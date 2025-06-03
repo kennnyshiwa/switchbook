@@ -15,12 +15,16 @@ export type SortOption =
   | 'travel-asc'
   | 'travel-desc'
 
+export type ViewMode = 'grid' | 'table'
+
 interface CollectionControlsProps {
   onSearchChange: (search: string) => void
   onSortChange: (sort: SortOption) => void
+  onViewChange: (view: ViewMode) => void
+  currentView: ViewMode
 }
 
-export default function CollectionControls({ onSearchChange, onSortChange }: CollectionControlsProps) {
+export default function CollectionControls({ onSearchChange, onSortChange, onViewChange, currentView }: CollectionControlsProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('recent')
 
@@ -57,27 +61,58 @@ export default function CollectionControls({ onSearchChange, onSortChange }: Col
             />
           </div>
         </div>
-        
-        <div>
-          <label htmlFor="sort" className="sr-only">Sort by</label>
-          <select
-            id="sort"
-            value={sortOption}
-            onChange={handleSortChange}
-            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-          >
-            <option value="recent">Most Recent</option>
-            <option value="oldest">Oldest First</option>
-            <option value="name-asc">Name (A-Z)</option>
-            <option value="name-desc">Name (Z-A)</option>
-            <option value="manufacturer-asc">Manufacturer (A-Z)</option>
-            <option value="manufacturer-desc">Manufacturer (Z-A)</option>
-            <option value="type">Type</option>
-            <option value="spring-asc">Spring Weight (Low to High)</option>
-            <option value="spring-desc">Spring Weight (High to Low)</option>
-            <option value="travel-asc">Travel (Low to High)</option>
-            <option value="travel-desc">Travel (High to Low)</option>
-          </select>
+
+        <div className="flex gap-2">
+          <div className="bg-gray-100 p-1 rounded-lg flex">
+            <button
+              onClick={() => onViewChange('grid')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                currentView === 'grid'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              title="Grid view"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zM12 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM12 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-3z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <button
+              onClick={() => onViewChange('table')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                currentView === 'table'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              title="Table view"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zM3 16a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          
+          <div>
+            <label htmlFor="sort" className="sr-only">Sort by</label>
+            <select
+              id="sort"
+              value={sortOption}
+              onChange={handleSortChange}
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            >
+              <option value="recent">Most Recent</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="manufacturer-asc">Manufacturer (A-Z)</option>
+              <option value="manufacturer-desc">Manufacturer (Z-A)</option>
+              <option value="type">Type</option>
+              <option value="spring-asc">Spring Weight (Low to High)</option>
+              <option value="spring-desc">Spring Weight (High to Low)</option>
+              <option value="travel-asc">Travel (Low to High)</option>
+              <option value="travel-desc">Travel (High to Low)</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>

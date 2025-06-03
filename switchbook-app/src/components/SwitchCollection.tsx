@@ -3,9 +3,10 @@
 import { useState, useMemo } from 'react'
 import { Switch } from '@prisma/client'
 import SwitchCard from './SwitchCard'
+import SwitchTable from './SwitchTable'
 import AddSwitchModal from './AddSwitchModal'
 import EditSwitchModal from './EditSwitchModal'
-import CollectionControls, { SortOption } from './CollectionControls'
+import CollectionControls, { SortOption, ViewMode } from './CollectionControls'
 
 interface SwitchCollectionProps {
   switches: Switch[]
@@ -18,6 +19,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
   const [editingSwitch, setEditingSwitch] = useState<Switch | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('recent')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
   const handleSwitchAdded = (newSwitch: Switch) => {
     setSwitches([newSwitch, ...switches])
@@ -166,6 +168,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
         <CollectionControls
           onSearchChange={setSearchTerm}
           onSortChange={setSortOption}
+          onViewChange={setViewMode}
+          currentView={viewMode}
         />
       </div>
       
@@ -173,17 +177,23 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
         <div className="text-center py-12">
           <p className="text-gray-500">No switches found matching &quot;{searchTerm}&quot;</p>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAndSortedSwitches.map((switchItem) => (
-          <SwitchCard
-            key={switchItem.id}
-            switch={switchItem}
-            onDelete={handleSwitchDeleted}
-            onEdit={setEditingSwitch}
-          />
+            <SwitchCard
+              key={switchItem.id}
+              switch={switchItem}
+              onDelete={handleSwitchDeleted}
+              onEdit={setEditingSwitch}
+            />
           ))}
         </div>
+      ) : (
+        <SwitchTable
+          switches={filteredAndSortedSwitches}
+          onDelete={handleSwitchDeleted}
+          onEdit={setEditingSwitch}
+        />
       )}
 
       {showAddModal && (
