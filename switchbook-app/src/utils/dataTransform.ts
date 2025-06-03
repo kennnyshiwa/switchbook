@@ -5,6 +5,11 @@ interface SwitchData {
   type: SwitchType;
   manufacturer: string;
   springWeight?: string | null;
+  springLength?: string | null;
+  actuationForce?: number | null;
+  bottomOutForce?: number | null;
+  preTravel?: number | null;
+  bottomOut?: number | null;
   travel?: string | null;
   notes?: string | null;
   imageUrl?: string | null;
@@ -20,6 +25,11 @@ export function transformSwitchData(data: SwitchData) {
     type: data.type,
     manufacturer: data.manufacturer,
     springWeight: data.springWeight || null,
+    springLength: data.springLength || null,
+    actuationForce: data.actuationForce || null,
+    bottomOutForce: data.bottomOutForce || null,
+    preTravel: data.preTravel || null,
+    bottomOut: data.bottomOut || null,
     travel: data.travel || null,
     notes: data.notes || null,
     imageUrl: data.imageUrl || null,
