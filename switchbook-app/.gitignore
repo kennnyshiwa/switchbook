@@ -25,6 +25,7 @@ dist/
 .idea/
 *.swp
 *.swo
+.claude/
 
 # OS
 .DS_Store
@@ -49,3 +50,4 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+.vercel

@@ -26,6 +26,11 @@ model Switch {
   name            String
   type            SwitchType
   springWeight    String?
+  springLength    String?
+  actuationForce  Float?
+  bottomOutForce  Float?
+  preTravel       Float?
+  bottomOut       Float?
   travel          String?
   manufacturer    String
   notes           String?
