@@ -2,12 +2,14 @@
 
 import { Switch } from '@prisma/client'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface CollectionStatsProps {
   switches: Switch[]
 }
 
 export default function CollectionStats({ switches }: CollectionStatsProps) {
+  const { theme } = useTheme()
   // Calculate statistics by type
   const typeStats = switches.reduce((acc, switchItem) => {
     const type = switchItem.type.replace('_', ' ')
@@ -42,10 +44,29 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
     '#F97316', // orange
   ]
 
+  const isDark = theme === 'dark'
+  
+  // Custom tooltip with dark mode support
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className={`${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} p-2 rounded shadow border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <p className="text-sm">{`${payload[0].name}: ${payload[0].value}`}</p>
+        </div>
+      )
+    }
+    return null
+  }
+
+  // Custom label with dark mode support
+  const renderCustomLabel = ({ name, percent }: any) => {
+    return `${name} ${(percent * 100).toFixed(0)}%`
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Switches by Type</h3>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Switches by Type</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -54,7 +75,7 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={renderCustomLabel}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -63,14 +84,14 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Switches by Manufacturer</h3>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Switches by Manufacturer</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -79,7 +100,7 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={renderCustomLabel}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -88,7 +109,7 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         </div>

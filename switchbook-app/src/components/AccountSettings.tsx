@@ -64,14 +64,14 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
       <div className="flex space-x-4 mb-6">
         <Link
           href="/dashboard"
-          className="text-blue-600 hover:text-blue-500"
+          className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
         >
           ← Back to Dashboard
         </Link>
         {user.role === 'ADMIN' && (
           <Link
             href="/admin"
-            className="text-blue-600 hover:text-blue-500"
+            className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
           >
             Admin Dashboard
           </Link>
@@ -79,40 +79,40 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
       </div>
 
       {/* Account Information */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Account Information</h2>
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Account Information</h2>
         <dl className="space-y-4">
           <div>
-            <dt className="text-sm font-medium text-gray-500">Username</dt>
-            <dd className="mt-1 text-sm text-gray-900">{user.username}</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Username</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{user.username}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Email</dt>
-            <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{user.email}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Role</dt>
-            <dd className="mt-1 text-sm text-gray-900">
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Role</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-white">
               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                 user.role === 'ADMIN' 
-                  ? 'bg-purple-100 text-purple-800' 
-                  : 'bg-gray-100 text-gray-800'
+                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
               }`}>
                 {user.role}
               </span>
             </dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Collection Size</dt>
-            <dd className="mt-1 text-sm text-gray-900">{user._count.switches} switches</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Collection Size</dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{user._count.switches} switches</dd>
           </div>
         </dl>
       </div>
 
       {/* Share Link */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Share Your Collection</h2>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Share Your Collection</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Share this link with others to let them view your switch collection:
         </p>
         <div className="flex items-center space-x-2">
@@ -120,7 +120,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
             type="text"
             readOnly
             value={shareUrl}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50"
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-gray-50 dark:bg-gray-700 dark:text-white"
           />
           <button
             onClick={() => {
@@ -135,9 +135,9 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-white shadow rounded-lg p-6 border-2 border-red-200">
-        <h2 className="text-lg font-medium text-red-900 mb-4">Danger Zone</h2>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 border-2 border-red-200 dark:border-red-800">
+        <h2 className="text-lg font-medium text-red-900 dark:text-red-400 mb-4">Danger Zone</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Once you delete your account, there is no going back. Please be certain.
         </p>
         <button

@@ -49,13 +49,13 @@ export default async function AdminDashboard() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
           <Link
             href="/dashboard"
-            className="text-blue-600 hover:text-blue-500"
+            className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
           >
             Back to My Collection
           </Link>
@@ -63,35 +63,35 @@ export default async function AdminDashboard() {
 
         {/* Statistics Grid */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">{totalUsers}</dd>
-              <p className="mt-2 text-sm text-gray-600">{usersLast30Days} new in last 30 days</p>
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Users</dt>
+              <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">{totalUsers}</dd>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{usersLast30Days} new in last 30 days</p>
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Total Switches</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">{totalSwitches}</dd>
-              <p className="mt-2 text-sm text-gray-600">{switchesLast30Days} new in last 30 days</p>
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Switches</dt>
+              <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">{totalSwitches}</dd>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{switchesLast30Days} new in last 30 days</p>
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Average per User</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Average per User</dt>
+              <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {totalUsers > 0 ? (totalSwitches / totalUsers).toFixed(1) : 0}
               </dd>
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">Active Collections</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Collections</dt>
+              <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
                 {topCollectors.filter(u => u._count.switches > 0).length}
               </dd>
             </div>
@@ -99,22 +99,22 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Top Collectors */}
-        <div className="bg-white shadow rounded-lg mb-8">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-8">
           <div className="px-4 py-5 sm:px-6">
-            <h2 className="text-lg font-medium text-gray-900">Top Collectors</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Top Collectors</h2>
           </div>
-          <div className="border-t border-gray-200">
-            <ul className="divide-y divide-gray-200">
+          <div className="border-t border-gray-200 dark:border-gray-700">
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {topCollectors.map((user) => (
                 <li key={user.id} className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{user.username}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{user.username}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm text-gray-900 dark:text-white">
                       {user._count.switches} switches
                     </div>
                   </div>
@@ -128,11 +128,11 @@ export default async function AdminDashboard() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Link
             href="/admin/users"
-            className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
           >
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg font-medium text-gray-900">Manage Users</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Manage Users</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 View all users, reset passwords, and manage accounts
               </p>
             </div>
@@ -140,11 +140,11 @@ export default async function AdminDashboard() {
 
           <Link
             href="/admin/stats"
-            className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
           >
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg font-medium text-gray-900">Detailed Statistics</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Detailed Statistics</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 View detailed analytics and usage statistics
               </p>
             </div>
