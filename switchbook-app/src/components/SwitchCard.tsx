@@ -86,7 +86,12 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
             </span>
             {switchItem.dateObtained && (
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                {new Date(switchItem.dateObtained).toLocaleDateString()}
+                {(() => {
+                  const date = new Date(switchItem.dateObtained)
+                  // Add timezone offset to get the correct local date
+                  const utcDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000)
+                  return utcDate.toLocaleDateString()
+                })()}
               </span>
             )}
           </div>

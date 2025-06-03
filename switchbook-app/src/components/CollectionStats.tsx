@@ -69,7 +69,9 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
     // Group switches by month/year
     const monthlyData = switchesWithDates.reduce((acc, switchItem) => {
       const date = new Date(switchItem.dateObtained!)
-      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      // Add timezone offset to get the correct local date
+      const localDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000)
+      const monthYear = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}`
       acc[monthYear] = (acc[monthYear] || 0) + 1
       return acc
     }, {} as Record<string, number>)
