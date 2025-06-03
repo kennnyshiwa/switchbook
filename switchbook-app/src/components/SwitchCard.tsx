@@ -41,9 +41,9 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
       {switchItem.imageUrl && (
-        <div className="relative h-48 bg-gray-100 flex items-center justify-center">
+        <div className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
           <Image
             src={switchItem.imageUrl}
             alt={switchItem.name}
@@ -55,7 +55,7 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
       
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">{switchItem.name}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.name}</h3>
           <div className="flex space-x-2">
             <button
               onClick={() => onEdit(switchItem)}
@@ -86,37 +86,37 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
             </span>
           </div>
 
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer}
           </p>
 
           {switchItem.springWeight && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               <span className="font-medium">Spring:</span> {switchItem.springWeight}
             </p>
           )}
 
           {switchItem.travel && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               <span className="font-medium">Travel:</span> {switchItem.travel}
             </p>
           )}
 
           {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
-            <div className="border-t border-gray-200 pt-2 mt-2">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Materials</p>
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Materials</p>
               {switchItem.topHousing && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   <span className="font-medium">Top:</span> {switchItem.topHousing}
                 </p>
               )}
               {switchItem.bottomHousing && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   <span className="font-medium">Bottom:</span> {switchItem.bottomHousing}
                 </p>
               )}
               {switchItem.stem && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   <span className="font-medium">Stem:</span> {switchItem.stem}
                 </p>
               )}
@@ -124,7 +124,7 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
           )}
 
           {switchItem.notes && (
-            <p className="text-sm text-gray-500 mt-2">{switchItem.notes}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{switchItem.notes}</p>
           )}
         </div>
       </div>
