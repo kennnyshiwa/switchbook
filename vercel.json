@@ -1,6 +1,7 @@
 {
-  "buildCommand": "cd switchbook-app && npm run build",
-  "outputDirectory": "switchbook-app/.next",
-  "framework": "nextjs",
-  "installCommand": "cd switchbook-app && npm install"
+  "functions": {
+    "switchbook-app/src/app/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  }
 }
