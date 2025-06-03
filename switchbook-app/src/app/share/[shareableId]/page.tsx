@@ -35,7 +35,7 @@ export default async function SharePage({ params }: SharePageProps) {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{user.username}'s Switch Collection</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{user.username}&apos;s Switch Collection</h1>
           <p className="text-gray-600 mt-1">{user.switches.length} switches in collection</p>
         </div>
 

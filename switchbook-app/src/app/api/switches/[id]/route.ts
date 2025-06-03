@@ -70,7 +70,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     console.error("Switch update error:", error)
     console.error("Request body:", JSON.stringify(body, null, 2))
     return NextResponse.json(
-      { error: "Failed to update switch", details: error.message },
+      { error: "Failed to update switch", details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

@@ -171,7 +171,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
       
       {filteredAndSortedSwitches.length === 0 && searchTerm ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">No switches found matching "{searchTerm}"</p>
+          <p className="text-gray-500">No switches found matching &quot;{searchTerm}&quot;</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

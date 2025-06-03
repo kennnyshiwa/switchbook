@@ -9,8 +9,9 @@ const roleUpdateSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await auth()
     
@@ -25,7 +26,7 @@ export async function PATCH(
     const { role } = roleUpdateSchema.parse(body)
 
     // Prevent admin from demoting themselves
-    if (params.id === session.user.id && role === 'USER') {
+    if (id === session.user.id && role === 'USER') {
       return NextResponse.json(
         { error: 'Cannot demote your own account' },
         { status: 400 }
@@ -34,7 +35,7 @@ export async function PATCH(
 
     // Check if user exists
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!user) {
@@ -46,7 +47,7 @@ export async function PATCH(
 
     // Update user role
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: { role },
       select: {
         id: true,
