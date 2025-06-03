@@ -33,6 +33,7 @@ model Switch {
   topHousing      String?
   bottomHousing   String?
   stem            String?
+  dateObtained    DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   userId          String

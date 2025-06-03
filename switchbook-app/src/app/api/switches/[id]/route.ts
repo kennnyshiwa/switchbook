@@ -35,6 +35,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       topHousing: validatedData.topHousing || null,
       bottomHousing: validatedData.bottomHousing || null,
       stem: validatedData.stem || null,
+      dateObtained: validatedData.dateObtained ? new Date(validatedData.dateObtained) : null,
     }
 
     // Verify the switch belongs to the user

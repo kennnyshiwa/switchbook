@@ -1,7 +1,7 @@
 'use client'
 
 import { Switch } from '@prisma/client'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface CollectionStatsProps {
@@ -63,6 +63,36 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
     return `${name} ${(percent * 100).toFixed(0)}%`
   }
 
+  // Calculate timeline data only for switches with dateObtained
+  const switchesWithDates = switches.filter(s => s.dateObtained)
+  const timelineData = switchesWithDates.length > 0 ? (() => {
+    // Group switches by month/year
+    const monthlyData = switchesWithDates.reduce((acc, switchItem) => {
+      const date = new Date(switchItem.dateObtained!)
+      const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      acc[monthYear] = (acc[monthYear] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Sort by date and create cumulative data
+    const sortedMonths = Object.keys(monthlyData).sort()
+    let cumulative = 0
+    
+    return sortedMonths.map(month => {
+      cumulative += monthlyData[month]
+      const [year, monthNum] = month.split('-')
+      const monthName = new Date(Number(year), Number(monthNum) - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      return {
+        month: monthName,
+        count: cumulative,
+        newSwitches: monthlyData[month]
+      }
+    })
+  })() : []
+
+  // Check if we should show the timeline
+  const showTimeline = timelineData.length > 0
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
@@ -114,6 +144,51 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {showTimeline && (
+        <div className="col-span-full bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Collection Timeline</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={timelineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke={isDark ? '#374151' : '#E5E7EB'} 
+                />
+                <XAxis 
+                  dataKey="month" 
+                  stroke={isDark ? '#9CA3AF' : '#6B7280'}
+                  style={{ fontSize: 12 }}
+                />
+                <YAxis 
+                  stroke={isDark ? '#9CA3AF' : '#6B7280'}
+                  style={{ fontSize: 12 }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                    border: `1px solid ${isDark ? '#374151' : '#E5E7EB'}`,
+                    borderRadius: '0.375rem',
+                  }}
+                  labelStyle={{ color: isDark ? '#F3F4F6' : '#111827' }}
+                  formatter={(value: any, name: string) => {
+                    if (name === 'Total Switches') return value
+                    return `+${value}`
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#3B82F6" 
+                  strokeWidth={2}
+                  name="Total Switches"
+                  dot={{ fill: '#3B82F6' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

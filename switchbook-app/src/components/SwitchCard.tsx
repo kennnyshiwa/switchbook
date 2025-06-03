@@ -80,10 +80,15 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[switchItem.type]}`}>
               {switchItem.type.replace('_', ' ')}
             </span>
+            {switchItem.dateObtained && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {new Date(switchItem.dateObtained).toLocaleDateString()}
+              </span>
+            )}
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-300">
