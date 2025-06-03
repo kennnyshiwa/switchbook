@@ -36,7 +36,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       topHousing: switchItem.topHousing || '',
       bottomHousing: switchItem.bottomHousing || '',
       stem: switchItem.stem || '',
-      dateObtained: switchItem.dateObtained ? switchItem.dateObtained.split('T')[0] : '',
+      dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
     }
   })
 
