@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Switch } from '@prisma/client'
+import { SWITCH_TYPE_COLORS } from '@/constants/switchTypes'
+import { deleteSwitch } from '@/utils/switchActions'
 
 interface SwitchTableProps {
   switches: Switch[]
@@ -9,35 +11,20 @@ interface SwitchTableProps {
   onEdit: (switchData: Switch) => void
 }
 
-export default function SwitchTable({ switches, onDelete, onEdit }: SwitchTableProps) {
+function SwitchTable({ switches, onDelete, onEdit }: SwitchTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (switchItem: Switch) => {
     if (!confirm('Are you sure you want to delete this switch?')) return
 
     setDeletingId(switchItem.id)
-    try {
-      const response = await fetch(`/api/switches/${switchItem.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        onDelete(switchItem.id)
-      }
-    } catch (error) {
-      console.error('Failed to delete switch:', error)
-    } finally {
-      setDeletingId(null)
+    const success = await deleteSwitch(switchItem.id)
+    if (success) {
+      onDelete(switchItem.id)
     }
+    setDeletingId(null)
   }
 
-  const typeColors = {
-    LINEAR: 'bg-red-100 text-red-800',
-    TACTILE: 'bg-brown-100 text-brown-800',
-    CLICKY: 'bg-blue-100 text-blue-800',
-    SILENT_LINEAR: 'bg-gray-100 text-gray-800',
-    SILENT_TACTILE: 'bg-purple-100 text-purple-800',
-  }
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
@@ -78,7 +65,7 @@ export default function SwitchTable({ switches, onDelete, onEdit }: SwitchTableP
                   <div className="text-sm font-medium text-gray-900 dark:text-white">{switchItem.name}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[switchItem.type]}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
                     {switchItem.type.replace('_', ' ')}
                   </span>
                 </td>
@@ -139,3 +126,5 @@ export default function SwitchTable({ switches, onDelete, onEdit }: SwitchTableP
     </div>
   )
 }
+
+export default memo(SwitchTable)

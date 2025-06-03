@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Switch } from '@prisma/client'
 import Image from 'next/image'
+import { SWITCH_TYPE_COLORS } from '@/constants/switchTypes'
+import { deleteSwitch } from '@/utils/switchActions'
 
 interface SwitchCardProps {
   switch: Switch
@@ -10,35 +12,20 @@ interface SwitchCardProps {
   onEdit: (switchData: Switch) => void
 }
 
-export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
+function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this switch?')) return
 
     setIsDeleting(true)
-    try {
-      const response = await fetch(`/api/switches/${switchItem.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        onDelete(switchItem.id)
-      }
-    } catch (error) {
-      console.error('Failed to delete switch:', error)
-    } finally {
-      setIsDeleting(false)
+    const success = await deleteSwitch(switchItem.id)
+    if (success) {
+      onDelete(switchItem.id)
     }
+    setIsDeleting(false)
   }
 
-  const typeColors = {
-    LINEAR: 'bg-red-100 text-red-800',
-    TACTILE: 'bg-brown-100 text-brown-800',
-    CLICKY: 'bg-blue-100 text-blue-800',
-    SILENT_LINEAR: 'bg-gray-100 text-gray-800',
-    SILENT_TACTILE: 'bg-purple-100 text-purple-800',
-  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
@@ -88,7 +75,7 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[switchItem.type]}`}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
               {switchItem.type.replace('_', ' ')}
             </span>
             {switchItem.dateObtained && (
@@ -148,3 +135,5 @@ export default function SwitchCard({ switch: switchItem, onDelete, onEdit }: Swi
     </div>
   )
 }
+
+export default memo(SwitchCard)

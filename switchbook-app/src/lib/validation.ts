@@ -19,9 +19,9 @@ export const loginSchema = z.object({
 export const switchSchema = z.object({
   name: z.string().min(1, "Switch name is required").max(100),
   type: z.enum(["LINEAR", "TACTILE", "CLICKY", "SILENT_LINEAR", "SILENT_TACTILE"]),
+  manufacturer: z.string().min(1, "Manufacturer is required").max(100),
   springWeight: z.string().optional(),
   travel: z.string().optional(),
-  manufacturer: z.string().min(1, "Manufacturer is required").max(100),
   notes: z.string().max(500).optional(),
   imageUrl: z.string().url().optional().or(z.literal("")),
   topHousing: z.string().max(100).optional().or(z.literal("")),

@@ -3,13 +3,14 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
+import { transformSwitchData } from "@/utils/dataTransform"
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
-  let body: any
+  let body: unknown
   try {
     const session = await auth()
     const { id } = await params
@@ -22,21 +23,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     body = await request.json()
-    console.log("Request body:", JSON.stringify(body, null, 2))
     const validatedData = switchSchema.parse(body)
     
     // Transform empty strings to null for optional fields
-    const transformedData = {
-      ...validatedData,
-      springWeight: validatedData.springWeight || null,
-      travel: validatedData.travel || null,
-      notes: validatedData.notes || null,
-      imageUrl: validatedData.imageUrl || null,
-      topHousing: validatedData.topHousing || null,
-      bottomHousing: validatedData.bottomHousing || null,
-      stem: validatedData.stem || null,
-      dateObtained: validatedData.dateObtained ? new Date(validatedData.dateObtained) : null,
-    }
+    const transformedData = transformSwitchData(validatedData)
 
     // Verify the switch belongs to the user
     const switchItem = await prisma.switch.findFirst({
@@ -68,8 +58,6 @@ export async function PUT(request: Request, { params }: RouteParams) {
       )
     }
 
-    console.error("Switch update error:", error)
-    console.error("Request body:", JSON.stringify(body, null, 2))
     return NextResponse.json(
       { error: "Failed to update switch", details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -110,7 +98,6 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Switch deletion error:", error)
     return NextResponse.json(
       { error: "Failed to delete switch" },
       { status: 500 }

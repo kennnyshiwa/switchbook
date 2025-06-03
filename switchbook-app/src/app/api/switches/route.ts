@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
+import { transformSwitchData } from "@/utils/dataTransform"
 
 export async function POST(request: Request) {
   try {
@@ -19,17 +20,7 @@ export async function POST(request: Request) {
     const validatedData = switchSchema.parse(body)
     
     // Transform empty strings to null for optional fields
-    const transformedData = {
-      ...validatedData,
-      springWeight: validatedData.springWeight || null,
-      travel: validatedData.travel || null,
-      notes: validatedData.notes || null,
-      imageUrl: validatedData.imageUrl || null,
-      topHousing: validatedData.topHousing || null,
-      bottomHousing: validatedData.bottomHousing || null,
-      stem: validatedData.stem || null,
-      dateObtained: validatedData.dateObtained ? new Date(validatedData.dateObtained) : null,
-    }
+    const transformedData = transformSwitchData(validatedData)
 
     const newSwitch = await prisma.switch.create({
       data: {
@@ -47,7 +38,6 @@ export async function POST(request: Request) {
       )
     }
 
-    console.error("Switch creation error:", error)
     return NextResponse.json(
       { error: "Failed to create switch" },
       { status: 500 }
@@ -73,7 +63,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(switches)
   } catch (error) {
-    console.error("Switch fetch error:", error)
     return NextResponse.json(
       { error: "Failed to fetch switches" },
       { status: 500 }
