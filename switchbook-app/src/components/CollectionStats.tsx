@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Switch } from '@prisma/client'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -10,6 +11,22 @@ interface CollectionStatsProps {
 
 export default function CollectionStats({ switches }: CollectionStatsProps) {
   const { theme } = useTheme()
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
+  // Load collapsed state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('statsCollapsed')
+    if (savedState === 'true') {
+      setIsCollapsed(true)
+    }
+  }, [])
+
+  // Save collapsed state to localStorage
+  const toggleCollapse = () => {
+    const newState = !isCollapsed
+    setIsCollapsed(newState)
+    localStorage.setItem('statsCollapsed', newState.toString())
+  }
   // Calculate statistics by type
   const typeStats = switches.reduce((acc, switchItem) => {
     const type = switchItem.type.replace('_', ' ')
@@ -96,7 +113,27 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
   const showTimeline = timelineData.length > 0
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Collection Statistics</h2>
+        <button
+          onClick={toggleCollapse}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <svg 
+            className={`w-4 h-4 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+          {isCollapsed ? 'Show Charts' : 'Hide Charts'}
+        </button>
+      </div>
+      
+      {!isCollapsed && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-300">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Switches by Type</h3>
         <div className="h-64">
@@ -189,6 +226,8 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>
