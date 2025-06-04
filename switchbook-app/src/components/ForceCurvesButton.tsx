@@ -131,7 +131,36 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
-      if (variant === 'icon') calculateDropdownPosition()
+      // Calculate position for icon variant (table view) only
+      if (variant === 'icon' && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        const viewportHeight = window.innerHeight
+        const viewportWidth = window.innerWidth
+        const spaceAbove = rect.top
+        const spaceBelow = viewportHeight - rect.bottom
+        const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
+        const dropdownWidth = 320
+        
+        let top = rect.bottom + 4
+        let left = rect.right - dropdownWidth
+        
+        if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
+          top = rect.top - estimatedDropdownHeight - 4
+          setDropdownPosition('top')
+        } else {
+          setDropdownPosition('bottom')
+        }
+        
+        if (left < 16) {
+          left = rect.left
+        }
+        
+        if (left + dropdownWidth > viewportWidth - 16) {
+          left = viewportWidth - dropdownWidth - 16
+        }
+        
+        setDropdownStyle({ top, left })
+      }
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -143,25 +172,19 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
-    if (variant === 'icon') calculateDropdownPosition()
-    setIsDropdownOpen(!isDropdownOpen)
-  }
-
-  const calculateDropdownPosition = () => {
-    if (buttonRef.current) {
+    // Calculate position for icon variant (table view) only
+    if (variant === 'icon' && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       const viewportHeight = window.innerHeight
       const viewportWidth = window.innerWidth
       const spaceAbove = rect.top
       const spaceBelow = viewportHeight - rect.bottom
       const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
-      const dropdownWidth = 320 // w-80
+      const dropdownWidth = 320
       
-      // Calculate position for fixed positioning
       let top = rect.bottom + 4
       let left = rect.right - dropdownWidth
       
-      // Use bottom position if there's more space below or if top would be cut off
       if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
         top = rect.top - estimatedDropdownHeight - 4
         setDropdownPosition('top')
@@ -169,28 +192,18 @@ export default function ForceCurvesButton({
         setDropdownPosition('bottom')
       }
       
-      // For icon variant (table view), anchor to the right edge of button
-      if (variant === 'icon') {
-        left = rect.right - dropdownWidth
-      } else {
-        // For button variant, anchor to left edge
+      if (left < 16) {
         left = rect.left
       }
       
-      // Ensure dropdown doesn't go off left edge
-      if (left < 16) {
-        left = 16
-      }
-      
-      // Ensure dropdown doesn't go off right edge
       if (left + dropdownWidth > viewportWidth - 16) {
         left = viewportWidth - dropdownWidth - 16
       }
       
       setDropdownStyle({ top, left })
     }
+    setIsDropdownOpen(!isDropdownOpen)
   }
-
 
   const getMatchTypeLabel = (matchType: ForceCurveMatch['matchType']) => {
     switch (matchType) {
