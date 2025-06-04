@@ -147,6 +147,20 @@ export default function BulkUploadPage() {
             if (!isNaN(numValue)) {
               (switchData as any)[field] = numValue
             }
+          } else if (field === 'type') {
+            // Normalize switch type to uppercase and handle variations
+            const normalizedType = value.toUpperCase().replace(/[\s_-]/g, '_')
+            // Map common variations to valid enum values
+            const typeMapping: { [key: string]: string } = {
+              'LINEAR': 'LINEAR',
+              'TACTILE': 'TACTILE',
+              'CLICKY': 'CLICKY',
+              'SILENT_LINEAR': 'SILENT_LINEAR',
+              'SILENT_TACTILE': 'SILENT_TACTILE',
+              'SILENTLINEAR': 'SILENT_LINEAR',
+              'SILENTTACTILE': 'SILENT_TACTILE',
+            }
+            (switchData as any)[field] = typeMapping[normalizedType] || normalizedType
           } else {
             (switchData as any)[field] = value
           }
@@ -224,7 +238,7 @@ export default function BulkUploadPage() {
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
                 <li>• Use commas to separate columns</li>
                 <li>• Include headers in the first row</li>
-                <li>• Switch Type must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, or SILENT_TACTILE</li>
+                <li>• Switch Type must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, or SILENT_TACTILE (case-insensitive)</li>
                 <li>• Forces should be numeric values in grams</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
               </ul>
