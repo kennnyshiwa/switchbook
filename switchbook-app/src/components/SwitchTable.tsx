@@ -125,7 +125,8 @@ function SwitchTable({ switches, onDelete, onEdit }: SwitchTableProps) {
                     <ForceCurvesButton 
                       switchName={switchItem.name}
                       manufacturer={switchItem.manufacturer}
-                      variant="icon"
+                      variant="button"
+                      dropdownPosition="below"
                     />
                     <button
                       onClick={() => onEdit(switchItem)}
