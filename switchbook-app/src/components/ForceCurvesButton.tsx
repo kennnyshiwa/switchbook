@@ -19,7 +19,9 @@ export default function ForceCurvesButton({
   const [matches, setMatches] = useState<ForceCurveMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('top')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -70,6 +72,21 @@ export default function ForceCurvesButton({
       window.open(url || matches[0].url, '_blank', 'noopener,noreferrer')
       setIsDropdownOpen(false)
     } else {
+      // Calculate optimal dropdown position before opening
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        const viewportHeight = window.innerHeight
+        const spaceAbove = rect.top
+        const spaceBelow = viewportHeight - rect.bottom
+        const estimatedDropdownHeight = Math.min(matches.length * 60, 256) // Estimate dropdown height
+        
+        // Use bottom position if there's more space below or if top would be cut off
+        if (spaceBelow > estimatedDropdownHeight || spaceAbove < estimatedDropdownHeight) {
+          setDropdownPosition('bottom')
+        } else {
+          setDropdownPosition('top')
+        }
+      }
       setIsDropdownOpen(!isDropdownOpen)
     }
   }
@@ -124,6 +141,7 @@ export default function ForceCurvesButton({
     return (
       <div className="relative" ref={dropdownRef}>
         <button
+          ref={buttonRef}
           onClick={() => handleClick()}
           className={`text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors ${className}`}
           title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
@@ -141,7 +159,7 @@ export default function ForceCurvesButton({
         </button>
         
         {isDropdownOpen && matches.length > 1 && (
-          <div className="absolute bottom-full mb-1 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80">
+          <div className={`absolute ${dropdownPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'} right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80`}>
             <div className="max-h-64 overflow-y-auto">
               {matches.map((match, index) => (
                 <button
