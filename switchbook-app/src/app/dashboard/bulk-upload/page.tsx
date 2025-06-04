@@ -213,7 +213,8 @@ export default function BulkUploadPage() {
 
   if (currentStep === 'upload') {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto p-6">
         <div className="mb-6">
           <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center mb-4">
             ← Back to Dashboard
@@ -274,13 +275,15 @@ export default function BulkUploadPage() {
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Select a CSV file to upload your switches</p>
           </div>
         </div>
+        </div>
       </div>
     )
   }
 
   if (currentStep === 'mapping') {
     return (
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-6xl mx-auto p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Map CSV Columns</h1>
           <p className="text-gray-600 dark:text-gray-300">Verify that each column maps to the correct switch field</p>
@@ -330,13 +333,15 @@ export default function BulkUploadPage() {
             </button>
           </div>
         </div>
+        </div>
       </div>
     )
   }
 
   if (currentStep === 'preview') {
     return (
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-6xl mx-auto p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Preview & Edit Switches</h1>
           <p className="text-gray-600 dark:text-gray-300">
@@ -435,13 +440,15 @@ export default function BulkUploadPage() {
             </button>
           </div>
         </div>
+        </div>
       </div>
     )
   }
 
   if (currentStep === 'importing') {
     return (
-      <div className="max-w-2xl mx-auto p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-2xl mx-auto p-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Importing Switches...</h1>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-4">
@@ -452,13 +459,15 @@ export default function BulkUploadPage() {
           </div>
           <p className="text-gray-600 dark:text-gray-300">{importProgress}% complete</p>
         </div>
+        </div>
       </div>
     )
   }
 
   if (currentStep === 'complete') {
     return (
-      <div className="max-w-2xl mx-auto p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-2xl mx-auto p-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Import Complete!</h1>
           
@@ -505,6 +514,7 @@ export default function BulkUploadPage() {
               Import More
             </button>
           </div>
+        </div>
         </div>
       </div>
     )
