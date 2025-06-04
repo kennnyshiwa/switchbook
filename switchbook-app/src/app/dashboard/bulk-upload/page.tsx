@@ -420,26 +420,59 @@ export default function BulkUploadPage() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-x-auto overflow-y-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Name
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Name*
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Type
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Type*
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Manufacturer
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Spring Weight
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Spring Length
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actuation Force (g)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bottom Out Force (g)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Pre-travel (mm)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bottom Out (mm)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Top Housing
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bottom Housing
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Stem
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Notes
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Image URL
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Date Obtained
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -447,7 +480,7 @@ export default function BulkUploadPage() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {parsedSwitches.map((switchItem, index) => (
                   <tr key={index} className={switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       {switchItem.isDuplicate ? (
                         <div className="flex flex-col space-y-1">
                           <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
@@ -469,20 +502,20 @@ export default function BulkUploadPage() {
                         <span className="text-xs text-green-600 dark:text-green-400">New</span>
                       )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <input
                         type="text"
                         value={switchItem.name}
                         onChange={(e) => updateParsedSwitch(index, 'name', e.target.value)}
-                        className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <select
                         value={switchItem.type}
                         onChange={(e) => updateParsedSwitch(index, 'type', e.target.value)}
-                        className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       >
                         <option value="LINEAR">LINEAR</option>
@@ -492,25 +525,134 @@ export default function BulkUploadPage() {
                         <option value="SILENT_TACTILE">SILENT_TACTILE</option>
                       </select>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <input
                         type="text"
                         value={switchItem.manufacturer || ''}
                         onChange={(e) => updateParsedSwitch(index, 'manufacturer', e.target.value)}
-                        className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <input
                         type="text"
                         value={switchItem.springWeight || ''}
                         onChange={(e) => updateParsedSwitch(index, 'springWeight', e.target.value)}
-                        className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={switchItem.springLength || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'springLength', e.target.value)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.actuationForce || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                        min="0"
+                        max="1000"
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.bottomOutForce || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                        min="0"
+                        max="1000"
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.preTravel || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                        min="0"
+                        max="10"
+                        step="0.1"
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.bottomOut || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                        min="0"
+                        max="10"
+                        step="0.1"
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={switchItem.topHousing || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'topHousing', e.target.value)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={switchItem.bottomHousing || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'bottomHousing', e.target.value)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={switchItem.stem || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'stem', e.target.value)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4">
+                      <textarea
+                        value={switchItem.notes || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'notes', e.target.value)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                        rows={2}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="url"
+                        value={switchItem.imageUrl || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'imageUrl', e.target.value)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="date"
+                        value={switchItem.dateObtained || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'dateObtained', e.target.value)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <button
                         onClick={() => setParsedSwitches(prev => prev.filter((_, i) => i !== index))}
                         className="text-red-600 hover:text-red-700 text-sm"
