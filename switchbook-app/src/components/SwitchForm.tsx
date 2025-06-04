@@ -67,54 +67,51 @@ export default function SwitchForm({ register, errors }: SwitchFormProps) {
             </div>
           </div>
         </div>
-        <input
+        <select
           {...register('manufacturer')}
-          type="text"
-          list="manufacturers"
-          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-          placeholder="Optional - Type to search or select from dropdown"
-        />
-        <datalist id="manufacturers">
-          <option value="ABT" />
-          <option value="Aflion" />
-          <option value="Alps" />
-          <option value="Aristotle" />
-          <option value="BSUN" />
-          <option value="Burgess" />
-          <option value="Cherry" />
-          <option value="Duhuk Lumia" />
-          <option value="Gateron" />
-          <option value="Grain Gold" />
-          <option value="Greetech" />
-          <option value="Haimu" />
-          <option value="HMX" />
-          <option value="Huano" />
-          <option value="Jedel" />
-          <option value="Jerrzi" />
-          <option value="Jixian" />
-          <option value="JWICK" />
-          <option value="JWK" />
-          <option value="Kailh" />
-          <option value="Keygeek" />
-          <option value="KTT" />
-          <option value="LCET" />
-          <option value="Lichicx" />
-          <option value="NewGiant" />
-          <option value="Omron" />
-          <option value="Outemu" />
-          <option value="Raesha" />
-          <option value="SOAI/Leobog" />
-          <option value="SP Star" />
-          <option value="Swikeys" />
-          <option value="Tecsee" />
-          <option value="TTC" />
-          <option value="Unknown" />
-          <option value="Varmilo" />
-          <option value="Weipeng" />
-          <option value="Xiang Min" />
-          <option value="Yusya" />
-          <option value="Zorro" />
-        </datalist>
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2"
+        >
+          <option value="">Select a manufacturer (optional)</option>
+          <option value="ABT">ABT</option>
+          <option value="Aflion">Aflion</option>
+          <option value="Alps">Alps</option>
+          <option value="Aristotle">Aristotle</option>
+          <option value="BSUN">BSUN</option>
+          <option value="Burgess">Burgess</option>
+          <option value="Cherry">Cherry</option>
+          <option value="Duhuk Lumia">Duhuk Lumia</option>
+          <option value="Gateron">Gateron</option>
+          <option value="Grain Gold">Grain Gold</option>
+          <option value="Greetech">Greetech</option>
+          <option value="Haimu">Haimu</option>
+          <option value="HMX">HMX</option>
+          <option value="Huano">Huano</option>
+          <option value="Jedel">Jedel</option>
+          <option value="Jerrzi">Jerrzi</option>
+          <option value="Jixian">Jixian</option>
+          <option value="JWICK">JWICK</option>
+          <option value="JWK">JWK</option>
+          <option value="Kailh">Kailh</option>
+          <option value="Keygeek">Keygeek</option>
+          <option value="KTT">KTT</option>
+          <option value="LCET">LCET</option>
+          <option value="Lichicx">Lichicx</option>
+          <option value="NewGiant">NewGiant</option>
+          <option value="Omron">Omron</option>
+          <option value="Outemu">Outemu</option>
+          <option value="Raesha">Raesha</option>
+          <option value="SOAI/Leobog">SOAI/Leobog</option>
+          <option value="SP Star">SP Star</option>
+          <option value="Swikeys">Swikeys</option>
+          <option value="Tecsee">Tecsee</option>
+          <option value="TTC">TTC</option>
+          <option value="Unknown">Unknown</option>
+          <option value="Varmilo">Varmilo</option>
+          <option value="Weipeng">Weipeng</option>
+          <option value="Xiang Min">Xiang Min</option>
+          <option value="Yusya">Yusya</option>
+          <option value="Zorro">Zorro</option>
+        </select>
         {errors.manufacturer && (
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.manufacturer.message}</p>
         )}
