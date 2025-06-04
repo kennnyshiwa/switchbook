@@ -215,14 +215,14 @@ export default function BulkUploadPage() {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="mb-6">
-          <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 flex items-center mb-4">
+          <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center mb-4">
             ← Back to Dashboard
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Upload Switches</h1>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">How to Import Switches</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">How to Import Switches</h2>
           <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
             <p>Follow these steps to bulk import your switch collection:</p>
             <ol className="list-decimal list-inside space-y-2 ml-4">
@@ -248,10 +248,10 @@ export default function BulkUploadPage() {
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Upload Your CSV File</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Upload Your CSV File</h2>
             <button
               onClick={downloadTemplate}
-              className="text-sm text-blue-600 hover:text-blue-700 underline"
+              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"
             >
               Download Template CSV
             </button>
@@ -271,7 +271,7 @@ export default function BulkUploadPage() {
             >
               Choose CSV File
             </label>
-            <p className="mt-2 text-sm text-gray-500">Select a CSV file to upload your switches</p>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Select a CSV file to upload your switches</p>
           </div>
         </div>
       </div>
