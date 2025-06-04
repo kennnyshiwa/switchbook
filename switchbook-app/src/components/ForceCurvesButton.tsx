@@ -115,8 +115,7 @@ export default function ForceCurvesButton({
       setIsDropdownOpen(false)
       setShowAllOptions(false)
       
-      // Open the selected URL
-      window.open(url, '_blank', 'noopener,noreferrer')
+      // Don't auto-open on first selection - let user click again to open
     } catch (error) {
       console.error('Failed to save preference:', error)
     }
@@ -132,8 +131,10 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
-      // Calculate dropdown position and show the preference interface
-      calculateDropdownPosition()
+      // Calculate dropdown position for icon variant only
+      if (variant === 'icon') {
+        calculateDropdownPosition()
+      }
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -145,12 +146,14 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
-    calculateDropdownPosition()
+    if (variant === 'icon') {
+      calculateDropdownPosition()
+    }
     setIsDropdownOpen(!isDropdownOpen)
   }
 
   const calculateDropdownPosition = () => {
-    if (buttonRef.current) {
+    if (buttonRef.current && variant === 'icon') {
       const rect = buttonRef.current.getBoundingClientRect()
       const viewportHeight = window.innerHeight
       const viewportWidth = window.innerWidth
@@ -159,11 +162,11 @@ export default function ForceCurvesButton({
       const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
       const dropdownWidth = 256 // min-w-64
       
-      // Calculate position for fixed positioning
+      // For icon variant in table, position more carefully
       let top = rect.bottom + 4
-      let left = rect.right - dropdownWidth
+      let left = rect.left - dropdownWidth + rect.width // Align right edge of dropdown with right edge of button
       
-      // Use bottom position if there's more space below or if top would be cut off
+      // Check if we need to position above instead
       if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
         top = rect.top - estimatedDropdownHeight - 4
         setDropdownPosition('top')
@@ -173,10 +176,10 @@ export default function ForceCurvesButton({
       
       // Ensure dropdown doesn't go off left edge
       if (left < 16) {
-        left = rect.left
+        left = rect.left // Align with left edge of button instead
       }
       
-      // Ensure dropdown doesn't go off right edge
+      // Ensure dropdown doesn't go off right edge  
       if (left + dropdownWidth > viewportWidth - 16) {
         left = viewportWidth - dropdownWidth - 16
       }
