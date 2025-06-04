@@ -157,6 +157,22 @@ export default function BulkUploadPage() {
     }))
   }
 
+  // Helper function to clean up values with duplicate units
+  const cleanUnitValue = (value: string): string => {
+    // Remove quotes first
+    const cleanValue = value.replace(/^"|"$/g, '').trim()
+    
+    // Extract numeric part and unit
+    const match = cleanValue.match(/^(\d+\.?\d*)\s*([a-zA-Z]+)?/)
+    if (!match) return cleanValue
+    
+    const [, number, unit] = match
+    if (!unit) return cleanValue
+    
+    // Return number with single unit
+    return `${number}${unit.toLowerCase()}`
+  }
+
   const parseAndPreview = () => {
     const parsed: ParsedSwitchWithDuplicate[] = csvData.map(row => {
       const switchData: Partial<ParsedSwitchWithDuplicate> = {}
@@ -184,6 +200,9 @@ export default function BulkUploadPage() {
               'SILENTTACTILE': 'SILENT_TACTILE',
             } as const
             (switchData as any)[field] = typeMapping[normalizedType as keyof typeof typeMapping] || normalizedType
+          } else if (field === 'springWeight' || field === 'springLength') {
+            // Clean up spring weight and length values to avoid duplicate units
+            (switchData as any)[field] = cleanUnitValue(value)
           } else {
             (switchData as any)[field] = value
           }
@@ -216,9 +235,17 @@ export default function BulkUploadPage() {
   }
 
   const updateParsedSwitch = (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | undefined) => {
-    setParsedSwitches(prev => prev.map((sw, i) => 
-      i === index ? { ...sw, [field]: value } : sw
-    ))
+    setParsedSwitches(prev => prev.map((sw, i) => {
+      if (i !== index) return sw
+      
+      // Clean up spring weight and length values when editing
+      let cleanedValue = value
+      if ((field === 'springWeight' || field === 'springLength') && typeof value === 'string') {
+        cleanedValue = cleanUnitValue(value)
+      }
+      
+      return { ...sw, [field]: cleanedValue }
+    }))
   }
 
   const toggleOverwrite = (index: number) => {
