@@ -141,6 +141,15 @@ function LoginContent() {
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
+
+          <div className="text-center">
+            <Link
+              href="/auth/forgot-password"
+              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              Forgot your password?
+            </Link>
+          </div>
         </form>
       </div>
     </div>
