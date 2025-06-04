@@ -152,15 +152,15 @@ export default function ForceCurvesButton({
     }
   }
 
-  // Use identical dropdown positioning for all variants - right-align for table view consistency
-  const dropdownClasses = 'absolute bottom-full mb-1 right-0'
+  // Use identical dropdown positioning for all variants - left-align like before
+  const dropdownClasses = 'absolute bottom-full mb-1 left-0'
 
   // Render the dropdown (shared across all variants)
   const renderDropdown = () => {
     if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
 
     return (
-      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-48`}>
+      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-64`}>
         <div className="max-h-64 overflow-y-auto">
           {savedPreference && !showAllOptions ? (
             <div>
