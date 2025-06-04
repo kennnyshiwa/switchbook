@@ -159,7 +159,7 @@ export default function ForceCurvesButton({
         </button>
         
         {isDropdownOpen && matches.length > 1 && (
-          <div className={`absolute ${dropdownPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'} right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80`}>
+          <div className={`absolute ${dropdownPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'} -left-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80`}>
             <div className="max-h-64 overflow-y-auto">
               {matches.map((match, index) => (
                 <button
