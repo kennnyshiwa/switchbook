@@ -43,7 +43,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
       const search = searchTerm.toLowerCase()
       filtered = switches.filter(s => 
         s.name.toLowerCase().includes(search) ||
-        s.manufacturer.toLowerCase().includes(search) ||
+        (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
         s.type.toLowerCase().includes(search) ||
         (s.notes?.toLowerCase().includes(search) ?? false) ||
         (s.springWeight?.toLowerCase().includes(search) ?? false) ||
@@ -69,10 +69,10 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
         sorted.sort((a, b) => b.name.localeCompare(a.name))
         break
       case 'manufacturer-asc':
-        sorted.sort((a, b) => a.manufacturer.localeCompare(b.manufacturer))
+        sorted.sort((a, b) => (a.manufacturer || 'Unknown').localeCompare(b.manufacturer || 'Unknown'))
         break
       case 'manufacturer-desc':
-        sorted.sort((a, b) => b.manufacturer.localeCompare(a.manufacturer))
+        sorted.sort((a, b) => (b.manufacturer || 'Unknown').localeCompare(a.manufacturer || 'Unknown'))
         break
       case 'type':
         sorted.sort((a, b) => a.type.localeCompare(b.type))

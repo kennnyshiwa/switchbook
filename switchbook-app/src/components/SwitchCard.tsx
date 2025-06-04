@@ -91,7 +91,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer}
+            <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer || 'Unknown'}
           </p>
 
           {(switchItem.actuationForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut) && (

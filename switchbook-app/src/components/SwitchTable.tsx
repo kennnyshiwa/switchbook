@@ -79,7 +79,7 @@ function SwitchTable({ switches, onDelete, onEdit }: SwitchTableProps) {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.manufacturer}
+                  {switchItem.manufacturer || 'Unknown'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.actuationForce ? `${switchItem.actuationForce}g` : '-'}

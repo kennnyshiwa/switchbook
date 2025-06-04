@@ -29,7 +29,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     defaultValues: {
       name: switchItem.name,
       type: switchItem.type,
-      manufacturer: switchItem.manufacturer,
+      manufacturer: switchItem.manufacturer || '',
       actuationForce: switchItem.actuationForce || undefined,
       bottomOutForce: switchItem.bottomOutForce || undefined,
       preTravel: switchItem.preTravel || undefined,

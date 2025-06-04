@@ -75,7 +75,7 @@ export default async function SharePage({ params }: SharePageProps) {
                     </div>
 
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer}
+                      <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer || 'Unknown'}
                     </p>
 
                     {switchItem.springWeight && (

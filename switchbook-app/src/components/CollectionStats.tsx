@@ -41,7 +41,8 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
 
   // Calculate statistics by manufacturer
   const manufacturerStats = switches.reduce((acc, switchItem) => {
-    acc[switchItem.manufacturer] = (acc[switchItem.manufacturer] || 0) + 1
+    const manufacturer = switchItem.manufacturer || 'Unknown'
+    acc[manufacturer] = (acc[manufacturer] || 0) + 1
     return acc
   }, {} as Record<string, number>)
 
