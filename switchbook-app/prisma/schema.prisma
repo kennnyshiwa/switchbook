@@ -19,6 +19,7 @@ model User {
   shareableId           String                @unique @default(cuid())
   emailVerified         DateTime?
   verificationTokens    VerificationToken[]
+  forceCurvePreferences ForceCurvePreference[]
 }
 
 model Switch {
@@ -51,6 +52,20 @@ model VerificationToken {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt  DateTime
   createdAt  DateTime @default(now())
+}
+
+model ForceCurvePreference {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  switchName       String
+  manufacturer     String?
+  selectedFolder   String
+  selectedUrl      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@unique([userId, switchName, manufacturer])
 }
 
 enum UserRole {

@@ -21,17 +21,36 @@ export default function ForceCurvesButton({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('top')
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
+  const [showAllOptions, setShowAllOptions] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isMounted = true
 
-    async function checkForForceCurves() {
+    async function loadForceCurveData() {
       try {
-        const foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+        // Load matches and preferences in parallel
+        const [foundMatches, preferenceResponse] = await Promise.all([
+          findAllForceCurveMatches(switchName, manufacturer || undefined),
+          fetch(`/api/force-curve-preferences?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`).catch(() => null)
+        ])
+
         if (isMounted) {
           setMatches(foundMatches)
+          
+          // Check for saved preference
+          if (preferenceResponse?.ok) {
+            const preference = await preferenceResponse.json()
+            if (preference?.selectedFolder) {
+              setSavedPreference({
+                folder: preference.selectedFolder,
+                url: preference.selectedUrl
+              })
+            }
+          }
+          
           setIsLoading(false)
         }
       } catch (error) {
@@ -41,7 +60,7 @@ export default function ForceCurvesButton({
       }
     }
 
-    checkForForceCurves()
+    loadForceCurveData()
 
     return () => {
       isMounted = false
@@ -64,51 +83,86 @@ export default function ForceCurvesButton({
     return null // Don't show anything while loading
   }
 
-  if (matches.length === 0) {
-    return null // No force curve data available
+  // If no matches and no saved preference, don't show anything
+  if (matches.length === 0 && !savedPreference) {
+    return null
+  }
+
+  const savePreference = async (folderName: string, url: string) => {
+    try {
+      await fetch('/api/force-curve-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          switchName,
+          manufacturer: manufacturer || null,
+          selectedFolder: folderName,
+          selectedUrl: url
+        })
+      })
+      setSavedPreference({ folder: folderName, url })
+      setIsDropdownOpen(false)
+      setShowAllOptions(false)
+    } catch (error) {
+      console.error('Failed to save preference:', error)
+    }
   }
 
   const handleClick = (url?: string) => {
-    if (matches.length === 1 || url) {
-      window.open(url || matches[0].url, '_blank', 'noopener,noreferrer')
+    // If specific URL provided (from dropdown selection), open it
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer')
       setIsDropdownOpen(false)
-    } else {
-      // Calculate optimal dropdown position before opening
-      if (buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect()
-        const viewportHeight = window.innerHeight
-        const viewportWidth = window.innerWidth
-        const spaceAbove = rect.top
-        const spaceBelow = viewportHeight - rect.bottom
-        const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
-        const dropdownWidth = 256 // min-w-64
-        
-        // Calculate position for fixed positioning
-        let top = rect.bottom + 4
-        let left = rect.right - dropdownWidth
-        
-        // Use bottom position if there's more space below or if top would be cut off
-        if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
-          top = rect.top - estimatedDropdownHeight - 4
-          setDropdownPosition('top')
-        } else {
-          setDropdownPosition('bottom')
-        }
-        
-        // Ensure dropdown doesn't go off left edge
-        if (left < 16) {
-          left = rect.left
-        }
-        
-        // Ensure dropdown doesn't go off right edge
-        if (left + dropdownWidth > viewportWidth - 16) {
-          left = viewportWidth - dropdownWidth - 16
-        }
-        
-        setDropdownStyle({ top, left })
-      }
-      setIsDropdownOpen(!isDropdownOpen)
+      return
     }
+
+    // If saved preference exists and not showing all options, use it
+    if (savedPreference && !showAllOptions) {
+      window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    // If only one match and no saved preference, open it directly
+    if (matches.length === 1 && !savedPreference) {
+      window.open(matches[0].url, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    // Otherwise, show dropdown with options
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      const spaceAbove = rect.top
+      const spaceBelow = viewportHeight - rect.bottom
+      const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
+      const dropdownWidth = 256 // min-w-64
+      
+      // Calculate position for fixed positioning
+      let top = rect.bottom + 4
+      let left = rect.right - dropdownWidth
+      
+      // Use bottom position if there's more space below or if top would be cut off
+      if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
+        top = rect.top - estimatedDropdownHeight - 4
+        setDropdownPosition('top')
+      } else {
+        setDropdownPosition('bottom')
+      }
+      
+      // Ensure dropdown doesn't go off left edge
+      if (left < 16) {
+        left = rect.left
+      }
+      
+      // Ensure dropdown doesn't go off right edge
+      if (left + dropdownWidth > viewportWidth - 16) {
+        left = viewportWidth - dropdownWidth - 16
+      }
+      
+      setDropdownStyle({ top, left })
+    }
+    setIsDropdownOpen(!isDropdownOpen)
   }
 
   const getMatchTypeLabel = (matchType: ForceCurveMatch['matchType']) => {
@@ -131,26 +185,51 @@ export default function ForceCurvesButton({
           <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Force Curves {matches.length > 1 && `(${matches.length})`}
-          {matches.length > 1 && (
+          Force Curves {savedPreference ? '✓' : matches.length > 1 ? `(${matches.length})` : ''}
+          {(matches.length > 1 || savedPreference) && (
             <svg className="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           )}
         </span>
         
-        {isDropdownOpen && matches.length > 1 && (
+        {isDropdownOpen && (matches.length > 1 || savedPreference) && (
           <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80">
-            {matches.map((match, index) => (
-              <button
-                key={index}
-                onClick={() => handleClick(match.url)}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-md last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-              >
-                <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
-              </button>
-            ))}
+            {savedPreference && !showAllOptions ? (
+              <div>
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
+                  <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
+                </div>
+                <button
+                  onClick={() => setShowAllOptions(true)}
+                  className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md"
+                >
+                  Choose different option ({matches.length} available)
+                </button>
+              </div>
+            ) : (
+              <div>
+                {savedPreference && (
+                  <button
+                    onClick={() => setShowAllOptions(false)}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+                  >
+                    ← Back to selected: {savedPreference.folder}
+                  </button>
+                )}
+                {matches.map((match, index) => (
+                  <button
+                    key={index}
+                    onClick={() => savePreference(match.folderName, match.url)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                  >
+                    <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -178,22 +257,47 @@ export default function ForceCurvesButton({
           </div>
         </button>
         
-        {isDropdownOpen && matches.length > 1 && (
+        {isDropdownOpen && (matches.length > 1 || savedPreference) && (
           <div 
             className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80"
             style={dropdownStyle}
           >
             <div className="max-h-64 overflow-y-auto">
-              {matches.map((match, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleClick(match.url)}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-md last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0 block"
-                >
-                  <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
-                </button>
-              ))}
+              {savedPreference && !showAllOptions ? (
+                <div>
+                  <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
+                    <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
+                  </div>
+                  <button
+                    onClick={() => setShowAllOptions(true)}
+                    className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md"
+                  >
+                    Choose different option ({matches.length} available)
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {savedPreference && (
+                    <button
+                      onClick={() => setShowAllOptions(false)}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+                    >
+                      ← Back to selected: {savedPreference.folder}
+                    </button>
+                  )}
+                  {matches.map((match, index) => (
+                    <button
+                      key={index}
+                      onClick={() => savePreference(match.folderName, match.url)}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0 block"
+                    >
+                      <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -212,27 +316,52 @@ export default function ForceCurvesButton({
         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
-        Force Curves {matches.length > 1 && `(${matches.length})`}
-        {matches.length > 1 && (
+        Force Curves {savedPreference ? '✓' : matches.length > 1 ? `(${matches.length})` : ''}
+        {(matches.length > 1 || savedPreference) && (
           <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
           </svg>
         )}
       </button>
       
-      {isDropdownOpen && matches.length > 1 && (
+      {isDropdownOpen && (matches.length > 1 || savedPreference) && (
         <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80">
           <div className="max-h-64 overflow-y-auto">
-            {matches.map((match, index) => (
-              <button
-                key={index}
-                onClick={() => handleClick(match.url)}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-md last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0 block"
-              >
-                <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
-              </button>
-            ))}
+            {savedPreference && !showAllOptions ? (
+              <div>
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
+                  <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
+                </div>
+                <button
+                  onClick={() => setShowAllOptions(true)}
+                  className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md"
+                >
+                  Choose different option ({matches.length} available)
+                </button>
+              </div>
+            ) : (
+              <div>
+                {savedPreference && (
+                  <button
+                    onClick={() => setShowAllOptions(false)}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+                  >
+                    ← Back to selected: {savedPreference.folder}
+                  </button>
+                )}
+                {matches.map((match, index) => (
+                  <button
+                    key={index}
+                    onClick={() => savePreference(match.folderName, match.url)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0 block"
+                  >
+                    <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
