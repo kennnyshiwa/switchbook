@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
@@ -29,15 +29,22 @@ interface ColumnMapping {
 
 type ImportStep = 'upload' | 'mapping' | 'preview' | 'importing' | 'complete'
 
+interface ParsedSwitchWithDuplicate extends ParsedSwitch {
+  isDuplicate?: boolean
+  existingId?: string
+  overwrite?: boolean
+}
+
 export default function BulkUploadPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload')
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({})
-  const [parsedSwitches, setParsedSwitches] = useState<ParsedSwitch[]>([])
+  const [parsedSwitches, setParsedSwitches] = useState<ParsedSwitchWithDuplicate[]>([])
+  const [existingSwitches, setExistingSwitches] = useState<Switch[]>([])
   const [importProgress, setImportProgress] = useState(0)
-  const [importResults, setImportResults] = useState<{ success: number; errors: string[] }>({ success: 0, errors: [] })
+  const [importResults, setImportResults] = useState<{ success: number; errors: string[]; skipped: number }>({ success: 0, errors: [], skipped: 0 })
 
   const switchFields = [
     { key: 'name', label: 'Switch Name', required: true },
@@ -56,6 +63,22 @@ export default function BulkUploadPage() {
     { key: 'imageUrl', label: 'Image URL', required: false },
     { key: 'dateObtained', label: 'Date Obtained', required: false },
   ]
+
+  // Fetch existing switches on component mount
+  useEffect(() => {
+    const fetchExistingSwitches = async () => {
+      try {
+        const response = await fetch('/api/switches')
+        if (response.ok) {
+          const switches = await response.json()
+          setExistingSwitches(switches)
+        }
+      } catch (error) {
+        console.error('Failed to fetch existing switches:', error)
+      }
+    }
+    fetchExistingSwitches()
+  }, [])
 
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
@@ -135,8 +158,8 @@ export default function BulkUploadPage() {
   }
 
   const parseAndPreview = () => {
-    const parsed: ParsedSwitch[] = csvData.map(row => {
-      const switchData: Partial<ParsedSwitch> = {}
+    const parsed: ParsedSwitchWithDuplicate[] = csvData.map(row => {
+      const switchData: Partial<ParsedSwitchWithDuplicate> = {}
       
       Object.entries(columnMapping).forEach(([columnIndex, field]) => {
         if (field && row[parseInt(columnIndex)]) {
@@ -167,16 +190,40 @@ export default function BulkUploadPage() {
         }
       })
       
-      return switchData as ParsedSwitch
+      return switchData as ParsedSwitchWithDuplicate
     }).filter(sw => sw.name && sw.type) // Only include switches with required fields
     
-    setParsedSwitches(parsed)
+    // Check for duplicates
+    const parsedWithDuplicateCheck = parsed.map(switchItem => {
+      const existingSwitch = existingSwitches.find(
+        existing => existing.name.toLowerCase() === switchItem.name.toLowerCase()
+      )
+      
+      if (existingSwitch) {
+        return {
+          ...switchItem,
+          isDuplicate: true,
+          existingId: existingSwitch.id,
+          overwrite: false // Default to not overwriting
+        }
+      }
+      
+      return switchItem
+    })
+    
+    setParsedSwitches(parsedWithDuplicateCheck)
     setCurrentStep('preview')
   }
 
-  const updateParsedSwitch = (index: number, field: keyof ParsedSwitch, value: string | number | undefined) => {
+  const updateParsedSwitch = (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | undefined) => {
     setParsedSwitches(prev => prev.map((sw, i) => 
       i === index ? { ...sw, [field]: value } : sw
+    ))
+  }
+
+  const toggleOverwrite = (index: number) => {
+    setParsedSwitches(prev => prev.map((sw, i) => 
+      i === index ? { ...sw, overwrite: !sw.overwrite } : sw
     ))
   }
 
@@ -184,15 +231,38 @@ export default function BulkUploadPage() {
     setCurrentStep('importing')
     setImportProgress(0)
     
-    const results = { success: 0, errors: [] as string[] }
+    const results = { success: 0, errors: [] as string[], skipped: 0 }
     
     for (let i = 0; i < parsedSwitches.length; i++) {
+      const switchItem = parsedSwitches[i]
+      
+      // Skip duplicates that user chose not to overwrite
+      if (switchItem.isDuplicate && !switchItem.overwrite) {
+        results.skipped++
+        setImportProgress(Math.round(((i + 1) / parsedSwitches.length) * 100))
+        continue
+      }
+      
       try {
-        const response = await fetch('/api/switches', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(parsedSwitches[i])
-        })
+        let response
+        
+        if (switchItem.isDuplicate && switchItem.overwrite && switchItem.existingId) {
+          // Update existing switch
+          const { isDuplicate, existingId, overwrite, ...switchData } = switchItem
+          response = await fetch(`/api/switches/${switchItem.existingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(switchData)
+          })
+        } else {
+          // Create new switch
+          const { isDuplicate, existingId, overwrite, ...switchData } = switchItem
+          response = await fetch('/api/switches', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(switchData)
+          })
+        }
         
         if (response.ok) {
           results.success++
@@ -355,6 +425,9 @@ export default function BulkUploadPage() {
               <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Name
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -373,13 +446,36 @@ export default function BulkUploadPage() {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {parsedSwitches.map((switchItem, index) => (
-                  <tr key={index}>
+                  <tr key={index} className={switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {switchItem.isDuplicate ? (
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+                            Duplicate
+                          </span>
+                          <label className="flex items-center text-xs">
+                            <input
+                              type="checkbox"
+                              checked={switchItem.overwrite}
+                              onChange={() => toggleOverwrite(index)}
+                              className="mr-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className={switchItem.overwrite ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
+                              {switchItem.overwrite ? 'Overwrite' : 'Skip'}
+                            </span>
+                          </label>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-green-600 dark:text-green-400">New</span>
+                      )}
+                    </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <input
                         type="text"
                         value={switchItem.name}
                         onChange={(e) => updateParsedSwitch(index, 'name', e.target.value)}
                         className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -387,6 +483,7 @@ export default function BulkUploadPage() {
                         value={switchItem.type}
                         onChange={(e) => updateParsedSwitch(index, 'type', e.target.value)}
                         className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       >
                         <option value="LINEAR">LINEAR</option>
                         <option value="TACTILE">TACTILE</option>
@@ -401,6 +498,7 @@ export default function BulkUploadPage() {
                         value={switchItem.manufacturer || ''}
                         onChange={(e) => updateParsedSwitch(index, 'manufacturer', e.target.value)}
                         className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -409,6 +507,7 @@ export default function BulkUploadPage() {
                         value={switchItem.springWeight || ''}
                         onChange={(e) => updateParsedSwitch(index, 'springWeight', e.target.value)}
                         className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -436,7 +535,7 @@ export default function BulkUploadPage() {
               onClick={importSwitches}
               className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
             >
-              Import {parsedSwitches.length} Switches
+              Import {parsedSwitches.filter(s => !s.isDuplicate || s.overwrite).length} of {parsedSwitches.length} Switches
             </button>
           </div>
         </div>
@@ -478,6 +577,14 @@ export default function BulkUploadPage() {
               </h3>
             </div>
             
+            {importResults.skipped > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
+                <h3 className="font-medium text-blue-900 dark:text-blue-100">
+                  Skipped {importResults.skipped} duplicate switches
+                </h3>
+              </div>
+            )}
+            
             {importResults.errors.length > 0 && (
               <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md">
                 <h3 className="font-medium text-red-900 dark:text-red-100 mb-2">
@@ -507,7 +614,7 @@ export default function BulkUploadPage() {
                 setColumnMapping({})
                 setParsedSwitches([])
                 setImportProgress(0)
-                setImportResults({ success: 0, errors: [] })
+                setImportResults({ success: 0, errors: [], skipped: 0 })
               }}
               className="flex-1 px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
             >
