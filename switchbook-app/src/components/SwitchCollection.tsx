@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Switch } from '@prisma/client'
+import Link from 'next/link'
 import SwitchCard from './SwitchCard'
 import SwitchTable from './SwitchTable'
 import AddSwitchModal from './AddSwitchModal'
@@ -117,13 +118,22 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">No switches yet</h3>
             <p className="mt-1 text-sm text-gray-500">Get started by adding your first switch.</p>
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
               <button
                 onClick={() => setShowAddModal(true)}
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
                 Add your first switch
               </button>
+              <div className="text-center">
+                <span className="text-gray-400 text-sm">or</span>
+              </div>
+              <Link
+                href="/dashboard/bulk-upload"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Bulk Upload
+              </Link>
             </div>
           </div>
         </div>
@@ -142,15 +152,23 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     <>
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             Your Switches ({switches.length}{searchTerm && ` • ${filteredAndSortedSwitches.length} shown`})
           </h2>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Add Switch
-          </button>
+          <div className="flex space-x-3">
+            <Link
+              href="/dashboard/bulk-upload"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
+            >
+              Bulk Upload
+            </Link>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            >
+              Add Switch
+            </button>
+          </div>
         </div>
         <CollectionControls
           onSearchChange={setSearchTerm}
