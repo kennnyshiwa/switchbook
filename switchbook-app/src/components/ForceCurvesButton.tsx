@@ -21,7 +21,10 @@ export default function ForceCurvesButton({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
   const [showAllOptions, setShowAllOptions] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('top')
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -128,6 +131,7 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
+      calculateDropdownPosition()
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -139,7 +143,52 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
+    calculateDropdownPosition()
     setIsDropdownOpen(!isDropdownOpen)
+  }
+
+  const calculateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      const spaceAbove = rect.top
+      const spaceBelow = viewportHeight - rect.bottom
+      const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
+      const dropdownWidth = 320 // w-80
+      
+      // Calculate position for fixed positioning
+      let top = rect.bottom + 4
+      let left = rect.right - dropdownWidth
+      
+      // Use bottom position if there's more space below or if top would be cut off
+      if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
+        top = rect.top - estimatedDropdownHeight - 4
+        setDropdownPosition('top')
+      } else {
+        setDropdownPosition('bottom')
+      }
+      
+      // For icon variant (table view), anchor to the right edge of button
+      if (variant === 'icon') {
+        left = rect.right - dropdownWidth
+      } else {
+        // For button variant, anchor to left edge
+        left = rect.left
+      }
+      
+      // Ensure dropdown doesn't go off left edge
+      if (left < 16) {
+        left = 16
+      }
+      
+      // Ensure dropdown doesn't go off right edge
+      if (left + dropdownWidth > viewportWidth - 16) {
+        left = viewportWidth - dropdownWidth - 16
+      }
+      
+      setDropdownStyle({ top, left })
+    }
   }
 
 
@@ -152,17 +201,15 @@ export default function ForceCurvesButton({
     }
   }
 
-  // Variant-specific dropdown positioning - right-anchor for table view (icon), left-anchor for grid view (button)
-  const dropdownClasses = variant === 'icon' 
-    ? 'absolute bottom-full mb-1 right-0' 
-    : 'absolute bottom-full mb-1 left-0'
-
   // Render the dropdown (shared across all variants)
   const renderDropdown = () => {
     if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
 
     return (
-      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80`}>
+      <div 
+        className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80"
+        style={dropdownStyle}
+      >
         <div className="max-h-64 overflow-y-auto">
           {savedPreference && !showAllOptions ? (
             <div>
@@ -240,6 +287,7 @@ export default function ForceCurvesButton({
     return (
       <div className="relative" ref={dropdownRef}>
         <button
+          ref={buttonRef}
           onClick={() => handleClick()}
           className={`text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors ${className}`}
           title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
@@ -264,6 +312,7 @@ export default function ForceCurvesButton({
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        ref={buttonRef}
         onClick={() => handleClick()}
         className={`inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-100 border border-purple-300 rounded-md hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700 dark:hover:bg-purple-800 transition-colors ${className}`}
         title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
