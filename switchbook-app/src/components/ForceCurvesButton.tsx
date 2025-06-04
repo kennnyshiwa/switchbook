@@ -205,13 +205,13 @@ export default function ForceCurvesButton({
   const renderDropdown = () => {
     if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
 
-    // Use the exact anchoring pattern from commit 5593c5e
+    // Use the exact anchoring pattern from commit 5593c5e but with much higher z-index
     const dropdownClasses = variant === 'icon' 
       ? 'absolute bottom-full mb-1 right-0' 
       : 'absolute bottom-full mb-1 left-0'
 
     return (
-      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80`}>
+      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[9999] w-80`}>
         {renderDropdownContent()}
       </div>
     )
