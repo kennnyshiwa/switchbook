@@ -8,15 +8,13 @@ interface ForceCurvesButtonProps {
   manufacturer?: string | null
   variant?: 'button' | 'badge' | 'icon'
   className?: string
-  dropdownPosition?: 'above' | 'below'
 }
 
 export default function ForceCurvesButton({ 
   switchName, 
   manufacturer, 
   variant = 'button',
-  className = '',
-  dropdownPosition = 'above'
+  className = ''
 }: ForceCurvesButtonProps) {
   const [matches, setMatches] = useState<ForceCurveMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -154,12 +152,8 @@ export default function ForceCurvesButton({
     }
   }
 
-  // Determine dropdown positioning based on variant and dropdownPosition
-  const dropdownClasses = variant === 'icon' 
-    ? 'absolute top-full mt-1 -left-56' 
-    : dropdownPosition === 'below'
-      ? 'absolute top-full mt-1 left-0'
-      : 'absolute bottom-full mb-1 left-0'
+  // Use identical dropdown positioning for all variants
+  const dropdownClasses = 'absolute bottom-full mb-1 left-0'
 
   // Render the dropdown (shared across all variants)
   const renderDropdown = () => {
