@@ -35,6 +35,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       preTravel: switchItem.preTravel || undefined,
       bottomOut: switchItem.bottomOut || undefined,
       springWeight: switchItem.springWeight || '',
+      springLength: switchItem.springLength || '',
       imageUrl: switchItem.imageUrl || '',
       notes: switchItem.notes || '',
       topHousing: switchItem.topHousing || '',

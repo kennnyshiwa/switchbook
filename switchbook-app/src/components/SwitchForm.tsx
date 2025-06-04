@@ -121,17 +121,36 @@ export default function SwitchForm({ register, errors }: SwitchFormProps) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Spring Weight</label>
-        <input
-          {...register('springWeight')}
-          type="text"
-          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-          placeholder="62g"
-        />
-        {errors.springWeight && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.springWeight.message}</p>
-        )}
+      <div className="space-y-4">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Spring Details</h4>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Spring Weight</label>
+            <input
+              {...register('springWeight')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="62g"
+            />
+            {errors.springWeight && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.springWeight.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Spring Length (mm)</label>
+            <input
+              {...register('springLength')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="14mm"
+            />
+            {errors.springLength && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.springLength.message}</p>
+            )}
+          </div>
+        </div>
       </div>
 
 
