@@ -20,6 +20,7 @@ export default function ForceCurvesButton({
   const [isLoading, setIsLoading] = useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('top')
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -76,16 +77,35 @@ export default function ForceCurvesButton({
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect()
         const viewportHeight = window.innerHeight
+        const viewportWidth = window.innerWidth
         const spaceAbove = rect.top
         const spaceBelow = viewportHeight - rect.bottom
-        const estimatedDropdownHeight = Math.min(matches.length * 60, 256) // Estimate dropdown height
+        const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
+        const dropdownWidth = 256 // min-w-64
+        
+        // Calculate position for fixed positioning
+        let top = rect.bottom + 4
+        let left = rect.right - dropdownWidth
         
         // Use bottom position if there's more space below or if top would be cut off
-        if (spaceBelow > estimatedDropdownHeight || spaceAbove < estimatedDropdownHeight) {
-          setDropdownPosition('bottom')
-        } else {
+        if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
+          top = rect.top - estimatedDropdownHeight - 4
           setDropdownPosition('top')
+        } else {
+          setDropdownPosition('bottom')
         }
+        
+        // Ensure dropdown doesn't go off left edge
+        if (left < 16) {
+          left = rect.left
+        }
+        
+        // Ensure dropdown doesn't go off right edge
+        if (left + dropdownWidth > viewportWidth - 16) {
+          left = viewportWidth - dropdownWidth - 16
+        }
+        
+        setDropdownStyle({ top, left })
       }
       setIsDropdownOpen(!isDropdownOpen)
     }
@@ -159,7 +179,10 @@ export default function ForceCurvesButton({
         </button>
         
         {isDropdownOpen && matches.length > 1 && (
-          <div className={`absolute ${dropdownPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'} -left-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80`}>
+          <div 
+            className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80"
+            style={dropdownStyle}
+          >
             <div className="max-h-64 overflow-y-auto">
               {matches.map((match, index) => (
                 <button
