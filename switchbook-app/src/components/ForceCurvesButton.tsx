@@ -19,12 +19,9 @@ export default function ForceCurvesButton({
   const [matches, setMatches] = useState<ForceCurveMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('top')
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
   const [showAllOptions, setShowAllOptions] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -131,10 +128,6 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
-      // Calculate dropdown position for icon variant only
-      if (variant === 'icon') {
-        calculateDropdownPosition()
-      }
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -146,41 +139,9 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
-    if (variant === 'icon') {
-      calculateDropdownPosition()
-    }
     setIsDropdownOpen(!isDropdownOpen)
   }
 
-  const calculateDropdownPosition = () => {
-    if (buttonRef.current && variant === 'icon') {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
-      const spaceAbove = rect.top
-      const spaceBelow = viewportHeight - rect.bottom
-      const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
-      const dropdownWidth = 256 // min-w-64
-      
-      // Position dropdown to the left of the icon button, not right-aligned
-      let top = rect.bottom + 4
-      let left = rect.left - dropdownWidth + 20 // Position left with small offset
-      
-      // Check if we need to position above instead
-      if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
-        top = rect.top - estimatedDropdownHeight - 4
-        setDropdownPosition('top')
-      } else {
-        setDropdownPosition('bottom')
-      }
-      
-      // Ensure dropdown doesn't go off left edge of viewport
-      if (left < 10) {
-        left = rect.right - dropdownWidth + 10 // Position to the right of button instead
-      }
-      
-      setDropdownStyle({ top, left })
-    }
-  }
 
   const getMatchTypeLabel = (matchType: ForceCurveMatch['matchType']) => {
     switch (matchType) {
@@ -266,7 +227,6 @@ export default function ForceCurvesButton({
     return (
       <div className="relative" ref={dropdownRef}>
         <button
-          ref={buttonRef}
           onClick={() => handleClick()}
           className={`text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors ${className}`}
           title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
@@ -284,10 +244,7 @@ export default function ForceCurvesButton({
         </button>
         
         {isDropdownOpen && (matches.length > 1 || savedPreference) && (
-          <div 
-            className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80"
-            style={dropdownStyle}
-          >
+          <div className="absolute top-full mt-1 -left-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80">
             <div className="max-h-64 overflow-y-auto">
               {savedPreference && !showAllOptions ? (
                 <div>
