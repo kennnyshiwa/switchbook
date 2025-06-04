@@ -131,7 +131,7 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
-      calculateDropdownPosition()
+      if (variant === 'icon') calculateDropdownPosition()
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -143,7 +143,7 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
-    calculateDropdownPosition()
+    if (variant === 'icon') calculateDropdownPosition()
     setIsDropdownOpen(!isDropdownOpen)
   }
 
@@ -201,63 +201,76 @@ export default function ForceCurvesButton({
     }
   }
 
-  // Variant-specific dropdown positioning - right-anchor for table view (icon), left-anchor for grid view (button)
-  const dropdownClasses = variant === 'icon' 
-    ? 'absolute bottom-full mb-1 right-0' 
-    : 'absolute bottom-full mb-1 left-0'
+  // Render dropdown content (shared between positioning methods)
+  const renderDropdownContent = () => (
+    <div className="max-h-64 overflow-y-auto">
+      {savedPreference && !showAllOptions ? (
+        <div>
+          <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
+            <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
+          </div>
+          <button
+            onClick={() => {
+              window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
+              setIsDropdownOpen(false)
+            }}
+            className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 block"
+          >
+            Open this force curve
+          </button>
+          <button
+            onClick={() => setShowAllOptions(true)}
+            className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md block"
+          >
+            Choose different option ({matches.length} available)
+          </button>
+        </div>
+      ) : (
+        <div>
+          {savedPreference && (
+            <button
+              onClick={() => setShowAllOptions(false)}
+              className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+            >
+              ← Back to selected: {savedPreference.folder}
+            </button>
+          )}
+          {matches.map((match, index) => (
+            <button
+              key={index}
+              onClick={() => savePreference(match.folderName, match.url)}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0 block"
+            >
+              <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 
   // Render the dropdown (shared across all variants)
   const renderDropdown = () => {
     if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
 
-    return (
-      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80`}>
-        <div className="max-h-64 overflow-y-auto">
-          {savedPreference && !showAllOptions ? (
-            <div>
-              <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
-                <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
-              </div>
-              <button
-                onClick={() => {
-                  window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
-                  setIsDropdownOpen(false)
-                }}
-                className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 block"
-              >
-                Open this force curve
-              </button>
-              <button
-                onClick={() => setShowAllOptions(true)}
-                className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md block"
-              >
-                Choose different option ({matches.length} available)
-              </button>
-            </div>
-          ) : (
-            <div>
-              {savedPreference && (
-                <button
-                  onClick={() => setShowAllOptions(false)}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
-                >
-                  ← Back to selected: {savedPreference.folder}
-                </button>
-              )}
-              {matches.map((match, index) => (
-                <button
-                  key={index}
-                  onClick={() => savePreference(match.folderName, match.url)}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0 block"
-                >
-                  <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
-                </button>
-              ))}
-            </div>
-          )}
+    // For icon variant (table view), use fixed positioning to escape table container
+    if (variant === 'icon') {
+      return (
+        <div 
+          className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80"
+          style={dropdownStyle}
+        >
+          {renderDropdownContent()}
         </div>
+      )
+    }
+
+    // For button variant (grid view), use normal absolute positioning  
+    return (
+      <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80">
+        {renderDropdownContent()}
       </div>
     )
   }
