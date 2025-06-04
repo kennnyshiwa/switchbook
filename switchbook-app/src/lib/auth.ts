@@ -16,6 +16,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: "jwt",
   },
+  debug: process.env.NODE_ENV === "development",
+  trustHost: true,
   providers: [
     Credentials({
       name: "credentials",
@@ -77,5 +79,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
+  },
+  events: {
+    async signIn(message) {
+      console.log("Sign in event:", message)
+    },
+    async signOut(message) {
+      console.log("Sign out event:", message)
+    },
   },
 })
