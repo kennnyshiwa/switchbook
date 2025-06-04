@@ -21,10 +21,7 @@ export default function ForceCurvesButton({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
   const [showAllOptions, setShowAllOptions] = useState(false)
-  const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>('top')
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -131,36 +128,6 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
-      // Calculate position for icon variant (table view) only
-      if (variant === 'icon' && buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect()
-        const viewportHeight = window.innerHeight
-        const viewportWidth = window.innerWidth
-        const spaceAbove = rect.top
-        const spaceBelow = viewportHeight - rect.bottom
-        const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
-        const dropdownWidth = 320
-        
-        let top = rect.bottom + 4
-        let left = rect.right - dropdownWidth
-        
-        if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
-          top = rect.top - estimatedDropdownHeight - 4
-          setDropdownPosition('top')
-        } else {
-          setDropdownPosition('bottom')
-        }
-        
-        if (left < 16) {
-          left = rect.left
-        }
-        
-        if (left + dropdownWidth > viewportWidth - 16) {
-          left = viewportWidth - dropdownWidth - 16
-        }
-        
-        setDropdownStyle({ top, left })
-      }
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -172,36 +139,6 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
-    // Calculate position for icon variant (table view) only
-    if (variant === 'icon' && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
-      const spaceAbove = rect.top
-      const spaceBelow = viewportHeight - rect.bottom
-      const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
-      const dropdownWidth = 320
-      
-      let top = rect.bottom + 4
-      let left = rect.right - dropdownWidth
-      
-      if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
-        top = rect.top - estimatedDropdownHeight - 4
-        setDropdownPosition('top')
-      } else {
-        setDropdownPosition('bottom')
-      }
-      
-      if (left < 16) {
-        left = rect.left
-      }
-      
-      if (left + dropdownWidth > viewportWidth - 16) {
-        left = viewportWidth - dropdownWidth - 16
-      }
-      
-      setDropdownStyle({ top, left })
-    }
     setIsDropdownOpen(!isDropdownOpen)
   }
 
@@ -268,21 +205,13 @@ export default function ForceCurvesButton({
   const renderDropdown = () => {
     if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
 
-    // For icon variant (table view), use fixed positioning to escape table container
-    if (variant === 'icon') {
-      return (
-        <div 
-          className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80"
-          style={dropdownStyle}
-        >
-          {renderDropdownContent()}
-        </div>
-      )
-    }
+    // Use the exact anchoring pattern from commit 5593c5e
+    const dropdownClasses = variant === 'icon' 
+      ? 'absolute bottom-full mb-1 right-0' 
+      : 'absolute bottom-full mb-1 left-0'
 
-    // For button variant (grid view), use normal absolute positioning  
     return (
-      <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80">
+      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-80`}>
         {renderDropdownContent()}
       </div>
     )
