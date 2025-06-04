@@ -253,6 +253,15 @@ export default function ForceCurvesButton({
                     <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
                   </div>
                   <button
+                    onClick={() => {
+                      window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
+                      setIsDropdownOpen(false)
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+                  >
+                    Open this force curve
+                  </button>
+                  <button
                     onClick={() => setShowAllOptions(true)}
                     className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md"
                   >
