@@ -460,8 +460,8 @@ export default function BulkUploadPage() {
                               onChange={() => toggleOverwrite(index)}
                               className="mr-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
-                            <span className={switchItem.overwrite ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
-                              {switchItem.overwrite ? 'Overwrite' : 'Skip'}
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Overwrite
                             </span>
                           </label>
                         </div>
