@@ -21,7 +21,9 @@ export default function ForceCurvesButton({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
   const [showAllOptions, setShowAllOptions] = useState(false)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -128,6 +130,16 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
+      // Calculate position for icon variant to escape table
+      if (variant === 'icon' && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect()
+        setDropdownStyle({
+          position: 'fixed',
+          top: rect.top - 320 - 4, // position above button
+          left: rect.right - 320, // right-align to button
+          zIndex: 9999
+        })
+      }
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -139,6 +151,16 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
+    // Calculate position for icon variant to escape table
+    if (variant === 'icon' && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.top - 320 - 4, // position above button
+        left: rect.right - 320, // right-align to button
+        zIndex: 9999
+      })
+    }
     setIsDropdownOpen(!isDropdownOpen)
   }
 
@@ -205,13 +227,21 @@ export default function ForceCurvesButton({
   const renderDropdown = () => {
     if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
 
-    // Use the exact anchoring pattern from commit 5593c5e but with much higher z-index
-    const dropdownClasses = variant === 'icon' 
-      ? 'absolute bottom-full mb-1 right-0' 
-      : 'absolute bottom-full mb-1 left-0'
+    // For icon variant, use fixed positioning to escape table
+    if (variant === 'icon') {
+      return (
+        <div 
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg w-80"
+          style={dropdownStyle}
+        >
+          {renderDropdownContent()}
+        </div>
+      )
+    }
 
+    // For other variants, use normal absolute positioning
     return (
-      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[9999] w-80`}>
+      <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[9999] w-80">
         {renderDropdownContent()}
       </div>
     )
@@ -244,6 +274,7 @@ export default function ForceCurvesButton({
     return (
       <div className="relative" ref={dropdownRef}>
         <button
+          ref={buttonRef}
           onClick={() => handleClick()}
           className={`text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors ${className}`}
           title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
