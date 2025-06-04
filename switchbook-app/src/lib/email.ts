@@ -37,7 +37,8 @@ export async function sendVerificationEmail(email: string, userId: string) {
     },
   })
 
-  const verificationUrl = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}`
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const verificationUrl = `${baseUrl}/auth/verify-email?token=${token}`
   const client = getMailgunClient()
   
   if (!client) {
@@ -85,7 +86,8 @@ export async function sendUserPasswordResetEmail(email: string, userId: string) 
     },
   })
 
-  const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`
   const client = getMailgunClient()
   
   if (!client) {
