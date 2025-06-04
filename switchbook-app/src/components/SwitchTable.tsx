@@ -4,6 +4,7 @@ import { useState, memo } from 'react'
 import { Switch } from '@prisma/client'
 import { SWITCH_TYPE_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
+import ForceCurvesButton from './ForceCurvesButton'
 
 interface SwitchTableProps {
   switches: Switch[]
@@ -120,7 +121,12 @@ function SwitchTable({ switches, onDelete, onEdit }: SwitchTableProps) {
                   {switchItem.notes || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end space-x-2">
+                  <div className="flex justify-end items-center space-x-2">
+                    <ForceCurvesButton 
+                      switchName={switchItem.name}
+                      manufacturer={switchItem.manufacturer}
+                      variant="icon"
+                    />
                     <button
                       onClick={() => onEdit(switchItem)}
                       className="text-blue-600 hover:text-blue-800"

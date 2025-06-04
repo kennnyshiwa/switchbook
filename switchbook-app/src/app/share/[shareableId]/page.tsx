@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import CollectionStats from "@/components/CollectionStats"
+import ForceCurvesButton from "@/components/ForceCurvesButton"
 
 interface SharePageProps {
   params: Promise<{ shareableId: string }>
@@ -94,6 +95,16 @@ export default async function SharePage({ params }: SharePageProps) {
                     {switchItem.notes && (
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{switchItem.notes}</p>
                     )}
+
+                    {/* Force Curves Button */}
+                    <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <ForceCurvesButton 
+                        switchName={switchItem.name}
+                        manufacturer={switchItem.manufacturer}
+                        variant="button"
+                        className="w-full justify-center"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

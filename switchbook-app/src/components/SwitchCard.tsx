@@ -5,6 +5,7 @@ import { Switch } from '@prisma/client'
 import Image from 'next/image'
 import { SWITCH_TYPE_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
+import ForceCurvesButton from './ForceCurvesButton'
 
 interface SwitchCardProps {
   switch: Switch
@@ -162,6 +163,16 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
           {switchItem.notes && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{switchItem.notes}</p>
           )}
+
+          {/* Force Curves Button */}
+          <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+            <ForceCurvesButton 
+              switchName={switchItem.name}
+              manufacturer={switchItem.manufacturer}
+              variant="button"
+              className="w-full justify-center"
+            />
+          </div>
         </div>
       </div>
     </div>
