@@ -156,15 +156,14 @@ export default function ForceCurvesButton({
     if (buttonRef.current && variant === 'icon') {
       const rect = buttonRef.current.getBoundingClientRect()
       const viewportHeight = window.innerHeight
-      const viewportWidth = window.innerWidth
       const spaceAbove = rect.top
       const spaceBelow = viewportHeight - rect.bottom
       const estimatedDropdownHeight = Math.min(matches.length * 60, 256)
       const dropdownWidth = 256 // min-w-64
       
-      // For icon variant in table, position more carefully
+      // Position dropdown to the left of the icon button, not right-aligned
       let top = rect.bottom + 4
-      let left = rect.left - dropdownWidth + rect.width // Align right edge of dropdown with right edge of button
+      let left = rect.left - dropdownWidth + 20 // Position left with small offset
       
       // Check if we need to position above instead
       if (spaceBelow < estimatedDropdownHeight && spaceAbove > estimatedDropdownHeight) {
@@ -174,14 +173,9 @@ export default function ForceCurvesButton({
         setDropdownPosition('bottom')
       }
       
-      // Ensure dropdown doesn't go off left edge
-      if (left < 16) {
-        left = rect.left // Align with left edge of button instead
-      }
-      
-      // Ensure dropdown doesn't go off right edge  
-      if (left + dropdownWidth > viewportWidth - 16) {
-        left = viewportWidth - dropdownWidth - 16
+      // Ensure dropdown doesn't go off left edge of viewport
+      if (left < 10) {
+        left = rect.right - dropdownWidth + 10 // Position to the right of button instead
       }
       
       setDropdownStyle({ top, left })
