@@ -128,11 +128,6 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
             </p>
           )}
 
-          {switchItem.travel && (
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              <span className="font-medium">Travel:</span> {switchItem.travel}
-            </p>
-          )}
 
           {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">

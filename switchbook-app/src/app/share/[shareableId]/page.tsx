@@ -84,11 +84,6 @@ export default async function SharePage({ params }: SharePageProps) {
                       </p>
                     )}
 
-                    {switchItem.travel && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Travel:</span> {switchItem.travel}
-                      </p>
-                    )}
 
                     {switchItem.notes && (
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{switchItem.notes}</p>

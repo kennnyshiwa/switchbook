@@ -10,7 +10,6 @@ interface SwitchData {
   bottomOutForce?: number | null;
   preTravel?: number | null;
   bottomOut?: number | null;
-  travel?: string | null;
   notes?: string | null;
   imageUrl?: string | null;
   topHousing?: string | null;
@@ -30,7 +29,6 @@ export function transformSwitchData(data: SwitchData) {
     bottomOutForce: data.bottomOutForce || null,
     preTravel: data.preTravel || null,
     bottomOut: data.bottomOut || null,
-    travel: data.travel || null,
     notes: data.notes || null,
     imageUrl: data.imageUrl || null,
     topHousing: data.topHousing || null,

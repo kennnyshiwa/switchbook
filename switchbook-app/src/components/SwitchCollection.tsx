@@ -91,20 +91,6 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
           return bWeight - aWeight
         })
         break
-      case 'travel-asc':
-        sorted.sort((a, b) => {
-          const aTravel = parseFloat(a.travel?.match(/[\d.]+/)?.[0] || '0')
-          const bTravel = parseFloat(b.travel?.match(/[\d.]+/)?.[0] || '0')
-          return aTravel - bTravel
-        })
-        break
-      case 'travel-desc':
-        sorted.sort((a, b) => {
-          const aTravel = parseFloat(a.travel?.match(/[\d.]+/)?.[0] || '0')
-          const bTravel = parseFloat(b.travel?.match(/[\d.]+/)?.[0] || '0')
-          return bTravel - aTravel
-        })
-        break
     }
 
     return sorted

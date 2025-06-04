@@ -109,8 +109,6 @@ export default function CollectionControls({ onSearchChange, onSortChange, onVie
               <option value="type">Type</option>
               <option value="spring-asc">Spring Weight (Low to High)</option>
               <option value="spring-desc">Spring Weight (High to Low)</option>
-              <option value="travel-asc">Travel (Low to High)</option>
-              <option value="travel-desc">Travel (High to Low)</option>
             </select>
           </div>
         </div>
