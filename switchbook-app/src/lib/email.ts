@@ -1,17 +1,27 @@
-import nodemailer from 'nodemailer'
+import Mailgun from 'mailgun.js'
+import formData from 'form-data'
 import { randomBytes } from 'crypto'
 import { prisma } from './prisma'
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-})
+// Initialize Mailgun client
+const mailgun = new Mailgun(formData)
+
+function getMailgunClient() {
+  const apiKey = process.env.MAILGUN_API_KEY
+  const domain = process.env.MAILGUN_DOMAIN
+  const baseUrl = process.env.MAILGUN_URL || 'https://api.mailgun.net'
+  
+  if (!apiKey || !domain) {
+    console.error('Mailgun configuration missing. Please set MAILGUN_API_KEY and MAILGUN_DOMAIN environment variables.')
+    return null
+  }
+  
+  return mailgun.client({
+    username: 'api',
+    key: apiKey,
+    url: baseUrl
+  })
+}
 
 export async function sendVerificationEmail(email: string, userId: string) {
   // Generate verification token
@@ -28,9 +38,14 @@ export async function sendVerificationEmail(email: string, userId: string) {
   })
 
   const verificationUrl = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}`
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
 
-  const mailOptions = {
-    from: process.env.EMAIL_FROM,
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
     to: email,
     subject: 'Verify your Switchbook account',
     html: `
@@ -48,7 +63,7 @@ export async function sendVerificationEmail(email: string, userId: string) {
   }
 
   try {
-    await transporter.sendMail(mailOptions)
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
     return { success: true }
   } catch (error) {
     console.error('Failed to send verification email:', error)
@@ -71,9 +86,14 @@ export async function sendUserPasswordResetEmail(email: string, userId: string) 
   })
 
   const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
 
-  const mailOptions = {
-    from: process.env.EMAIL_FROM,
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
     to: email,
     subject: 'Reset your Switchbook password',
     html: `
@@ -91,7 +111,7 @@ export async function sendUserPasswordResetEmail(email: string, userId: string) 
   }
 
   try {
-    await transporter.sendMail(mailOptions)
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
     return { success: true }
   } catch (error) {
     console.error('Failed to send password reset email:', error)
@@ -100,8 +120,14 @@ export async function sendUserPasswordResetEmail(email: string, userId: string) 
 }
 
 export async function sendPasswordResetEmail(email: string, newPassword: string) {
-  const mailOptions = {
-    from: process.env.EMAIL_FROM,
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
     to: email,
     subject: 'Your Switchbook password has been reset',
     html: `
@@ -116,7 +142,7 @@ export async function sendPasswordResetEmail(email: string, newPassword: string)
   }
 
   try {
-    await transporter.sendMail(mailOptions)
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
     return { success: true }
   } catch (error) {
     console.error('Failed to send password reset email:', error)
