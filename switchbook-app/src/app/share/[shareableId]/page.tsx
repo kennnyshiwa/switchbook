@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import CollectionStats from "@/components/CollectionStats"
 import ForceCurvesButton from "@/components/ForceCurvesButton"
+import { SWITCH_TYPE_COLORS } from "@/constants/switchTypes"
 
 interface SharePageProps {
   params: Promise<{ shareableId: string }>
@@ -24,13 +25,6 @@ export default async function SharePage({ params }: SharePageProps) {
     notFound()
   }
 
-  const typeColors = {
-    LINEAR: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
-    TACTILE: 'bg-brown-100 text-brown-800 dark:bg-brown-900/20 dark:text-brown-400',
-    CLICKY: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
-    SILENT_LINEAR: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    SILENT_TACTILE: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400',
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -70,7 +64,7 @@ export default async function SharePage({ params }: SharePageProps) {
                   
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[switchItem.type]}`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
                         {switchItem.type.replace('_', ' ')}
                       </span>
                     </div>
