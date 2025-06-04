@@ -160,7 +160,7 @@ export default function ForceCurvesButton({
     if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
 
     return (
-      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] min-w-64 max-w-80`}>
+      <div className={`${dropdownClasses} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[60] w-48`}>
         <div className="max-h-64 overflow-y-auto">
           {savedPreference && !showAllOptions ? (
             <div>
