@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 const PreferenceSchema = z.object({
   switchName: z.string().min(1),
-  manufacturer: z.string().optional(),
+  manufacturer: z.string().nullable().optional(),
   selectedFolder: z.string().min(1),
   selectedUrl: z.string().url(),
 })
