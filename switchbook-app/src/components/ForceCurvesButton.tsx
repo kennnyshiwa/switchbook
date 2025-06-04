@@ -103,7 +103,9 @@ export default function ForceCurvesButton({
       })
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('API Error Response:', errorData)
+        throw new Error(`HTTP error! status: ${response.status}, details: ${JSON.stringify(errorData)}`)
       }
       
       const result = await response.json()
