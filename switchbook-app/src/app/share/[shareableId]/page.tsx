@@ -80,7 +80,13 @@ export default async function SharePage({ params }: SharePageProps) {
 
                     {switchItem.springWeight && (
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Spring:</span> {switchItem.springWeight}
+                        <span className="font-medium">Spring Weight:</span> {switchItem.springWeight}g
+                      </p>
+                    )}
+
+                    {switchItem.springLength && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-medium">Spring Length:</span> {switchItem.springLength}mm
                       </p>
                     )}
 

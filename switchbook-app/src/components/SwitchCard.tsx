@@ -122,10 +122,19 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
             </div>
           )}
 
-          {switchItem.springWeight && (
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              <span className="font-medium">Spring:</span> {switchItem.springWeight}
-            </p>
+          {(switchItem.springWeight || switchItem.springLength) && (
+            <div className="space-y-1">
+              {switchItem.springWeight && (
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  <span className="font-medium">Spring Weight:</span> {switchItem.springWeight}g
+                </p>
+              )}
+              {switchItem.springLength && (
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  <span className="font-medium">Spring Length:</span> {switchItem.springLength}mm
+                </p>
+              )}
+            </div>
           )}
 
 
