@@ -135,8 +135,8 @@ export default function ForceCurvesButton({
         const rect = buttonRef.current.getBoundingClientRect()
         setDropdownStyle({
           position: 'fixed',
-          top: rect.top - 320 - 4, // position above button
-          left: rect.right - 320, // right-align to button
+          top: rect.top - 4, // position just above button (will grow upward with bottom-full)
+          right: window.innerWidth - rect.right, // anchor to right edge of button
           zIndex: 9999
         })
       }
@@ -156,8 +156,8 @@ export default function ForceCurvesButton({
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownStyle({
         position: 'fixed',
-        top: rect.top - 320 - 4, // position above button
-        left: rect.right - 320, // right-align to button
+        top: rect.top - 4, // position just above button (will grow upward with bottom-full)
+        right: window.innerWidth - rect.right, // anchor to right edge of button
         zIndex: 9999
       })
     }
@@ -232,7 +232,11 @@ export default function ForceCurvesButton({
       return (
         <div 
           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg w-80"
-          style={dropdownStyle}
+          style={{
+            ...dropdownStyle,
+            transform: 'translateY(-100%)', // Make it grow upward from the anchor point
+            marginBottom: '4px' // Add small gap like mb-1
+          }}
         >
           {renderDropdownContent()}
         </div>
