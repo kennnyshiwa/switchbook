@@ -31,7 +31,6 @@ model Switch {
   bottomOutForce  Float?
   preTravel       Float?
   bottomOut       Float?
-  travel          String?
   manufacturer    String
   notes           String?
   imageUrl        String?

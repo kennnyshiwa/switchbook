@@ -26,7 +26,6 @@ export const switchSchema = z.object({
   bottomOutForce: z.number().min(0).max(1000).optional(),
   preTravel: z.number().min(0).max(10).optional(),
   bottomOut: z.number().min(0).max(10).optional(),
-  travel: z.string().optional(),
   notes: z.string().max(500).optional(),
   imageUrl: z.string().url().optional().or(z.literal("")),
   topHousing: z.string().max(100).optional().or(z.literal("")),
