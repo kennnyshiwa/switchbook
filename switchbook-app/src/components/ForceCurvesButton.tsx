@@ -90,7 +90,8 @@ export default function ForceCurvesButton({
 
   const savePreference = async (folderName: string, url: string) => {
     try {
-      await fetch('/api/force-curve-preferences', {
+      console.log('Saving preference:', { switchName, manufacturer, folderName, url })
+      const response = await fetch('/api/force-curve-preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,9 +101,20 @@ export default function ForceCurvesButton({
           selectedUrl: url
         })
       })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      console.log('Preference saved:', result)
+      
       setSavedPreference({ folder: folderName, url })
       setIsDropdownOpen(false)
       setShowAllOptions(false)
+      
+      // Open the selected URL
+      window.open(url, '_blank', 'noopener,noreferrer')
     } catch (error) {
       console.error('Failed to save preference:', error)
     }
@@ -116,9 +128,11 @@ export default function ForceCurvesButton({
       return
     }
 
-    // If saved preference exists and not showing all options, use it
+    // If saved preference exists and not showing all options, show preference options
     if (savedPreference && !showAllOptions) {
-      window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
+      // Calculate dropdown position and show the preference interface
+      calculateDropdownPosition()
+      setIsDropdownOpen(!isDropdownOpen)
       return
     }
 
@@ -129,6 +143,11 @@ export default function ForceCurvesButton({
     }
 
     // Otherwise, show dropdown with options
+    calculateDropdownPosition()
+    setIsDropdownOpen(!isDropdownOpen)
+  }
+
+  const calculateDropdownPosition = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       const viewportHeight = window.innerHeight
@@ -162,7 +181,6 @@ export default function ForceCurvesButton({
       
       setDropdownStyle({ top, left })
     }
-    setIsDropdownOpen(!isDropdownOpen)
   }
 
   const getMatchTypeLabel = (matchType: ForceCurveMatch['matchType']) => {
@@ -201,6 +219,15 @@ export default function ForceCurvesButton({
                   <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
                   <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
                 </div>
+                <button
+                  onClick={() => {
+                    window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
+                    setIsDropdownOpen(false)
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+                >
+                  Open this force curve
+                </button>
                 <button
                   onClick={() => setShowAllOptions(true)}
                   className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md"
@@ -333,6 +360,15 @@ export default function ForceCurvesButton({
                   <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
                   <div className="font-medium text-gray-900 dark:text-white truncate">{savedPreference.folder}</div>
                 </div>
+                <button
+                  onClick={() => {
+                    window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
+                    setIsDropdownOpen(false)
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+                >
+                  Open this force curve
+                </button>
                 <button
                   onClick={() => setShowAllOptions(true)}
                   className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md"
