@@ -5,6 +5,7 @@ import { Switch } from '@prisma/client'
 import { SWITCH_TYPE_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
+import { formatWithUnit } from '@/utils/formatters'
 
 interface SwitchTableProps {
   switches: Switch[]
@@ -99,10 +100,10 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                   {switchItem.bottomOut ? `${switchItem.bottomOut}mm` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.springWeight ? `${switchItem.springWeight}g` : '-'}
+                  {formatWithUnit(switchItem.springWeight, 'g')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.springLength ? `${switchItem.springLength}mm` : '-'}
+                  {formatWithUnit(switchItem.springLength, 'mm')}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
                   <div className="space-y-1">

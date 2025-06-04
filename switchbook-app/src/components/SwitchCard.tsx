@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { SWITCH_TYPE_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
+import { formatWithUnit } from '@/utils/formatters'
 
 interface SwitchCardProps {
   switch: Switch
@@ -128,12 +129,12 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
             <div className="space-y-1">
               {switchItem.springWeight && (
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-medium">Spring Weight:</span> {switchItem.springWeight}g
+                  <span className="font-medium">Spring Weight:</span> {formatWithUnit(switchItem.springWeight, 'g')}
                 </p>
               )}
               {switchItem.springLength && (
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-medium">Spring Length:</span> {switchItem.springLength}mm
+                  <span className="font-medium">Spring Length:</span> {formatWithUnit(switchItem.springLength, 'mm')}
                 </p>
               )}
             </div>

@@ -4,6 +4,7 @@ import Image from "next/image"
 import CollectionStats from "@/components/CollectionStats"
 import ForceCurvesButton from "@/components/ForceCurvesButton"
 import { SWITCH_TYPE_COLORS } from "@/constants/switchTypes"
+import { formatWithUnit } from "@/utils/formatters"
 
 interface SharePageProps {
   params: Promise<{ shareableId: string }>
@@ -124,12 +125,12 @@ export default async function SharePage({ params }: SharePageProps) {
                       <div className="space-y-1">
                         {switchItem.springWeight && (
                           <p className="text-sm text-gray-600 dark:text-gray-300">
-                            <span className="font-medium">Spring Weight:</span> {switchItem.springWeight}g
+                            <span className="font-medium">Spring Weight:</span> {formatWithUnit(switchItem.springWeight, 'g')}
                           </p>
                         )}
                         {switchItem.springLength && (
                           <p className="text-sm text-gray-600 dark:text-gray-300">
-                            <span className="font-medium">Spring Length:</span> {switchItem.springLength}mm
+                            <span className="font-medium">Spring Length:</span> {formatWithUnit(switchItem.springLength, 'mm')}
                           </p>
                         )}
                       </div>
