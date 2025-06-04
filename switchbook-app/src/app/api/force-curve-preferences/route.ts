@@ -15,19 +15,14 @@ export async function POST(request: NextRequest) {
   let validatedData: any = null
   
   try {
-    console.log('POST /api/force-curve-preferences called')
     session = await auth()
-    console.log('Session:', { userId: session?.user?.id, hasSession: !!session })
     
     if (!session?.user?.id) {
-      console.log('No session or user ID, returning 401')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    console.log('Request body:', body)
     validatedData = PreferenceSchema.parse(body)
-    console.log('Validated data:', validatedData)
 
     const whereClause = {
       userId: session.user.id,
@@ -35,19 +30,14 @@ export async function POST(request: NextRequest) {
       manufacturer: validatedData.manufacturer || null,
     }
 
-    console.log('Where clause:', whereClause)
-
     // Check if preference already exists
     const existing = await prisma.forceCurvePreference.findFirst({
       where: whereClause
     })
 
-    console.log('Existing preference:', existing)
-
     let preference
     if (existing) {
       // Update existing preference
-      console.log('Updating existing preference')
       preference = await prisma.forceCurvePreference.update({
         where: { id: existing.id },
         data: {
@@ -57,7 +47,6 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Create new preference
-      console.log('Creating new preference')
       preference = await prisma.forceCurvePreference.create({
         data: {
           ...whereClause,
@@ -67,7 +56,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('Preference result:', preference)
     return NextResponse.json(preference)
   } catch (error) {
     if (error instanceof z.ZodError) {

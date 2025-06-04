@@ -89,7 +89,6 @@ export default function ForceCurvesButton({
 
   const savePreference = async (folderName: string, url: string) => {
     try {
-      console.log('Saving preference:', { switchName, manufacturer, folderName, url })
       const response = await fetch('/api/force-curve-preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,18 +102,12 @@ export default function ForceCurvesButton({
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('API Error Response:', errorData)
         throw new Error(`HTTP error! status: ${response.status}, details: ${JSON.stringify(errorData)}`)
       }
-      
-      const result = await response.json()
-      console.log('Preference saved:', result)
       
       setSavedPreference({ folder: folderName, url })
       setIsDropdownOpen(false)
       setShowAllOptions(false)
-      
-      // Don't auto-open on first selection - let user click again to open
     } catch (error) {
       console.error('Failed to save preference:', error)
     }

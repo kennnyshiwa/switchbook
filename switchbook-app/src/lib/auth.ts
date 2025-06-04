@@ -82,10 +82,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   events: {
     async signIn(message) {
-      console.log("Sign in event:", message)
+      // Sign in event handled
     },
     async signOut(message) {
-      console.log("Sign out event:", message)
+      // Sign out event handled
     },
   },
 })
