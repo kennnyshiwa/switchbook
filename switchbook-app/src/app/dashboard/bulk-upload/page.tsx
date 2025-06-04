@@ -151,7 +151,7 @@ export default function BulkUploadPage() {
             // Normalize switch type to uppercase and handle variations
             const normalizedType = value.toUpperCase().replace(/[\s_-]/g, '_')
             // Map common variations to valid enum values
-            const typeMapping: { [key: string]: string } = {
+            const typeMapping = {
               'LINEAR': 'LINEAR',
               'TACTILE': 'TACTILE',
               'CLICKY': 'CLICKY',
@@ -159,8 +159,8 @@ export default function BulkUploadPage() {
               'SILENT_TACTILE': 'SILENT_TACTILE',
               'SILENTLINEAR': 'SILENT_LINEAR',
               'SILENTTACTILE': 'SILENT_TACTILE',
-            }
-            (switchData as any)[field] = typeMapping[normalizedType] || normalizedType
+            } as const
+            (switchData as any)[field] = typeMapping[normalizedType as keyof typeof typeMapping] || normalizedType
           } else {
             (switchData as any)[field] = value
           }
