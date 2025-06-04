@@ -12,6 +12,7 @@ interface AccountSettingsProps {
     username: string
     role: string
     shareableId: string
+    showForceCurves: boolean
     _count: {
       switches: number
     }
@@ -21,7 +22,33 @@ interface AccountSettingsProps {
 export default function AccountSettings({ user }: AccountSettingsProps) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showForceCurves, setShowForceCurves] = useState(user.showForceCurves)
+  const [isUpdating, setIsUpdating] = useState(false)
   const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${user.shareableId}`
+
+  const handleForceCurvesToggle = async (enabled: boolean) => {
+    setIsUpdating(true)
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showForceCurves: enabled })
+      })
+
+      if (response.ok) {
+        setShowForceCurves(enabled)
+      } else {
+        alert('Failed to update setting. Please try again.')
+        setShowForceCurves(!enabled) // Revert on error
+      }
+    } catch (error) {
+      console.error('Error updating force curves setting:', error)
+      alert('An error occurred. Please try again.')
+      setShowForceCurves(!enabled) // Revert on error
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   const handleDeleteAccount = async () => {
     const confirmMessage = `Are you sure you want to delete your account? This will permanently delete:\n\n` +
@@ -131,6 +158,42 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
           >
             Copy
           </button>
+        </div>
+      </div>
+
+      {/* Preferences */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Preferences</h2>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Force Curves</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Display force curve buttons on switches when available. This enables access to detailed switch analysis charts and data.
+              </p>
+            </div>
+            <div className="flex items-center ml-4">
+              <button
+                type="button"
+                onClick={() => handleForceCurvesToggle(!showForceCurves)}
+                disabled={isUpdating}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 disabled:opacity-50 ${
+                  showForceCurves ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+                role="switch"
+                aria-checked={showForceCurves}
+                title={showForceCurves ? 'Disable force curves' : 'Enable force curves'}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    showForceCurves ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

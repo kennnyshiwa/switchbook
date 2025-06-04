@@ -10,9 +10,10 @@ interface SwitchTableProps {
   switches: Switch[]
   onDelete: (switchId: string) => void
   onEdit: (switchData: Switch) => void
+  showForceCurves: boolean
 }
 
-function SwitchTable({ switches, onDelete, onEdit }: SwitchTableProps) {
+function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (switchItem: Switch) => {
@@ -122,11 +123,13 @@ function SwitchTable({ switches, onDelete, onEdit }: SwitchTableProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center space-x-2">
-                    <ForceCurvesButton 
-                      switchName={switchItem.name}
-                      manufacturer={switchItem.manufacturer}
-                      variant="icon"
-                    />
+                    {showForceCurves && (
+                      <ForceCurvesButton 
+                        switchName={switchItem.name}
+                        manufacturer={switchItem.manufacturer}
+                        variant="icon"
+                      />
+                    )}
                     <button
                       onClick={() => onEdit(switchItem)}
                       className="text-blue-600 hover:text-blue-800"

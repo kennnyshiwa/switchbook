@@ -66,6 +66,7 @@ export default async function DashboardPage() {
         <SwitchCollection 
           switches={user.switches} 
           userId={user.id}
+          showForceCurves={user.showForceCurves}
         />
       </div>
     </div>

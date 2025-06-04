@@ -18,6 +18,7 @@ export default async function SettingsPage() {
       username: true,
       role: true,
       shareableId: true,
+      showForceCurves: true,
       _count: {
         select: { switches: true }
       }

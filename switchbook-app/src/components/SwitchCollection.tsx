@@ -11,9 +11,10 @@ import CollectionControls, { SortOption, ViewMode } from './CollectionControls'
 interface SwitchCollectionProps {
   switches: Switch[]
   userId: string
+  showForceCurves: boolean
 }
 
-export default function SwitchCollection({ switches: initialSwitches, userId }: SwitchCollectionProps) {
+export default function SwitchCollection({ switches: initialSwitches, userId, showForceCurves }: SwitchCollectionProps) {
   const [switches, setSwitches] = useState(initialSwitches)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingSwitch, setEditingSwitch] = useState<Switch | null>(null)
@@ -171,6 +172,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
               switch={switchItem}
               onDelete={handleSwitchDeleted}
               onEdit={setEditingSwitch}
+              showForceCurves={showForceCurves}
             />
           ))}
         </div>
@@ -179,6 +181,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId }: 
           switches={filteredAndSortedSwitches}
           onDelete={handleSwitchDeleted}
           onEdit={setEditingSwitch}
+          showForceCurves={showForceCurves}
         />
       )}
 

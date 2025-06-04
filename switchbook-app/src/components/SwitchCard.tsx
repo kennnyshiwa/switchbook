@@ -11,9 +11,10 @@ interface SwitchCardProps {
   switch: Switch
   onDelete: (switchId: string) => void
   onEdit: (switchData: Switch) => void
+  showForceCurves: boolean
 }
 
-function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
+function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: SwitchCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -165,14 +166,16 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit }: SwitchCardProps) {
           )}
 
           {/* Force Curves Button */}
-          <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
-            <ForceCurvesButton 
-              switchName={switchItem.name}
-              manufacturer={switchItem.manufacturer}
-              variant="button"
-              className="w-full justify-center"
-            />
-          </div>
+          {showForceCurves && (
+            <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+              <ForceCurvesButton 
+                switchName={switchItem.name}
+                manufacturer={switchItem.manufacturer}
+                variant="button"
+                className="w-full justify-center"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
