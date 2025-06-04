@@ -152,8 +152,8 @@ export default function ForceCurvesButton({
     }
   }
 
-  // Use identical dropdown positioning for all variants
-  const dropdownClasses = 'absolute bottom-full mb-1 left-0'
+  // Use identical dropdown positioning for all variants - right-align for table view consistency
+  const dropdownClasses = 'absolute bottom-full mb-1 right-0'
 
   // Render the dropdown (shared across all variants)
   const renderDropdown = () => {
@@ -173,13 +173,13 @@ export default function ForceCurvesButton({
                   window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
                   setIsDropdownOpen(false)
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
+                className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 block"
               >
                 Open this force curve
               </button>
               <button
                 onClick={() => setShowAllOptions(true)}
-                className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md"
+                className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md block"
               >
                 Choose different option ({matches.length} available)
               </button>
