@@ -129,7 +129,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-                  <div className="break-words">
+                  <div className="break-words whitespace-normal">
                     {switchItem.notes || '-'}
                   </div>
                 </td>
