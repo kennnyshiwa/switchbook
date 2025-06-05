@@ -128,7 +128,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                     {!switchItem.topHousing && !switchItem.bottomHousing && !switchItem.stem && '-'}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                   <p className="text-sm text-gray-500 dark:text-gray-400">{switchItem.notes || '-'}</p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
