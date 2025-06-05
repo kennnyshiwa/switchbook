@@ -12,12 +12,24 @@ interface CollectionStatsProps {
 export default function CollectionStats({ switches }: CollectionStatsProps) {
   const { theme } = useTheme()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [showTypeNumbers, setShowTypeNumbers] = useState(false)
+  const [showManufacturerNumbers, setShowManufacturerNumbers] = useState(false)
 
-  // Load collapsed state from localStorage on mount
+  // Load states from localStorage on mount
   useEffect(() => {
-    const savedState = localStorage.getItem('statsCollapsed')
-    if (savedState === 'true') {
+    const savedCollapsedState = localStorage.getItem('statsCollapsed')
+    if (savedCollapsedState === 'true') {
       setIsCollapsed(true)
+    }
+    
+    const savedTypeView = localStorage.getItem('typeChartView')
+    if (savedTypeView === 'numbers') {
+      setShowTypeNumbers(true)
+    }
+    
+    const savedManufacturerView = localStorage.getItem('manufacturerChartView')
+    if (savedManufacturerView === 'numbers') {
+      setShowManufacturerNumbers(true)
     }
   }, [])
 
@@ -26,6 +38,20 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
     const newState = !isCollapsed
     setIsCollapsed(newState)
     localStorage.setItem('statsCollapsed', newState.toString())
+  }
+  
+  // Toggle type chart view
+  const toggleTypeView = () => {
+    const newState = !showTypeNumbers
+    setShowTypeNumbers(newState)
+    localStorage.setItem('typeChartView', newState ? 'numbers' : 'chart')
+  }
+  
+  // Toggle manufacturer chart view
+  const toggleManufacturerView = () => {
+    const newState = !showManufacturerNumbers
+    setShowManufacturerNumbers(newState)
+    localStorage.setItem('manufacturerChartView', newState ? 'numbers' : 'chart')
   }
   // Calculate statistics by type
   const typeStats = switches.reduce((acc, switchItem) => {
@@ -136,52 +162,150 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
       {!isCollapsed && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-300">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Switches by Type</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Switches by Type</h3>
+          <button
+            onClick={toggleTypeView}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title={showTypeNumbers ? "Show chart" : "Show numbers"}
+          >
+            {showTypeNumbers ? (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+                Chart
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                Numbers
+              </>
+            )}
+          </button>
+        </div>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={typeData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={renderCustomLabel}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {typeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          {showTypeNumbers ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="space-y-3">
+                {typeData.map((item, index) => (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded" 
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">
+                      {item.name}:
+                    </span>
+                    <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {item.value}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      ({((item.value / switches.length) * 100).toFixed(1)}%)
+                    </span>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={typeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={renderCustomLabel}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {typeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Switches by Manufacturer</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Switches by Manufacturer</h3>
+          <button
+            onClick={toggleManufacturerView}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title={showManufacturerNumbers ? "Show chart" : "Show numbers"}
+          >
+            {showManufacturerNumbers ? (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+                Chart
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                Numbers
+              </>
+            )}
+          </button>
+        </div>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={manufacturerData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={renderCustomLabel}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {manufacturerData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+          {showManufacturerNumbers ? (
+            <div className="h-full overflow-y-auto">
+              <div className="space-y-2">
+                {manufacturerData
+                  .sort((a, b) => b.value - a.value)
+                  .map((item, index) => (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 min-w-[120px] truncate">
+                        {item.name}:
+                      </span>
+                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {item.value}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        ({((item.value / switches.length) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={manufacturerData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={renderCustomLabel}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {manufacturerData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
