@@ -1,12 +1,9 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import Link from "next/link"
 import SwitchCollection from "@/components/SwitchCollection"
 import CollectionStats from "@/components/CollectionStats"
-import ShareButton from "@/components/ShareButton"
-import SignOutButton from "@/components/SignOutButton"
-import ThemeToggle from "@/components/ThemeToggle"
+import HamburgerMenu from "@/components/HamburgerMenu"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -36,25 +33,10 @@ export default async function DashboardPage() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Switch Collection</h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">Welcome back, {user.username}!</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <ThemeToggle />
-            <ShareButton shareableId={user.shareableId} />
-            {user.role === 'ADMIN' && (
-              <Link
-                href="/admin"
-                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
-              >
-                Admin Panel
-              </Link>
-            )}
-            <Link
-              href="/settings"
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
-            >
-              Settings
-            </Link>
-            <SignOutButton />
-          </div>
+          <HamburgerMenu 
+            shareableId={user.shareableId} 
+            isAdmin={user.role === 'ADMIN'} 
+          />
         </div>
 
         {user.switches.length > 0 && (

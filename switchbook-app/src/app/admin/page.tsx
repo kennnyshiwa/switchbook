@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import HamburgerMenu from "@/components/HamburgerMenu"
 
 export default async function AdminDashboard() {
   const session = await auth()
@@ -10,8 +11,12 @@ export default async function AdminDashboard() {
     redirect("/dashboard")
   }
 
-  // Get statistics
-  const [totalUsers, totalSwitches, usersLast30Days, switchesLast30Days] = await Promise.all([
+  // Get user data and statistics
+  const [user, totalUsers, totalSwitches, usersLast30Days, switchesLast30Days] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { shareableId: true }
+    }),
     prisma.user.count(),
     prisma.switch.count(),
     prisma.user.count({
@@ -52,13 +57,19 @@ export default async function AdminDashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <Link
-            href="/dashboard"
-            className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            Back to My Collection
-          </Link>
+          <div className="flex items-center space-x-4">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+            <Link
+              href="/dashboard"
+              className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+            >
+              ← Back to My Collection
+            </Link>
+          </div>
+          <HamburgerMenu 
+            shareableId={user?.shareableId || ''} 
+            isAdmin={true} 
+          />
         </div>
 
         {/* Statistics Grid */}
