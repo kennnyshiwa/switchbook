@@ -32,7 +32,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
   return (
     <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table className="min-w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -65,7 +65,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Materials
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-80">
                 Notes
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -128,7 +128,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                     {!switchItem.topHousing && !switchItem.bottomHousing && !switchItem.stem && '-'}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs overflow-hidden">
+                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 w-80 break-words">
                   {switchItem.notes || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
