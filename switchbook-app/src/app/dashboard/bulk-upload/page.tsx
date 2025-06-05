@@ -7,6 +7,7 @@ import Link from 'next/link'
 
 interface ParsedSwitch {
   name: string
+  chineseName?: string
   type: string
   manufacturer?: string
   springWeight?: string
@@ -48,6 +49,7 @@ export default function BulkUploadPage() {
 
   const switchFields = [
     { key: 'name', label: 'Switch Name', required: true },
+    { key: 'chineseName', label: 'Chinese Name', required: false },
     { key: 'type', label: 'Type', required: true },
     { key: 'manufacturer', label: 'Manufacturer', required: false },
     { key: 'springWeight', label: 'Spring Weight', required: false },
@@ -83,7 +85,7 @@ export default function BulkUploadPage() {
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
     const sampleData = [
-      'Cherry MX Red', 'LINEAR', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
+      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
     ]
     
     const csvContent = [templateHeaders, sampleData].map(row => 
@@ -458,6 +460,9 @@ export default function BulkUploadPage() {
                     Name*
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Chinese Name
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Type*
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -534,6 +539,15 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.name}
                         onChange={(e) => updateParsedSwitch(index, 'name', e.target.value)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={switchItem.chineseName || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'chineseName', e.target.value)}
                         className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />

@@ -69,7 +69,18 @@ export default async function SharePage({ params }: SharePageProps) {
                 
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.name}</h3>
+                    <div className="flex-1">
+                      {!switchItem.name && switchItem.chineseName ? (
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.chineseName}</h3>
+                      ) : (
+                        <>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.name}</h3>
+                          {switchItem.chineseName && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{switchItem.chineseName}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">

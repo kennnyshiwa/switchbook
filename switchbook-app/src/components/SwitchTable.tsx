@@ -77,7 +77,16 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
             {switches.map((switchItem) => (
               <tr key={switchItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">{switchItem.name}</div>
+                  {!switchItem.name && switchItem.chineseName ? (
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{switchItem.chineseName}</div>
+                  ) : (
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">{switchItem.name}</div>
+                      {switchItem.chineseName && (
+                        <div className="text-sm text-gray-600 dark:text-gray-300">{switchItem.chineseName}</div>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>

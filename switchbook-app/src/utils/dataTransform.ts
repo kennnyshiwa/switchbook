@@ -2,6 +2,7 @@ import { SwitchType } from '@prisma/client';
 
 interface SwitchData {
   name: string;
+  chineseName?: string | null;
   type: SwitchType;
   manufacturer?: string | null;
   springWeight?: string | null;
@@ -21,6 +22,7 @@ interface SwitchData {
 export function transformSwitchData(data: SwitchData) {
   return {
     name: data.name,
+    chineseName: data.chineseName || null,
     type: data.type,
     manufacturer: data.manufacturer || null,
     springWeight: data.springWeight || null,

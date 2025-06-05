@@ -27,6 +27,7 @@ model User {
 model Switch {
   id              String    @id @default(cuid())
   name            String
+  chineseName     String?
   type            SwitchType
   springWeight    String?
   springLength    String?

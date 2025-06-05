@@ -52,7 +52,20 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
       
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.name}</h3>
+          <div className="flex-1 pr-2">
+            {!switchItem.name && switchItem.chineseName ? (
+              <>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.chineseName}</h3>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.name}</h3>
+                {switchItem.chineseName && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{switchItem.chineseName}</p>
+                )}
+              </>
+            )}
+          </div>
           <div className="flex space-x-2">
             <button
               onClick={() => onEdit(switchItem)}
