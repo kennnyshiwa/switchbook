@@ -1,3 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fix overscroll behavior and background colors */
+html {
+  overscroll-behavior: none;
+  background-color: rgb(249 250 251); /* gray-50 for light mode */
+  min-height: 100%;
+}
+
+html.dark {
+  background-color: rgb(17 24 39); /* gray-900 for dark mode */
+}
+
+body {
+  overscroll-behavior: none;
+  background-color: rgb(249 250 251); /* gray-50 for light mode */
+  min-height: 100vh;
+}
+
+html.dark body {
+  background-color: rgb(17 24 39); /* gray-900 for dark mode */
+}
+
+/* Prevent overscroll on main content areas */
+#__next {
+  overscroll-behavior: none;
+  min-height: 100vh;
+}
+
+/* Fix for mobile Safari overscroll */
+@supports (-webkit-overflow-scrolling: touch) {
+  html, body {
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
+  }
+}
+
+/* Prevent horizontal overscroll specifically */
+* {
+  overscroll-behavior-x: none;
+}
+
+/* Fix for specific scroll containers that might show white space */
+.overflow-auto, .overflow-x-auto, .overflow-y-auto {
+  overscroll-behavior: contain;
+}
