@@ -29,7 +29,7 @@ export default function SwitchForm({ register, errors }: SwitchFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Chinese Name (Optional)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Chinese Name</label>
         <input
           {...register('chineseName')}
           type="text"

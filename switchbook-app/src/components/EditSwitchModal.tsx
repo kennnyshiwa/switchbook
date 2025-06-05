@@ -28,6 +28,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     resolver: zodResolver(switchSchema),
     defaultValues: {
       name: switchItem.name,
+      chineseName: switchItem.chineseName || '',
       type: switchItem.type,
       manufacturer: switchItem.manufacturer || '',
       actuationForce: switchItem.actuationForce || undefined,
