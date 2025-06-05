@@ -262,23 +262,23 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
         </div>
         <div className="h-64">
           {showManufacturerNumbers ? (
-            <div className="h-full overflow-y-auto">
-              <div className="space-y-2">
+            <div className="h-full flex items-center justify-center overflow-y-auto">
+              <div className="space-y-3 max-h-full">
                 {manufacturerData
                   .sort((a, b) => b.value - a.value)
                   .map((item, index) => (
                     <div key={item.name} className="flex items-center gap-3">
                       <div 
-                        className="w-3 h-3 rounded flex-shrink-0" 
+                        className="w-4 h-4 rounded" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300 min-w-[120px] truncate">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">
                         {item.name}:
                       </span>
-                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white">
                         {item.value}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         ({((item.value / switches.length) * 100).toFixed(1)}%)
                       </span>
                     </div>
