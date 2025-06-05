@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
+import ManufacturerAutocomplete from '@/components/ManufacturerAutocomplete'
 
 interface ParsedSwitch {
   name: string
@@ -339,6 +340,7 @@ export default function BulkUploadPage() {
                 <li>• Use commas to separate columns</li>
                 <li>• Include headers in the first row</li>
                 <li>• Switch Type (if provided) must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, or SILENT_TACTILE (case-insensitive)</li>
+                <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
                 <li>• Forces should be numeric values in grams</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
               </ul>
@@ -568,13 +570,14 @@ export default function BulkUploadPage() {
                       </select>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.manufacturer || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'manufacturer', e.target.value)}
-                        className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
+                      <div className="min-w-[150px]">
+                        <ManufacturerAutocomplete
+                          value={switchItem.manufacturer || ''}
+                          onChange={(value) => updateParsedSwitch(index, 'manufacturer', value)}
+                          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                          placeholder="Type manufacturer..."
+                        />
+                      </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <input
