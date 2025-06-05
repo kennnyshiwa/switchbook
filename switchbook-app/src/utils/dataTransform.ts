@@ -1,9 +1,12 @@
-import { SwitchType } from '@prisma/client';
+import { SwitchType, SwitchTechnology } from '@prisma/client';
 
 interface SwitchData {
   name: string;
   chineseName?: string | null;
   type?: SwitchType | null | '';
+  technology?: SwitchTechnology | null | '';
+  magnetOrientation?: string | null;
+  compatibility?: string | null;
   manufacturer?: string | null;
   springWeight?: string | null;
   springLength?: string | null;
@@ -24,6 +27,9 @@ export function transformSwitchData(data: SwitchData) {
     name: data.name,
     chineseName: data.chineseName || null,
     type: data.type === '' ? null : (data.type || null),
+    technology: data.technology === '' ? null : (data.technology || null),
+    magnetOrientation: data.magnetOrientation || null,
+    compatibility: data.compatibility || null,
     manufacturer: data.manufacturer || null,
     springWeight: data.springWeight || null,
     springLength: data.springLength || null,
