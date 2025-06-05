@@ -191,23 +191,25 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
           {showTypeNumbers ? (
             <div className="h-full flex items-center justify-center">
               <div className="space-y-3">
-                {typeData.map((item, index) => (
-                  <div key={item.name} className="flex items-center gap-3">
-                    <div 
-                      className="w-4 h-4 rounded" 
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">
-                      {item.name}:
-                    </span>
-                    <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {item.value}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      ({((item.value / switches.length) * 100).toFixed(1)}%)
-                    </span>
-                  </div>
-                ))}
+                {typeData
+                  .sort((a, b) => b.value - a.value)
+                  .map((item, index) => (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[120px] text-left">
+                        {item.name}:
+                      </span>
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white min-w-[40px] text-right">
+                        {item.value}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        ({((item.value / switches.length) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+                  ))}
               </div>
             </div>
           ) : (
