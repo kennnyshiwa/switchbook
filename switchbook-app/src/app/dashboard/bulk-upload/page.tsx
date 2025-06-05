@@ -541,7 +541,7 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.name}
                         onChange={(e) => updateParsedSwitch(index, 'name', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -550,7 +550,7 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.chineseName || ''}
                         onChange={(e) => updateParsedSwitch(index, 'chineseName', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -558,7 +558,7 @@ export default function BulkUploadPage() {
                       <select
                         value={switchItem.type || ''}
                         onChange={(e) => updateParsedSwitch(index, 'type', e.target.value || undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       >
                         <option value="">No type</option>
@@ -570,7 +570,7 @@ export default function BulkUploadPage() {
                       </select>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="min-w-[120px]">
+                      <div className="min-w-[100px]">
                         <ManufacturerAutocomplete
                           value={switchItem.manufacturer || ''}
                           onChange={(value) => updateParsedSwitch(index, 'manufacturer', value)}
@@ -584,7 +584,7 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.springWeight || ''}
                         onChange={(e) => updateParsedSwitch(index, 'springWeight', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -593,7 +593,7 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.springLength || ''}
                         onChange={(e) => updateParsedSwitch(index, 'springLength', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -602,7 +602,7 @@ export default function BulkUploadPage() {
                         type="number"
                         value={switchItem.actuationForce || ''}
                         onChange={(e) => updateParsedSwitch(index, 'actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                         min="0"
                         max="1000"
@@ -613,7 +613,7 @@ export default function BulkUploadPage() {
                         type="number"
                         value={switchItem.bottomOutForce || ''}
                         onChange={(e) => updateParsedSwitch(index, 'bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                         min="0"
                         max="1000"
@@ -624,7 +624,7 @@ export default function BulkUploadPage() {
                         type="number"
                         value={switchItem.preTravel || ''}
                         onChange={(e) => updateParsedSwitch(index, 'preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                         min="0"
                         max="10"
@@ -636,7 +636,7 @@ export default function BulkUploadPage() {
                         type="number"
                         value={switchItem.bottomOut || ''}
                         onChange={(e) => updateParsedSwitch(index, 'bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                         min="0"
                         max="10"
@@ -648,7 +648,7 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.topHousing || ''}
                         onChange={(e) => updateParsedSwitch(index, 'topHousing', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -657,7 +657,7 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.bottomHousing || ''}
                         onChange={(e) => updateParsedSwitch(index, 'bottomHousing', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -666,7 +666,7 @@ export default function BulkUploadPage() {
                         type="text"
                         value={switchItem.stem || ''}
                         onChange={(e) => updateParsedSwitch(index, 'stem', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -674,7 +674,7 @@ export default function BulkUploadPage() {
                       <textarea
                         value={switchItem.notes || ''}
                         onChange={(e) => updateParsedSwitch(index, 'notes', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                         rows={2}
                       />
@@ -684,7 +684,7 @@ export default function BulkUploadPage() {
                         type="url"
                         value={switchItem.imageUrl || ''}
                         onChange={(e) => updateParsedSwitch(index, 'imageUrl', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
@@ -693,7 +693,7 @@ export default function BulkUploadPage() {
                         type="date"
                         value={switchItem.dateObtained || ''}
                         onChange={(e) => updateParsedSwitch(index, 'dateObtained', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
                     </td>
