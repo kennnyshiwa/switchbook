@@ -52,31 +52,64 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const force = searchParams.get('force') === 'true'
 
-    // Check if manufacturer is in use
+    // Get manufacturer details
+    const manufacturer = await prisma.manufacturer.findUnique({
+      where: { id },
+      select: { name: true, aliases: true }
+    })
+
+    if (!manufacturer) {
+      return NextResponse.json(
+        { error: "Manufacturer not found" },
+        { status: 404 }
+      )
+    }
+
+    // Check usage count
     const usageCount = await prisma.switch.count({
       where: {
         manufacturer: {
-          in: await prisma.manufacturer.findUnique({
-            where: { id },
-            select: { name: true }
-          }).then(m => [m?.name || ''])
+          equals: manufacturer.name,
+          mode: 'insensitive'
         }
       }
     })
 
-    if (usageCount > 0) {
+    // If manufacturer is in use and force is not specified, reject
+    if (usageCount > 0 && !force) {
       return NextResponse.json(
-        { error: "Cannot delete manufacturer that is in use" },
+        { error: "Cannot delete manufacturer that is in use", usageCount },
         { status: 400 }
       )
     }
 
+    // If force delete, update all switches to have null manufacturer
+    if (force && usageCount > 0) {
+      await prisma.switch.updateMany({
+        where: {
+          manufacturer: {
+            equals: manufacturer.name,
+            mode: 'insensitive'
+          }
+        },
+        data: {
+          manufacturer: null
+        }
+      })
+    }
+
+    // Delete the manufacturer
     await prisma.manufacturer.delete({
       where: { id }
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true, 
+      switchesUpdated: force ? usageCount : 0 
+    })
   } catch (error) {
     console.error('Failed to delete manufacturer:', error)
     return NextResponse.json(

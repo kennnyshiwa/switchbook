@@ -78,22 +78,57 @@ export default function ManufacturerManagement() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this manufacturer?')) return
+  const handleDelete = async (id: string, force = false) => {
+    const manufacturer = manufacturers.find(m => m.id === id)
+    if (!manufacturer) return
+
+    let confirmMessage = 'Are you sure you want to delete this manufacturer?'
+    
+    if (force && manufacturer.usageCount > 0) {
+      confirmMessage = `⚠️ FORCE DELETE WARNING ⚠️
+
+This will permanently delete "${manufacturer.name}" and set the manufacturer field to BLANK for ${manufacturer.usageCount} switches.
+
+This action CANNOT be undone.
+
+Are you absolutely sure you want to proceed?`
+    }
+
+    if (!confirm(confirmMessage)) return
 
     try {
-      const response = await fetch(`/api/admin/manufacturers/${id}`, {
+      const url = force 
+        ? `/api/admin/manufacturers/${id}?force=true`
+        : `/api/admin/manufacturers/${id}`
+        
+      const response = await fetch(url, {
         method: 'DELETE'
       })
 
       if (response.ok) {
+        const result = await response.json()
+        if (result.switchesUpdated > 0) {
+          alert(`Manufacturer deleted successfully. ${result.switchesUpdated} switches now have blank manufacturer field.`)
+        }
         fetchManufacturers()
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to delete manufacturer')
+        
+        // If it's a usage error, offer force delete option
+        if (error.usageCount && error.usageCount > 0) {
+          const forceConfirm = confirm(
+            `This manufacturer is used by ${error.usageCount} switches.\n\nWould you like to FORCE DELETE it? This will set those switches' manufacturer field to blank.`
+          )
+          if (forceConfirm) {
+            handleDelete(id, true)
+          }
+        } else {
+          alert(error.error || 'Failed to delete manufacturer')
+        }
       }
     } catch (error) {
       console.error('Failed to delete manufacturer:', error)
+      alert('Failed to delete manufacturer. Please try again.')
     }
   }
 
@@ -338,12 +373,20 @@ export default function ManufacturerManagement() {
                         >
                           Edit
                         </button>
-                        {manufacturer.usageCount === 0 && (
+                        {manufacturer.usageCount === 0 ? (
                           <button
                             onClick={() => handleDelete(manufacturer.id)}
                             className="text-red-600 hover:text-red-900"
                           >
                             Delete
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(manufacturer.id)}
+                            className="text-red-800 hover:text-red-900 font-semibold"
+                            title={`Force delete - will affect ${manufacturer.usageCount} switches`}
+                          >
+                            Force Delete
                           </button>
                         )}
                       </div>
