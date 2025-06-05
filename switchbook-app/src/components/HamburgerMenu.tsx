@@ -98,12 +98,7 @@ export default function HamburgerMenu({ shareableId, isAdmin }: HamburgerMenuPro
 
             {/* Share Collection */}
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  Share Collection
-                </span>
-                <ShareButton shareableId={shareableId} />
-              </div>
+              <ShareButton shareableId={shareableId} />
             </div>
 
             {/* Navigation Links */}
