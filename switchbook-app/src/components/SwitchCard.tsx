@@ -116,6 +116,24 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
             <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer || 'Unknown'}
           </p>
 
+          {switchItem.technology && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="font-medium">Technology:</span> {switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+            </p>
+          )}
+
+          {switchItem.magnetOrientation && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="font-medium">Magnet Orientation:</span> {switchItem.magnetOrientation}
+            </p>
+          )}
+
+          {switchItem.compatibility && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="font-medium">Compatibility:</span> {switchItem.compatibility}
+            </p>
+          )}
+
           {(switchItem.actuationForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Specs</p>

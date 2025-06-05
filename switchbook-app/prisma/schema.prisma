@@ -26,10 +26,13 @@ model User {
 }
 
 model Switch {
-  id              String    @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
   chineseName     String?
   type            SwitchType?
+  technology      SwitchTechnology?
+  magnetOrientation String?
+  compatibility   String?
   springWeight    String?
   springLength    String?
   actuationForce  Float?
@@ -43,10 +46,10 @@ model Switch {
   bottomHousing   String?
   stem            String?
   dateObtained    DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Manufacturer {
@@ -103,4 +106,12 @@ enum SwitchType {
   CLICKY
   SILENT_LINEAR
   SILENT_TACTILE
+}
+
+enum SwitchTechnology {
+  MECHANICAL
+  OPTICAL
+  MAGNETIC
+  INDUCTIVE
+  ELECTRO_CAPACITIVE
 }
