@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
 import SwitchCard from './SwitchCard'
@@ -22,6 +22,19 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('recent')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+
+  // Load view mode from localStorage on mount
+  useEffect(() => {
+    const savedView = localStorage.getItem('switchViewMode')
+    if (savedView === 'table' || savedView === 'grid') {
+      setViewMode(savedView)
+    }
+  }, [])
+
+  // Save view mode to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('switchViewMode', viewMode)
+  }, [viewMode])
 
   const handleSwitchAdded = (newSwitch: Switch) => {
     setSwitches([newSwitch, ...switches])
