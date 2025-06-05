@@ -28,7 +28,7 @@ model Switch {
   id              String    @id @default(cuid())
   name            String
   chineseName     String?
-  type            SwitchType
+  type            SwitchType?
   springWeight    String?
   springLength    String?
   actuationForce  Float?

@@ -166,10 +166,10 @@ export default async function AdminStats() {
             <div className="border-t border-gray-200 dark:border-gray-700">
               <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                 {mostPopularSwitchTypes.map((type) => (
-                  <li key={type.type} className="px-4 py-4 sm:px-6">
+                  <li key={type.type || 'no-type'} className="px-4 py-4 sm:px-6">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {type.type.replace('_', ' ')}
+                        {type.type ? type.type.replace('_', ' ') : 'No Type'}
                       </div>
                       <div className="text-sm text-gray-900 dark:text-white">
                         {type._count.type} switches
@@ -268,7 +268,7 @@ export default async function AdminStats() {
                         {activity.name}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {activity.type.replace('_', ' ')} • {activity.manufacturer || 'Unknown'} • by {activity.user.username}
+                        {activity.type ? activity.type.replace('_', ' ') : 'No Type'} • {activity.manufacturer || 'Unknown'} • by {activity.user.username}
                       </p>
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">

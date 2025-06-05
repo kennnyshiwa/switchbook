@@ -91,9 +91,15 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
-              {switchItem.type.replace('_', ' ')}
-            </span>
+            {switchItem.type ? (
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
+                {switchItem.type.replace('_', ' ')}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                No Type
+              </span>
+            )}
             {switchItem.dateObtained && (
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {(() => {

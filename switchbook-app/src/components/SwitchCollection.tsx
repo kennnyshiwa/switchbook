@@ -59,7 +59,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       filtered = switches.filter(s => 
         s.name.toLowerCase().includes(search) ||
         (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
-        s.type.toLowerCase().includes(search) ||
+        (s.type?.toLowerCase().includes(search) ?? false) ||
         (s.notes?.toLowerCase().includes(search) ?? false) ||
         (s.springWeight?.toLowerCase().includes(search) ?? false) ||
         (s.topHousing?.toLowerCase().includes(search) ?? false) ||
@@ -90,7 +90,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         sorted.sort((a, b) => (b.manufacturer || 'Unknown').localeCompare(a.manufacturer || 'Unknown'))
         break
       case 'type':
-        sorted.sort((a, b) => a.type.localeCompare(b.type))
+        sorted.sort((a, b) => (a.type || 'No Type').localeCompare(b.type || 'No Type'))
         break
       case 'spring-asc':
         sorted.sort((a, b) => {

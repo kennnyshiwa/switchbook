@@ -55,7 +55,7 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
   }
   // Calculate statistics by type
   const typeStats = switches.reduce((acc, switchItem) => {
-    const type = switchItem.type.replace('_', ' ')
+    const type = switchItem.type ? switchItem.type.replace('_', ' ') : 'No Type'
     acc[type] = (acc[type] || 0) + 1
     return acc
   }, {} as Record<string, number>)

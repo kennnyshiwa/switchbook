@@ -8,7 +8,7 @@ import Link from 'next/link'
 interface ParsedSwitch {
   name: string
   chineseName?: string
-  type: string
+  type?: string
   manufacturer?: string
   springWeight?: string
   springLength?: string
@@ -50,7 +50,7 @@ export default function BulkUploadPage() {
   const switchFields = [
     { key: 'name', label: 'Switch Name', required: true },
     { key: 'chineseName', label: 'Chinese Name', required: false },
-    { key: 'type', label: 'Type', required: true },
+    { key: 'type', label: 'Type', required: false },
     { key: 'manufacturer', label: 'Manufacturer', required: false },
     { key: 'springWeight', label: 'Spring Weight', required: false },
     { key: 'springLength', label: 'Spring Length', required: false },
@@ -212,7 +212,7 @@ export default function BulkUploadPage() {
       })
       
       return switchData as ParsedSwitchWithDuplicate
-    }).filter(sw => sw.name && sw.type) // Only include switches with required fields
+    }).filter(sw => sw.name) // Only include switches with required fields (just name now)
     
     // Check for duplicates
     const parsedWithDuplicateCheck = parsed.map(switchItem => {
@@ -327,8 +327,8 @@ export default function BulkUploadPage() {
             <p>Follow these steps to bulk import your switch collection:</p>
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
-              <li><strong>Required fields:</strong> Switch Name and Type</li>
-              <li><strong>Optional fields:</strong> Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
+              <li><strong>Required field:</strong> Switch Name</li>
+              <li><strong>Optional fields:</strong> Type, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>
             </ol>
@@ -338,7 +338,7 @@ export default function BulkUploadPage() {
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
                 <li>• Use commas to separate columns</li>
                 <li>• Include headers in the first row</li>
-                <li>• Switch Type must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, or SILENT_TACTILE (case-insensitive)</li>
+                <li>• Switch Type (if provided) must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, or SILENT_TACTILE (case-insensitive)</li>
                 <li>• Forces should be numeric values in grams</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
               </ul>
@@ -463,7 +463,7 @@ export default function BulkUploadPage() {
                     Chinese Name
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Type*
+                    Type
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Manufacturer
@@ -554,11 +554,12 @@ export default function BulkUploadPage() {
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <select
-                        value={switchItem.type}
-                        onChange={(e) => updateParsedSwitch(index, 'type', e.target.value)}
+                        value={switchItem.type || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'type', e.target.value || undefined)}
                         className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       >
+                        <option value="">No type</option>
                         <option value="LINEAR">LINEAR</option>
                         <option value="TACTILE">TACTILE</option>
                         <option value="CLICKY">CLICKY</option>
