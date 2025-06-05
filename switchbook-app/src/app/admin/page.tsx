@@ -125,7 +125,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href="/admin/users"
             className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
@@ -134,6 +134,18 @@ export default async function AdminDashboard() {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">Manage Users</h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 View all users, reset passwords, and manage accounts
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/manufacturers"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Manage Manufacturers</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Review, verify, and merge manufacturer entries
               </p>
             </div>
           </Link>

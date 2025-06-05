@@ -24,6 +24,8 @@ export default function AddSwitchModal({ userId, onClose, onSwitchAdded }: AddSw
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<SwitchFormData>({
     resolver: zodResolver(switchSchema),
   })
@@ -68,7 +70,7 @@ export default function AddSwitchModal({ userId, onClose, onSwitchAdded }: AddSw
             </div>
           )}
 
-          <SwitchForm register={register} errors={errors} />
+          <SwitchForm register={register} errors={errors} setValue={setValue} watch={watch} />
 
           <div className="flex justify-end space-x-3 pt-4">
             <button

@@ -22,6 +22,7 @@ model User {
   passwordResetTokens   PasswordResetToken[]
   forceCurvePreferences ForceCurvePreference[]
   showForceCurves       Boolean               @default(true)
+  manufacturers         Manufacturer[]
 }
 
 model Switch {
@@ -46,6 +47,17 @@ model Switch {
   updatedAt       DateTime  @updatedAt
   userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Manufacturer {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  aliases     String[]
+  verified    Boolean  @default(false)
+  addedBy     String?
+  user        User?    @relation(fields: [addedBy], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model VerificationToken {

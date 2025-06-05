@@ -1,8 +1,9 @@
 'use client'
 
-import { UseFormRegister, FieldErrors } from 'react-hook-form'
+import { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { switchSchema } from '@/lib/validation'
+import ManufacturerAutocomplete from './ManufacturerAutocomplete'
 
 type SwitchFormData = z.infer<typeof switchSchema>
 
@@ -10,9 +11,12 @@ interface SwitchFormProps {
   register: UseFormRegister<SwitchFormData>
   errors: FieldErrors<SwitchFormData>
   defaultValues?: Partial<SwitchFormData>
+  setValue: UseFormSetValue<SwitchFormData>
+  watch: UseFormWatch<SwitchFormData>
 }
 
-export default function SwitchForm({ register, errors }: SwitchFormProps) {
+export default function SwitchForm({ register, errors, setValue, watch }: SwitchFormProps) {
+  const manufacturerValue = watch('manufacturer')
   return (
     <>
       <div>
@@ -60,74 +64,13 @@ export default function SwitchForm({ register, errors }: SwitchFormProps) {
       </div>
 
       <div>
-        <div className="flex items-center gap-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Manufacturer</label>
-          <div className="relative group">
-            <svg 
-              className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" 
-              fill="currentColor" 
-              viewBox="0 0 20 20"
-            >
-              <path 
-                fillRule="evenodd" 
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" 
-                clipRule="evenodd" 
-              />
-            </svg>
-            <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-              If unsure, leave blank or select &quot;Unknown&quot;
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-            </div>
-          </div>
-        </div>
-        <select
-          {...register('manufacturer')}
-          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2"
-        >
-          <option value="">Select a manufacturer (optional)</option>
-          <option value="ABT">ABT</option>
-          <option value="Aflion">Aflion</option>
-          <option value="Alps">Alps</option>
-          <option value="Aristotle">Aristotle</option>
-          <option value="BSUN">BSUN</option>
-          <option value="Burgess">Burgess</option>
-          <option value="Cherry">Cherry</option>
-          <option value="Duhuk Lumia">Duhuk Lumia</option>
-          <option value="Gateron">Gateron</option>
-          <option value="Grain Gold">Grain Gold</option>
-          <option value="Greetech">Greetech</option>
-          <option value="Haimu">Haimu</option>
-          <option value="HMX">HMX</option>
-          <option value="Huano">Huano</option>
-          <option value="Jedel">Jedel</option>
-          <option value="Jerrzi">Jerrzi</option>
-          <option value="Jixian">Jixian</option>
-          <option value="JWICK">JWICK</option>
-          <option value="JWK">JWK</option>
-          <option value="Kailh">Kailh</option>
-          <option value="Keygeek">Keygeek</option>
-          <option value="KTT">KTT</option>
-          <option value="LCET">LCET</option>
-          <option value="Lichicx">Lichicx</option>
-          <option value="NewGiant">NewGiant</option>
-          <option value="Omron">Omron</option>
-          <option value="Outemu">Outemu</option>
-          <option value="Raesha">Raesha</option>
-          <option value="SOAI/Leobog">SOAI/Leobog</option>
-          <option value="SP Star">SP Star</option>
-          <option value="Swikeys">Swikeys</option>
-          <option value="Tecsee">Tecsee</option>
-          <option value="TTC">TTC</option>
-          <option value="Unknown">Unknown</option>
-          <option value="Varmilo">Varmilo</option>
-          <option value="Weipeng">Weipeng</option>
-          <option value="Xiang Min">Xiang Min</option>
-          <option value="Yusya">Yusya</option>
-          <option value="Zorro">Zorro</option>
-        </select>
-        {errors.manufacturer && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.manufacturer.message}</p>
-        )}
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Manufacturer</label>
+        <ManufacturerAutocomplete
+          value={manufacturerValue || ''}
+          onChange={(value) => setValue('manufacturer', value)}
+          error={errors.manufacturer?.message}
+          placeholder="Type to search manufacturers..."
+        />
       </div>
 
       <div className="space-y-4">
