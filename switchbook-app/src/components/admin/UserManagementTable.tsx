@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { UserRole } from '@prisma/client'
+import MergeAccountsModal from './MergeAccountsModal'
 
 interface User {
   id: string
@@ -24,6 +25,7 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
   const [isResetting, setIsResetting] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [isUpdatingRole, setIsUpdatingRole] = useState<string | null>(null)
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
 
   const handleResetPassword = async (userId: string) => {
     if (!confirm('Are you sure you want to reset this user\'s password?')) return
@@ -96,8 +98,18 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+    <>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setIsMergeModalOpen(true)}
+          className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+        >
+          Merge Accounts
+        </button>
+      </div>
+      
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -197,5 +209,13 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
         </tbody>
       </table>
     </div>
+    
+    <MergeAccountsModal 
+      isOpen={isMergeModalOpen}
+      onClose={() => setIsMergeModalOpen(false)}
+      users={users}
+      onMergeComplete={() => window.location.reload()}
+    />
+    </>
   )
 }
