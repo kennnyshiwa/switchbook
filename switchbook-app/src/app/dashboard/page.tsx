@@ -35,11 +35,11 @@ export default async function DashboardPage() {
             {/* Logo */}
             <Link href="/dashboard" className="flex-shrink-0">
               <Image
-                className="h-10 w-auto"
+                className="h-16 w-auto"
                 src="/logo.png"
                 alt="Switchbook"
-                width={40}
-                height={40}
+                width={64}
+                height={64}
               />
             </Link>
             <div>
