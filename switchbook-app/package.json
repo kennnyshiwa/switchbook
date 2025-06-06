@@ -23,7 +23,6 @@
     "@prisma/client": "^6.8.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.9",
-    "@types/lodash": "^4.17.17",
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
@@ -46,6 +45,7 @@
     "zod": "^3.25.49"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.17",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.3.3"
   }

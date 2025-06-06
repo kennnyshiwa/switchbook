@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
 import ManufacturerAutocomplete from '@/components/ManufacturerAutocomplete'
@@ -10,6 +9,9 @@ interface ParsedSwitch {
   name: string
   chineseName?: string
   type?: string
+  technology?: string
+  magnetOrientation?: string
+  compatibility?: string
   manufacturer?: string
   springWeight?: string
   springLength?: string
@@ -38,7 +40,6 @@ interface ParsedSwitchWithDuplicate extends ParsedSwitch {
 }
 
 export default function BulkUploadPage() {
-  const router = useRouter()
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload')
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
@@ -52,6 +53,9 @@ export default function BulkUploadPage() {
     { key: 'name', label: 'Switch Name', required: true },
     { key: 'chineseName', label: 'Chinese Name', required: false },
     { key: 'type', label: 'Type', required: false },
+    { key: 'technology', label: 'Technology', required: false },
+    { key: 'magnetOrientation', label: 'Magnet Orientation', required: false },
+    { key: 'compatibility', label: 'Compatibility', required: false },
     { key: 'manufacturer', label: 'Manufacturer', required: false },
     { key: 'springWeight', label: 'Spring Weight', required: false },
     { key: 'springLength', label: 'Spring Length', required: false },
@@ -86,7 +90,7 @@ export default function BulkUploadPage() {
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
     const sampleData = [
-      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
+      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', '', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
     ]
     
     const csvContent = [templateHeaders, sampleData].map(row => 
@@ -203,6 +207,20 @@ export default function BulkUploadPage() {
               'SILENTTACTILE': 'SILENT_TACTILE',
             } as const
             (switchData as any)[field] = typeMapping[normalizedType as keyof typeof typeMapping] || normalizedType
+          } else if (field === 'technology') {
+            // Normalize technology to uppercase and handle variations
+            const normalizedTech = value.toUpperCase().replace(/[\s_-]/g, '_')
+            const techMapping = {
+              'MECHANICAL': 'MECHANICAL',
+              'OPTICAL': 'OPTICAL',
+              'MAGNETIC': 'MAGNETIC',
+              'INDUCTIVE': 'INDUCTIVE',
+              'ELECTRO_CAPACITIVE': 'ELECTRO_CAPACITIVE',
+              'ELECTROCAPACITIVE': 'ELECTRO_CAPACITIVE',
+              'HALL_EFFECT': 'MAGNETIC', // Common alternative name
+              'HALLEFFECT': 'MAGNETIC',
+            } as const
+            (switchData as any)[field] = techMapping[normalizedTech as keyof typeof techMapping] || normalizedTech
           } else if (field === 'springWeight' || field === 'springLength') {
             // Clean up spring weight and length values to avoid duplicate units
             (switchData as any)[field] = cleanUnitValue(value)
@@ -329,7 +347,7 @@ export default function BulkUploadPage() {
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
               <li><strong>Required field:</strong> Switch Name</li>
-              <li><strong>Optional fields:</strong> Type, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
+              <li><strong>Optional fields:</strong> Type, Technology, Magnet Orientation, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>
             </ol>
@@ -340,6 +358,9 @@ export default function BulkUploadPage() {
                 <li>• Use commas to separate columns</li>
                 <li>• Include headers in the first row</li>
                 <li>• Switch Type (if provided) must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, or SILENT_TACTILE (case-insensitive)</li>
+                <li>• Technology (if provided) must be: MECHANICAL, OPTICAL, MAGNETIC, INDUCTIVE, or ELECTRO_CAPACITIVE (case-insensitive)</li>
+                <li>• Magnet Orientation is a free text field (e.g., &quot;North&quot;, &quot;South&quot;, &quot;North-South&quot;)</li>
+                <li>• Compatibility is a free text field (e.g., &quot;MX-style&quot;, &quot;Cherry MX&quot;, &quot;3-pin&quot;, &quot;5-pin&quot;)</li>
                 <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
                 <li>• Forces should be numeric values in grams</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
@@ -468,6 +489,15 @@ export default function BulkUploadPage() {
                     Type
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Technology
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Magnet Orientation
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Compatibility
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Manufacturer
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -568,6 +598,41 @@ export default function BulkUploadPage() {
                         <option value="SILENT_LINEAR">SILENT_LINEAR</option>
                         <option value="SILENT_TACTILE">SILENT_TACTILE</option>
                       </select>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <select
+                        value={switchItem.technology || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'technology', e.target.value || undefined)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      >
+                        <option value="">No technology</option>
+                        <option value="MECHANICAL">MECHANICAL</option>
+                        <option value="OPTICAL">OPTICAL</option>
+                        <option value="MAGNETIC">MAGNETIC</option>
+                        <option value="INDUCTIVE">INDUCTIVE</option>
+                        <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={switchItem.magnetOrientation || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'magnetOrientation', e.target.value)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        placeholder="e.g. North, South"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="text"
+                        value={switchItem.compatibility || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'compatibility', e.target.value)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        placeholder="e.g. MX-style"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="min-w-[100px]">
