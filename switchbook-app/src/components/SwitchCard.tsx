@@ -124,7 +124,13 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
 
           {switchItem.magnetOrientation && (
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              <span className="font-medium">Magnet Orientation:</span> {switchItem.magnetOrientation}
+              <span className="font-medium">Magnetic Pole Orientation:</span> {switchItem.magnetOrientation}
+            </p>
+          )}
+
+          {switchItem.magnetPosition && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="font-medium">Magnet Position:</span> {switchItem.magnetPosition}
             </p>
           )}
 

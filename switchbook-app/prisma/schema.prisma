@@ -32,6 +32,7 @@ model Switch {
   type            SwitchType?
   technology      SwitchTechnology?
   magnetOrientation String?
+  magnetPosition  String?
   compatibility   String?
   springWeight    String?
   springLength    String?

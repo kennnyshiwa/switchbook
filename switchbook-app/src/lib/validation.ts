@@ -22,6 +22,7 @@ export const switchSchema = z.object({
   type: z.enum(["LINEAR", "TACTILE", "CLICKY", "SILENT_LINEAR", "SILENT_TACTILE"]).optional().or(z.literal("")),
   technology: z.enum(["MECHANICAL", "OPTICAL", "MAGNETIC", "INDUCTIVE", "ELECTRO_CAPACITIVE"]).optional().or(z.literal("")),
   magnetOrientation: z.string().max(200).optional().or(z.literal("")),
+  magnetPosition: z.string().max(200).optional().or(z.literal("")),
   compatibility: z.string().max(200).optional().or(z.literal("")),
   manufacturer: z.string().max(100).optional().or(z.literal("")),
   springWeight: z.string().optional(),
