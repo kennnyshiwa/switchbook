@@ -85,6 +85,9 @@ export default function BulkEditPage() {
     ))
   }
 
+  // Check if any switches have MAGNETIC technology to show/hide magnetic fields
+  const showMagneticFields = switches.some(sw => sw.technology === 'MAGNETIC')
+
   const saveSwitches = async () => {
     setCurrentStep('saving')
     setSaveProgress(0)
@@ -163,15 +166,19 @@ export default function BulkEditPage() {
                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Technology
                     </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Magnetic Pole Orientation
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Magnet Position
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Magnet Strength (Gs)
-                    </th>
+                    {showMagneticFields && (
+                      <>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Magnetic Pole Orientation
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Magnet Position
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Magnet Strength (Gs)
+                        </th>
+                      </>
+                    )}
                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Compatibility
                     </th>
@@ -263,40 +270,44 @@ export default function BulkEditPage() {
                           <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
                         </select>
                       </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <select
-                          value={switchItem.magnetOrientation || ''}
-                          onChange={(e) => updateSwitch(index, 'magnetOrientation', e.target.value || undefined)}
-                          className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        >
-                          <option value="">No orientation</option>
-                          <option value="Horizontal">Horizontal</option>
-                          <option value="Vertical">Vertical</option>
-                        </select>
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <select
-                          value={switchItem.magnetPosition || ''}
-                          onChange={(e) => updateSwitch(index, 'magnetPosition', e.target.value || undefined)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        >
-                          <option value="">No position</option>
-                          <option value="Center">Center</option>
-                          <option value="Off-Center">Off-Center</option>
-                        </select>
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          value={switchItem.magnetStrength || ''}
-                          onChange={(e) => updateSwitch(index, 'magnetStrength', e.target.value ? parseFloat(e.target.value) : undefined)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                          placeholder="e.g. 35, 3500"
-                          min="0"
-                          max="10000"
-                          step="0.1"
-                        />
-                      </td>
+                      {showMagneticFields && (
+                        <>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <select
+                              value={switchItem.magnetOrientation || ''}
+                              onChange={(e) => updateSwitch(index, 'magnetOrientation', e.target.value || undefined)}
+                              className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                            >
+                              <option value="">No orientation</option>
+                              <option value="Horizontal">Horizontal</option>
+                              <option value="Vertical">Vertical</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <select
+                              value={switchItem.magnetPosition || ''}
+                              onChange={(e) => updateSwitch(index, 'magnetPosition', e.target.value || undefined)}
+                              className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                            >
+                              <option value="">No position</option>
+                              <option value="Center">Center</option>
+                              <option value="Off-Center">Off-Center</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="number"
+                              value={switchItem.magnetStrength || ''}
+                              onChange={(e) => updateSwitch(index, 'magnetStrength', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                              placeholder="e.g. 35, 3500"
+                              min="0"
+                              max="10000"
+                              step="0.1"
+                            />
+                          </td>
+                        </>
+                      )}
                       <td className="px-3 py-4 whitespace-nowrap">
                         <input
                           type="text"
