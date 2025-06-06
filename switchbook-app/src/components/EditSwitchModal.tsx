@@ -34,6 +34,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       type: switchItem.type || undefined,
       technology: switchItem.technology || undefined,
       magnetOrientation: switchItem.magnetOrientation || '',
+      magnetPosition: switchItem.magnetPosition || '',
+      magnetStrength: switchItem.magnetStrength || undefined,
       compatibility: switchItem.compatibility || '',
       manufacturer: switchItem.manufacturer || '',
       actuationForce: switchItem.actuationForce || undefined,
