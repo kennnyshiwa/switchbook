@@ -122,7 +122,7 @@ export default function SwitchForm({ register, errors, setValue, watch }: Switch
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Magnet Strength</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Magnet Strength (Gs)</label>
         <input
           {...register('magnetStrength', { valueAsNumber: true })}
           type="number"

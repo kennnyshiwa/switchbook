@@ -58,7 +58,7 @@ export default function BulkUploadPage() {
     { key: 'technology', label: 'Technology', required: false },
     { key: 'magnetOrientation', label: 'Magnetic Pole Orientation', required: false },
     { key: 'magnetPosition', label: 'Magnet Position', required: false },
-    { key: 'magnetStrength', label: 'Magnet Strength', required: false },
+    { key: 'magnetStrength', label: 'Magnet Strength (Gs)', required: false },
     { key: 'compatibility', label: 'Compatibility', required: false },
     { key: 'manufacturer', label: 'Manufacturer', required: false },
     { key: 'springWeight', label: 'Spring Weight', required: false },
@@ -526,7 +526,7 @@ export default function BulkUploadPage() {
                     Magnet Position
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Magnet Strength
+                    Magnet Strength (Gs)
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Compatibility

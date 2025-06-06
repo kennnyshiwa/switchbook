@@ -130,7 +130,7 @@ export default async function SharePage({ params }: SharePageProps) {
 
                     {switchItem.magnetStrength && (
                       <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-medium">Magnet Strength:</span> {switchItem.magnetStrength}
+                        <span className="font-medium">Magnet Strength:</span> {switchItem.magnetStrength}Gs
                       </p>
                     )}
 
