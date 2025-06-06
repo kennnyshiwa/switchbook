@@ -246,7 +246,7 @@ export default function BulkEditPage() {
                         <select
                           value={switchItem.type || ''}
                           onChange={(e) => updateSwitch(index, 'type', e.target.value || undefined)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                          className="block w-full min-w-[160px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         >
                           <option value="">No type</option>
                           <option value="LINEAR">LINEAR</option>
