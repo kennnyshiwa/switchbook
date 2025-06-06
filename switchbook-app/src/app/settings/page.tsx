@@ -20,6 +20,12 @@ export default async function SettingsPage() {
       role: true,
       shareableId: true,
       showForceCurves: true,
+      password: true,
+      accounts: {
+        select: {
+          provider: true
+        }
+      },
       _count: {
         select: { switches: true }
       }

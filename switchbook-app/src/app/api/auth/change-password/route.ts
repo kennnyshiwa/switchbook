@@ -25,6 +25,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    // Check if user has a password (OAuth users don't)
+    if (!user.password) {
+      return NextResponse.json({ error: "Cannot change password for OAuth users" }, { status: 400 })
+    }
+
     // Verify current password
     const isValidPassword = await bcrypt.compare(currentPassword, user.password)
     if (!isValidPassword) {

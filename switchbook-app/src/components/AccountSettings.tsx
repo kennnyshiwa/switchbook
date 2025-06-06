@@ -19,6 +19,10 @@ interface AccountSettingsProps {
     role: string
     shareableId: string
     showForceCurves: boolean
+    password: string | null
+    accounts: Array<{
+      provider: string
+    }>
     _count: {
       switches: number
     }
@@ -176,6 +180,20 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
             <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Collection Size</dt>
             <dd className="mt-1 text-sm text-gray-900 dark:text-white">{user._count.switches} switches</dd>
           </div>
+          {user.accounts.length > 0 && (
+            <div>
+              <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Connected Accounts</dt>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                <div className="flex flex-wrap gap-2">
+                  {user.accounts.map((account, index) => (
+                    <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      {account.provider === 'discord' ? 'Discord' : account.provider}
+                    </span>
+                  ))}
+                </div>
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
 
@@ -241,78 +259,80 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
       </div>
 
       {/* Security */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Security</h2>
-        
-        <form onSubmit={handlePasswordSubmit(handlePasswordChange)} className="space-y-4">
-          <div>
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Change Password</h3>
-            
-            {passwordChangeSuccess && (
-              <div className="mb-4 rounded-md bg-green-50 dark:bg-green-900/20 p-4">
-                <p className="text-sm text-green-800 dark:text-green-400">Password changed successfully!</p>
-              </div>
-            )}
+      {user.password && (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Security</h2>
+          
+          <form onSubmit={handlePasswordSubmit(handlePasswordChange)} className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Change Password</h3>
+              
+              {passwordChangeSuccess && (
+                <div className="mb-4 rounded-md bg-green-50 dark:bg-green-900/20 p-4">
+                  <p className="text-sm text-green-800 dark:text-green-400">Password changed successfully!</p>
+                </div>
+              )}
 
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Current Password
-                </label>
-                <input
-                  {...registerPassword('currentPassword')}
-                  type="password"
-                  autoComplete="current-password"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                />
-                {passwordErrors.currentPassword && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.currentPassword.message}</p>
-                )}
-              </div>
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Current Password
+                  </label>
+                  <input
+                    {...registerPassword('currentPassword')}
+                    type="password"
+                    autoComplete="current-password"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  />
+                  {passwordErrors.currentPassword && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.currentPassword.message}</p>
+                  )}
+                </div>
 
-              <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  New Password
-                </label>
-                <input
-                  {...registerPassword('newPassword')}
-                  type="password"
-                  autoComplete="new-password"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                />
-                {passwordErrors.newPassword && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.newPassword.message}</p>
-                )}
-              </div>
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    New Password
+                  </label>
+                  <input
+                    {...registerPassword('newPassword')}
+                    type="password"
+                    autoComplete="new-password"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  />
+                  {passwordErrors.newPassword && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.newPassword.message}</p>
+                  )}
+                </div>
 
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Confirm New Password
-                </label>
-                <input
-                  {...registerPassword('confirmPassword')}
-                  type="password"
-                  autoComplete="new-password"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
-                />
-                {passwordErrors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.confirmPassword.message}</p>
-                )}
-              </div>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Confirm New Password
+                  </label>
+                  <input
+                    {...registerPassword('confirmPassword')}
+                    type="password"
+                    autoComplete="new-password"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                  />
+                  {passwordErrors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordErrors.confirmPassword.message}</p>
+                  )}
+                </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isChangingPassword}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isChangingPassword ? 'Changing...' : 'Change Password'}
-                </button>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isChangingPassword ? 'Changing...' : 'Change Password'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </form>
-      </div>
+          </form>
+        </div>
+      )}
 
       {/* Danger Zone */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 border-2 border-red-200 dark:border-red-800">
