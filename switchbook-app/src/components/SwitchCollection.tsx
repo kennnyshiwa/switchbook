@@ -175,6 +175,12 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
             >
               Bulk Upload
             </Link>
+            <Link
+              href="/dashboard/bulk-edit"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
+            >
+              Bulk Edit
+            </Link>
             <button
               onClick={() => setShowAddModal(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
