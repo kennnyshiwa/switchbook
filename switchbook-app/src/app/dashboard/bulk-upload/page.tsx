@@ -146,10 +146,26 @@ export default function BulkUploadPage() {
         const autoMapping: ColumnMapping = {}
         data[0].forEach((header, index) => {
           const normalizedHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '')
-          const matchedField = switchFields.find(field => 
-            field.label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(normalizedHeader) ||
-            normalizedHeader.includes(field.key.toLowerCase())
-          )
+          
+          // Try exact matches first
+          let matchedField = switchFields.find(field => {
+            const normalizedLabel = field.label.toLowerCase().replace(/[^a-z0-9]/g, '')
+            const normalizedKey = field.key.toLowerCase()
+            return normalizedLabel === normalizedHeader || normalizedKey === normalizedHeader
+          })
+          
+          // If no exact match, try partial matches but be more specific
+          if (!matchedField) {
+            matchedField = switchFields.find(field => {
+              const normalizedLabel = field.label.toLowerCase().replace(/[^a-z0-9]/g, '')
+              const normalizedKey = field.key.toLowerCase()
+              
+              // Check if the header contains the full field key or label
+              return (normalizedHeader.includes(normalizedKey) && normalizedKey.length > 3) ||
+                     (normalizedLabel.includes(normalizedHeader) && normalizedHeader.length > 3)
+            })
+          }
+          
           if (matchedField) {
             autoMapping[index.toString()] = matchedField.key as keyof ParsedSwitch
           }
