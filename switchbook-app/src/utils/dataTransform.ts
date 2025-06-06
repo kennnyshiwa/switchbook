@@ -7,6 +7,7 @@ interface SwitchData {
   technology?: SwitchTechnology | null | '';
   magnetOrientation?: string | null;
   magnetPosition?: string | null;
+  magnetStrength?: number | null;
   compatibility?: string | null;
   manufacturer?: string | null;
   springWeight?: string | null;
@@ -31,6 +32,7 @@ export function transformSwitchData(data: SwitchData) {
     technology: data.technology === '' ? null : (data.technology || null),
     magnetOrientation: data.magnetOrientation || null,
     magnetPosition: data.magnetPosition || null,
+    magnetStrength: data.magnetStrength || null,
     compatibility: data.compatibility || null,
     manufacturer: data.manufacturer || null,
     springWeight: data.springWeight || null,

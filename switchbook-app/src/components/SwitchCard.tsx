@@ -134,6 +134,12 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
             </p>
           )}
 
+          {switchItem.magnetStrength && (
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="font-medium">Magnet Strength:</span> {switchItem.magnetStrength}
+            </p>
+          )}
+
           {switchItem.compatibility && (
             <p className="text-sm text-gray-600 dark:text-gray-300">
               <span className="font-medium">Compatibility:</span> {switchItem.compatibility}

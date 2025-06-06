@@ -12,6 +12,7 @@ interface ParsedSwitch {
   technology?: string
   magnetOrientation?: string
   magnetPosition?: string
+  magnetStrength?: number
   compatibility?: string
   manufacturer?: string
   springWeight?: string
@@ -57,6 +58,7 @@ export default function BulkUploadPage() {
     { key: 'technology', label: 'Technology', required: false },
     { key: 'magnetOrientation', label: 'Magnetic Pole Orientation', required: false },
     { key: 'magnetPosition', label: 'Magnet Position', required: false },
+    { key: 'magnetStrength', label: 'Magnet Strength', required: false },
     { key: 'compatibility', label: 'Compatibility', required: false },
     { key: 'manufacturer', label: 'Manufacturer', required: false },
     { key: 'springWeight', label: 'Spring Weight', required: false },
@@ -92,7 +94,7 @@ export default function BulkUploadPage() {
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
     const sampleData = [
-      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', 'Horizontal', 'Center', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
+      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', 'Horizontal', 'Center', '35', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
     ]
     
     const csvContent = [templateHeaders, sampleData].map(row => 
@@ -190,7 +192,7 @@ export default function BulkUploadPage() {
         if (field && row[parseInt(columnIndex)]) {
           const value = row[parseInt(columnIndex)].replace(/^"|"$/g, '') // Remove quotes
           
-          if (['actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut'].includes(field)) {
+          if (['actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'magnetStrength'].includes(field)) {
             const numValue = parseFloat(value)
             if (!isNaN(numValue)) {
               (switchData as any)[field] = numValue
@@ -371,7 +373,7 @@ export default function BulkUploadPage() {
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
               <li><strong>Required field:</strong> Switch Name</li>
-              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
+              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Strength, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>
             </ol>
@@ -385,6 +387,7 @@ export default function BulkUploadPage() {
                 <li>• Technology (if provided) must be: MECHANICAL, OPTICAL, MAGNETIC, INDUCTIVE, or ELECTRO_CAPACITIVE (case-insensitive)</li>
                 <li>• Magnetic Pole Orientation (if provided) must be: Horizontal or Vertical (case-insensitive)</li>
                 <li>• Magnet Position (if provided) must be: Center or Off-Center (case-insensitive)</li>
+                <li>• Magnet Strength should be a numeric value (e.g., 35, 3500)</li>
                 <li>• Compatibility is a free text field (e.g., &quot;MX-style&quot;, &quot;Cherry MX&quot;, &quot;3-pin&quot;, &quot;5-pin&quot;)</li>
                 <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
                 <li>• Forces should be numeric values in grams</li>
@@ -521,6 +524,9 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Magnet Position
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Magnet Strength
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Compatibility
@@ -665,6 +671,19 @@ export default function BulkUploadPage() {
                         <option value="Center">Center</option>
                         <option value="Off-Center">Off-Center</option>
                       </select>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.magnetStrength || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'magnetStrength', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        placeholder="e.g. 35, 3500"
+                        min="0"
+                        max="10000"
+                        step="0.1"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <input
