@@ -95,13 +95,9 @@ export default async function SharePage({ params }: SharePageProps) {
                             No Type
                           </span>
                         )}
-                        {switchItem.technology ? (
+                        {switchItem.technology && (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TECHNOLOGY_COLORS[switchItem.technology as keyof typeof SWITCH_TECHNOLOGY_COLORS]}`}>
                             {switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                            No Tech
                           </span>
                         )}
                       </div>
