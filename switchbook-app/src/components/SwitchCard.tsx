@@ -129,7 +129,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
             </p>
           )}
 
-          {(switchItem.actuationForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut) && (
+          {switchItem.technology !== 'MAGNETIC' && (switchItem.actuationForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut || switchItem.springWeight || switchItem.springLength) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Specs</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -151,6 +151,16 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
                 {switchItem.bottomOut && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Bottom Out:</span> {switchItem.bottomOut}mm
+                  </p>
+                )}
+                {switchItem.springWeight && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Spring Weight:</span> {formatWithUnit(switchItem.springWeight, 'g')}
+                  </p>
+                )}
+                {switchItem.springLength && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Spring Length:</span> {formatWithUnit(switchItem.springLength, 'mm')}
                   </p>
                 )}
               </div>
@@ -195,20 +205,6 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
             </div>
           )}
 
-          {(switchItem.springWeight || switchItem.springLength) && (
-            <div className="space-y-1">
-              {switchItem.springWeight && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-medium">Spring Weight:</span> {formatWithUnit(switchItem.springWeight, 'g')}
-                </p>
-              )}
-              {switchItem.springLength && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-medium">Spring Length:</span> {formatWithUnit(switchItem.springLength, 'mm')}
-                </p>
-              )}
-            </div>
-          )}
 
 
           {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
