@@ -470,7 +470,7 @@ export default function BulkUploadPage() {
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
               <li><strong>Required field:</strong> Switch Name</li>
-              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Strength, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
+              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Initial Force, Total Travel, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>
             </ol>
@@ -484,7 +484,11 @@ export default function BulkUploadPage() {
                 <li>• Technology (if provided) must be: MECHANICAL, OPTICAL, MAGNETIC, INDUCTIVE, or ELECTRO_CAPACITIVE (case-insensitive)</li>
                 <li>• Magnetic Pole Orientation (if provided) must be: Horizontal or Vertical (case-insensitive)</li>
                 <li>• Magnet Position (if provided) must be: Center or Off-Center (case-insensitive)</li>
-                <li>• Magnet Strength should be a numeric value (e.g., 35, 3500)</li>
+                <li>• Initial Force should be a numeric value in grams (e.g., 35, 55)</li>
+                <li>• Total Travel should be a numeric value in millimeters (e.g., 3.5, 4.0)</li>
+                <li>• Initial Magnetic Flux should be a numeric value in Gauss (e.g., 1200, 1500)</li>
+                <li>• Bottom Out Magnetic Flux should be a numeric value in Gauss (e.g., 3000, 3500)</li>
+                <li>• PCB Thickness (if provided) must be: 1.2mm or 1.6mm</li>
                 <li>• Compatibility is a free text field (e.g., &quot;MX-style&quot;, &quot;Cherry MX&quot;, &quot;3-pin&quot;, &quot;5-pin&quot;)</li>
                 <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
                 <li>• Forces should be numeric values in grams</li>
