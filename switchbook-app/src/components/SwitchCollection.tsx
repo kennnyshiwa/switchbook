@@ -54,11 +54,25 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   }
 
   // Helper function to check if a switch has force curves
-  const switchHasForceCurves = useCallback((switchItem: Switch): boolean => {
-    return forceCurvePreferences.some(pref => 
+  const switchHasForceCurves = useCallback(async (switchItem: Switch): Promise<boolean> => {
+    // First check if user has saved preferences for this switch
+    const hasSavedPreferences = forceCurvePreferences.some(pref => 
       pref.switchName === switchItem.name && 
       pref.manufacturer === switchItem.manufacturer
     )
+    
+    if (hasSavedPreferences) {
+      return true
+    }
+    
+    // If no saved preferences, check if force curves are available in the repository
+    try {
+      const { hasForceCurveData } = await import('@/utils/forceCurves')
+      return await hasForceCurveData(switchItem.name, switchItem.manufacturer || undefined)
+    } catch (error) {
+      console.error('Error checking force curve availability:', error)
+      return false
+    }
   }, [forceCurvePreferences])
 
   // Generate filter options from current switches
@@ -100,143 +114,160 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     }
   }, [switches])
 
-  const filteredAndSortedSwitches = useMemo(() => {
-    let filtered = switches
+  const [filteredSwitches, setFilteredSwitches] = useState<Switch[]>([])
+  const [isFiltering, setIsFiltering] = useState(false)
 
-    // Apply search filter
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase()
-      filtered = filtered.filter(s => 
-        s.name.toLowerCase().includes(search) ||
-        (s.chineseName?.toLowerCase().includes(search) ?? false) ||
-        (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
-        (s.type?.toLowerCase().includes(search) ?? false) ||
-        (s.technology?.toLowerCase().includes(search) ?? false) ||
-        (s.notes?.toLowerCase().includes(search) ?? false) ||
-        (s.springWeight?.toLowerCase().includes(search) ?? false) ||
-        (s.springLength?.toLowerCase().includes(search) ?? false) ||
-        (s.topHousing?.toLowerCase().includes(search) ?? false) ||
-        (s.bottomHousing?.toLowerCase().includes(search) ?? false) ||
-        (s.stem?.toLowerCase().includes(search) ?? false) ||
-        (s.magnetOrientation?.toLowerCase().includes(search) ?? false) ||
-        (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
-        (s.compatibility?.toLowerCase().includes(search) ?? false)
-      )
-    }
+  // Filter and sort switches (async due to force curve checking)
+  useEffect(() => {
+    const filterSwitches = async () => {
+      setIsFiltering(true)
+      let filtered = [...switches]
 
-    // Apply active filters
-    if (activeFilters.manufacturer) {
-      filtered = filtered.filter(s => s.manufacturer === activeFilters.manufacturer)
-    }
-    if (activeFilters.type) {
-      filtered = filtered.filter(s => s.type === activeFilters.type)
-    }
-    if (activeFilters.technology) {
-      filtered = filtered.filter(s => s.technology === activeFilters.technology)
-    }
-    if (activeFilters.topHousing) {
-      filtered = filtered.filter(s => s.topHousing === activeFilters.topHousing)
-    }
-    if (activeFilters.bottomHousing) {
-      filtered = filtered.filter(s => s.bottomHousing === activeFilters.bottomHousing)
-    }
-    if (activeFilters.stem) {
-      filtered = filtered.filter(s => s.stem === activeFilters.stem)
-    }
-    if (activeFilters.springWeight) {
-      filtered = filtered.filter(s => s.springWeight === activeFilters.springWeight)
-    }
-    if (activeFilters.springLength) {
-      filtered = filtered.filter(s => s.springLength === activeFilters.springLength)
-    }
-    if (activeFilters.magnetOrientation) {
-      filtered = filtered.filter(s => s.magnetOrientation === activeFilters.magnetOrientation)
-    }
-    if (activeFilters.magnetPosition) {
-      filtered = filtered.filter(s => s.magnetPosition === activeFilters.magnetPosition)
-    }
-    if (activeFilters.compatibility) {
-      filtered = filtered.filter(s => s.compatibility === activeFilters.compatibility)
-    }
-
-    // Apply numeric range filters
-    if (activeFilters.actuationForceMin !== undefined) {
-      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce >= activeFilters.actuationForceMin!)
-    }
-    if (activeFilters.actuationForceMax !== undefined) {
-      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce <= activeFilters.actuationForceMax!)
-    }
-    if (activeFilters.bottomOutForceMin !== undefined) {
-      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce >= activeFilters.bottomOutForceMin!)
-    }
-    if (activeFilters.bottomOutForceMax !== undefined) {
-      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce <= activeFilters.bottomOutForceMax!)
-    }
-    if (activeFilters.preTravelMin !== undefined) {
-      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel >= activeFilters.preTravelMin!)
-    }
-    if (activeFilters.preTravelMax !== undefined) {
-      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel <= activeFilters.preTravelMax!)
-    }
-    if (activeFilters.bottomOutMin !== undefined) {
-      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut >= activeFilters.bottomOutMin!)
-    }
-    if (activeFilters.bottomOutMax !== undefined) {
-      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut <= activeFilters.bottomOutMax!)
-    }
-
-    // Apply force curves filter
-    if (activeFilters.hasForceCurves !== undefined) {
-      if (activeFilters.hasForceCurves) {
-        // Show only switches that have force curves
-        filtered = filtered.filter(s => switchHasForceCurves(s))
-      } else {
-        // Show only switches that do NOT have force curves
-        filtered = filtered.filter(s => !switchHasForceCurves(s))
+      // Apply search filter
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase()
+        filtered = filtered.filter(s => 
+          s.name.toLowerCase().includes(search) ||
+          (s.chineseName?.toLowerCase().includes(search) ?? false) ||
+          (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
+          (s.type?.toLowerCase().includes(search) ?? false) ||
+          (s.technology?.toLowerCase().includes(search) ?? false) ||
+          (s.notes?.toLowerCase().includes(search) ?? false) ||
+          (s.springWeight?.toLowerCase().includes(search) ?? false) ||
+          (s.springLength?.toLowerCase().includes(search) ?? false) ||
+          (s.topHousing?.toLowerCase().includes(search) ?? false) ||
+          (s.bottomHousing?.toLowerCase().includes(search) ?? false) ||
+          (s.stem?.toLowerCase().includes(search) ?? false) ||
+          (s.magnetOrientation?.toLowerCase().includes(search) ?? false) ||
+          (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
+          (s.compatibility?.toLowerCase().includes(search) ?? false)
+        )
       }
+
+      // Apply active filters
+      if (activeFilters.manufacturer) {
+        filtered = filtered.filter(s => s.manufacturer === activeFilters.manufacturer)
+      }
+      if (activeFilters.type) {
+        filtered = filtered.filter(s => s.type === activeFilters.type)
+      }
+      if (activeFilters.technology) {
+        filtered = filtered.filter(s => s.technology === activeFilters.technology)
+      }
+      if (activeFilters.topHousing) {
+        filtered = filtered.filter(s => s.topHousing === activeFilters.topHousing)
+      }
+      if (activeFilters.bottomHousing) {
+        filtered = filtered.filter(s => s.bottomHousing === activeFilters.bottomHousing)
+      }
+      if (activeFilters.stem) {
+        filtered = filtered.filter(s => s.stem === activeFilters.stem)
+      }
+      if (activeFilters.springWeight) {
+        filtered = filtered.filter(s => s.springWeight === activeFilters.springWeight)
+      }
+      if (activeFilters.springLength) {
+        filtered = filtered.filter(s => s.springLength === activeFilters.springLength)
+      }
+      if (activeFilters.magnetOrientation) {
+        filtered = filtered.filter(s => s.magnetOrientation === activeFilters.magnetOrientation)
+      }
+      if (activeFilters.magnetPosition) {
+        filtered = filtered.filter(s => s.magnetPosition === activeFilters.magnetPosition)
+      }
+      if (activeFilters.compatibility) {
+        filtered = filtered.filter(s => s.compatibility === activeFilters.compatibility)
+      }
+
+      // Apply numeric range filters
+      if (activeFilters.actuationForceMin !== undefined) {
+        filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce >= activeFilters.actuationForceMin!)
+      }
+      if (activeFilters.actuationForceMax !== undefined) {
+        filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce <= activeFilters.actuationForceMax!)
+      }
+      if (activeFilters.bottomOutForceMin !== undefined) {
+        filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce >= activeFilters.bottomOutForceMin!)
+      }
+      if (activeFilters.bottomOutForceMax !== undefined) {
+        filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce <= activeFilters.bottomOutForceMax!)
+      }
+      if (activeFilters.preTravelMin !== undefined) {
+        filtered = filtered.filter(s => s.preTravel !== null && s.preTravel >= activeFilters.preTravelMin!)
+      }
+      if (activeFilters.preTravelMax !== undefined) {
+        filtered = filtered.filter(s => s.preTravel !== null && s.preTravel <= activeFilters.preTravelMax!)
+      }
+      if (activeFilters.bottomOutMin !== undefined) {
+        filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut >= activeFilters.bottomOutMin!)
+      }
+      if (activeFilters.bottomOutMax !== undefined) {
+        filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut <= activeFilters.bottomOutMax!)
+      }
+
+      // Apply force curves filter (async)
+      if (activeFilters.hasForceCurves !== undefined) {
+        const forceCurveChecks = await Promise.all(
+          filtered.map(async (s) => ({
+            switch: s,
+            hasForceCurves: await switchHasForceCurves(s)
+          }))
+        )
+        
+        if (activeFilters.hasForceCurves) {
+          // Show only switches that have force curves
+          filtered = forceCurveChecks.filter(result => result.hasForceCurves).map(result => result.switch)
+        } else {
+          // Show only switches that do NOT have force curves
+          filtered = forceCurveChecks.filter(result => !result.hasForceCurves).map(result => result.switch)
+        }
+      }
+
+      // Apply sorting
+      const sorted = [...filtered]
+      switch (sortOption) {
+        case 'recent':
+          sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          break
+        case 'oldest':
+          sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          break
+        case 'name-asc':
+          sorted.sort((a, b) => a.name.localeCompare(b.name))
+          break
+        case 'name-desc':
+          sorted.sort((a, b) => b.name.localeCompare(a.name))
+          break
+        case 'manufacturer-asc':
+          sorted.sort((a, b) => (a.manufacturer || 'Unknown').localeCompare(b.manufacturer || 'Unknown'))
+          break
+        case 'manufacturer-desc':
+          sorted.sort((a, b) => (b.manufacturer || 'Unknown').localeCompare(a.manufacturer || 'Unknown'))
+          break
+        case 'type':
+          sorted.sort((a, b) => (a.type || 'No Type').localeCompare(b.type || 'No Type'))
+          break
+        case 'spring-asc':
+          sorted.sort((a, b) => {
+            const aWeight = parseFloat(a.springWeight?.match(/\d+/)?.[0] || '0')
+            const bWeight = parseFloat(b.springWeight?.match(/\d+/)?.[0] || '0')
+            return aWeight - bWeight
+          })
+          break
+        case 'spring-desc':
+          sorted.sort((a, b) => {
+            const aWeight = parseFloat(a.springWeight?.match(/\d+/)?.[0] || '0')
+            const bWeight = parseFloat(b.springWeight?.match(/\d+/)?.[0] || '0')
+            return bWeight - aWeight
+          })
+          break
+      }
+
+      setFilteredSwitches(sorted)
+      setIsFiltering(false)
     }
 
-    // Apply sorting
-    const sorted = [...filtered]
-    switch (sortOption) {
-      case 'recent':
-        sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        break
-      case 'oldest':
-        sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-        break
-      case 'name-asc':
-        sorted.sort((a, b) => a.name.localeCompare(b.name))
-        break
-      case 'name-desc':
-        sorted.sort((a, b) => b.name.localeCompare(a.name))
-        break
-      case 'manufacturer-asc':
-        sorted.sort((a, b) => (a.manufacturer || 'Unknown').localeCompare(b.manufacturer || 'Unknown'))
-        break
-      case 'manufacturer-desc':
-        sorted.sort((a, b) => (b.manufacturer || 'Unknown').localeCompare(a.manufacturer || 'Unknown'))
-        break
-      case 'type':
-        sorted.sort((a, b) => (a.type || 'No Type').localeCompare(b.type || 'No Type'))
-        break
-      case 'spring-asc':
-        sorted.sort((a, b) => {
-          const aWeight = parseFloat(a.springWeight?.match(/\d+/)?.[0] || '0')
-          const bWeight = parseFloat(b.springWeight?.match(/\d+/)?.[0] || '0')
-          return aWeight - bWeight
-        })
-        break
-      case 'spring-desc':
-        sorted.sort((a, b) => {
-          const aWeight = parseFloat(a.springWeight?.match(/\d+/)?.[0] || '0')
-          const bWeight = parseFloat(b.springWeight?.match(/\d+/)?.[0] || '0')
-          return bWeight - aWeight
-        })
-        break
-    }
-
-    return sorted
+    filterSwitches()
   }, [switches, searchTerm, sortOption, activeFilters, switchHasForceCurves])
 
   if (switches.length === 0) {
@@ -294,7 +325,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Your Switches ({switches.length}{(searchTerm || Object.values(activeFilters).some(Boolean)) && ` • ${filteredAndSortedSwitches.length} shown`})
+            Your Switches ({switches.length}{(searchTerm || Object.values(activeFilters).some(Boolean)) && ` • ${filteredSwitches.length} shown`})
           </h2>
           <div className="flex space-x-3">
             <Link
@@ -327,7 +358,11 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         />
       </div>
       
-      {filteredAndSortedSwitches.length === 0 && (searchTerm || Object.values(activeFilters).some(Boolean)) ? (
+      {isFiltering ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Filtering switches...</p>
+        </div>
+      ) : filteredSwitches.length === 0 && (searchTerm || Object.values(activeFilters).some(Boolean)) ? (
         <div className="text-center py-12">
           <p className="text-gray-500">
             No switches found matching {searchTerm && `"${searchTerm}"`}
@@ -337,7 +372,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedSwitches.map((switchItem) => (
+          {filteredSwitches.map((switchItem) => (
             <SwitchCard
               key={switchItem.id}
               switch={switchItem}
@@ -349,7 +384,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         </div>
       ) : (
         <SwitchTable
-          switches={filteredAndSortedSwitches}
+          switches={filteredSwitches}
           onDelete={handleSwitchDeleted}
           onEdit={setEditingSwitch}
           showForceCurves={showForceCurves}
