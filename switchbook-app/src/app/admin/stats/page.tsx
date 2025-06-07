@@ -17,7 +17,7 @@ export default async function AdminStats() {
     verifiedUsers,
     usersWithSwitches,
     mostPopularSwitchTypes,
-    mostPopularManufacturers,
+    manufacturerData,
     recentActivity,
     userGrowthLast7Days,
     switchGrowthLast7Days
@@ -44,14 +44,23 @@ export default async function AdminStats() {
       take: 5
     }),
     
-    // Manufacturer popularity
-    prisma.switch.groupBy({
-      by: ['manufacturer'],
-      where: { manufacturer: { not: null } },
-      _count: { manufacturer: true },
-      orderBy: { _count: { manufacturer: 'desc' } },
-      take: 10
-    }),
+    // Get manufacturer data with proper names from manufacturer table
+    Promise.all([
+      prisma.switch.findMany({
+        where: { 
+          manufacturer: { 
+            not: null
+          },
+          NOT: {
+            manufacturer: ''
+          }
+        },
+        select: { manufacturer: true }
+      }),
+      prisma.manufacturer.findMany({
+        select: { name: true, aliases: true }
+      })
+    ]),
     
     // Recent activity
     prisma.switch.findMany({
@@ -101,6 +110,44 @@ export default async function AdminStats() {
       })
     }))
   ])
+
+  // Process manufacturer data using the manufacturer table for canonical names
+  const [allSwitchManufacturers, allManufacturers] = manufacturerData
+  
+  // Create a mapping from any manufacturer name/alias to the canonical name
+  const manufacturerNameMap = new Map<string, string>()
+  allManufacturers.forEach(mfr => {
+    // Map the canonical name to itself
+    manufacturerNameMap.set(mfr.name.toLowerCase(), mfr.name)
+    
+    // Map all aliases to the canonical name
+    if (mfr.aliases) {
+      mfr.aliases.forEach(alias => {
+        manufacturerNameMap.set(alias.toLowerCase(), mfr.name)
+      })
+    }
+  })
+  
+  // Count switches by canonical manufacturer name
+  const manufacturerCounts = new Map<string, number>()
+  
+  allSwitchManufacturers.forEach(({ manufacturer }) => {
+    if (manufacturer) {
+      const normalized = manufacturer.trim().toLowerCase()
+      const canonicalName = manufacturerNameMap.get(normalized) || manufacturer.trim()
+      
+      manufacturerCounts.set(canonicalName, (manufacturerCounts.get(canonicalName) || 0) + 1)
+    }
+  })
+
+  // Convert to array and sort by count, take top 10
+  const mostPopularManufacturers = Array.from(manufacturerCounts.entries())
+    .map(([manufacturer, count]) => ({
+      manufacturer,
+      _count: { manufacturer: count }
+    }))
+    .sort((a, b) => b._count.manufacturer - a._count.manufacturer)
+    .slice(0, 10)
 
   const engagementRate = totalUsers > 0 ? ((usersWithSwitches / totalUsers) * 100).toFixed(1) : 0
   const verificationRate = totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100).toFixed(1) : 0
@@ -185,21 +232,36 @@ export default async function AdminStats() {
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
             <div className="px-4 py-5 sm:px-6">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Top Manufacturers</h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Grouped by canonical names • {manufacturerCounts.size} total manufacturers
+              </p>
             </div>
             <div className="border-t border-gray-200 dark:border-gray-700">
               <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                {mostPopularManufacturers.map((manufacturer) => (
-                  <li key={manufacturer.manufacturer} className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {manufacturer.manufacturer}
+                {mostPopularManufacturers.map((manufacturer) => {
+                  const mfgData = allManufacturers.find(m => m.name === manufacturer.manufacturer)
+                  const isVerified = mfgData ? true : false // All in manufacturer table are in our system
+                  
+                  return (
+                    <li key={manufacturer.manufacturer} className="px-4 py-4 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {manufacturer.manufacturer}
+                          </div>
+                          {isVerified && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              Registered
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {manufacturer._count.manufacturer} switches
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-900 dark:text-white">
-                        {manufacturer._count.manufacturer} switches
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           </div>
