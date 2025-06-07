@@ -9,7 +9,6 @@ interface SwitchData {
   magnetPosition?: string | null;
   magnetPolarity?: string | null;
   initialForce?: number | null;
-  totalTravel?: number | null;
   initialMagneticFlux?: number | null;
   bottomOutMagneticFlux?: number | null;
   pcbThickness?: string | null;
@@ -39,7 +38,6 @@ export function transformSwitchData(data: SwitchData) {
     magnetPosition: data.magnetPosition || null,
     magnetPolarity: data.magnetPolarity || null,
     initialForce: data.initialForce || null,
-    totalTravel: data.totalTravel || null,
     initialMagneticFlux: data.initialMagneticFlux || null,
     bottomOutMagneticFlux: data.bottomOutMagneticFlux || null,
     pcbThickness: data.pcbThickness || null,

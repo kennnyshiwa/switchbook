@@ -15,7 +15,6 @@ interface ParsedSwitch {
   magnetPosition?: string
   magnetPolarity?: string
   initialForce?: number
-  totalTravel?: number
   initialMagneticFlux?: number
   bottomOutMagneticFlux?: number
   pcbThickness?: string
@@ -73,7 +72,6 @@ export default function BulkUploadPage() {
     { key: 'magnetPosition', label: 'Magnet Position', required: false },
     { key: 'magnetPolarity', label: 'Magnet Polarity', required: false },
     { key: 'initialForce', label: 'Initial Force (g)', required: false },
-    { key: 'totalTravel', label: 'Total Travel (mm)', required: false },
     { key: 'initialMagneticFlux', label: 'Initial Magnetic Flux (Gs)', required: false },
     { key: 'bottomOutMagneticFlux', label: 'Bottom Out Magnetic Flux (Gs)', required: false },
     { key: 'pcbThickness', label: 'PCB Thickness', required: false },
@@ -228,7 +226,7 @@ export default function BulkUploadPage() {
         if (field && row[parseInt(columnIndex)]) {
           const value = row[parseInt(columnIndex)].replace(/^"|"$/g, '') // Remove quotes
           
-          if (['actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'initialForce', 'totalTravel', 'initialMagneticFlux', 'bottomOutMagneticFlux'].includes(field)) {
+          if (['actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux'].includes(field)) {
             const numValue = parseFloat(value)
             if (!isNaN(numValue)) {
               (switchData as any)[field] = numValue
@@ -483,7 +481,7 @@ export default function BulkUploadPage() {
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
               <li><strong>Required field:</strong> Switch Name</li>
-              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Polarity, Initial Force, Total Travel, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
+              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Polarity, Initial Force, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>
             </ol>
@@ -498,7 +496,6 @@ export default function BulkUploadPage() {
                 <li>• Magnetic Pole Orientation (if provided) must be: Horizontal or Vertical (case-insensitive)</li>
                 <li>• Magnet Position (if provided) must be: Center or Off-Center (case-insensitive)</li>
                 <li>• Initial Force should be a numeric value in grams (e.g., 35, 55)</li>
-                <li>• Total Travel should be a numeric value in millimeters (e.g., 3.5, 4.0)</li>
                 <li>• Initial Magnetic Flux should be a numeric value in Gauss (e.g., 1200, 1500)</li>
                 <li>• Bottom Out Magnetic Flux should be a numeric value in Gauss (e.g., 3000, 3500)</li>
                 <li>• PCB Thickness (if provided) must be: 1.2mm or 1.6mm</li>
@@ -657,9 +654,6 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Initial Force (g)
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Total Travel (mm)
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Initial Flux (Gs)
@@ -835,18 +829,6 @@ export default function BulkUploadPage() {
                         className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         min="0"
                         max="1000"
-                        step="0.1"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.totalTravel || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'totalTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        min="0"
-                        max="10"
                         step="0.1"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />

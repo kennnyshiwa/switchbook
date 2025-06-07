@@ -60,13 +60,10 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                 Pre Travel
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Bottom Out
+                Bottom Out/Total Travel
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Initial Force
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Total Travel
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Initial Flux
@@ -152,9 +149,6 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.initialForce ? `${switchItem.initialForce}g` : '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.totalTravel ? `${switchItem.totalTravel}mm` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.initialMagneticFlux ? `${switchItem.initialMagneticFlux}Gs` : '-'}

@@ -36,7 +36,6 @@ model Switch {
   magnetPosition  String?
   magnetPolarity  String?
   initialForce    Float?
-  totalTravel     Float?
   initialMagneticFlux Float?
   bottomOutMagneticFlux Float?
   pcbThickness    String?

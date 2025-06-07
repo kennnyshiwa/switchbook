@@ -150,7 +150,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
                 )}
                 {switchItem.bottomOut && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    <span className="font-medium">Bottom Out:</span> {switchItem.bottomOut}mm
+                    <span className="font-medium">Bottom Out/Total Travel:</span> {switchItem.bottomOut}mm
                   </p>
                 )}
                 {switchItem.springWeight && (
@@ -167,18 +167,13 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
             </div>
           )}
 
-          {switchItem.technology === 'MAGNETIC' && (switchItem.initialForce || switchItem.totalTravel || switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
+          {switchItem.technology === 'MAGNETIC' && (switchItem.initialForce || switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Magnet Details</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 {switchItem.initialForce && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Initial Force:</span> {switchItem.initialForce}g
-                  </p>
-                )}
-                {switchItem.totalTravel && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    <span className="font-medium">Total Travel:</span> {switchItem.totalTravel}mm
                   </p>
                 )}
                 {switchItem.initialMagneticFlux && (
