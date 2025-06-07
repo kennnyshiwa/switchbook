@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import CollectionStats from "@/components/CollectionStats"
 import ForceCurvesButton from "@/components/ForceCurvesButton"
-import { SWITCH_TYPE_COLORS } from "@/constants/switchTypes"
+import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from "@/constants/switchTypes"
 import { formatWithUnit } from "@/utils/formatters"
 
 interface SharePageProps {
@@ -85,15 +85,26 @@ export default async function SharePage({ params }: SharePageProps) {
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      {switchItem.type ? (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
-                          {switchItem.type.replace('_', ' ')}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                          No Type
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {switchItem.type ? (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
+                            {switchItem.type.replace('_', ' ')}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            No Type
+                          </span>
+                        )}
+                        {switchItem.technology ? (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TECHNOLOGY_COLORS[switchItem.technology as keyof typeof SWITCH_TECHNOLOGY_COLORS]}`}>
+                            {switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            No Tech
+                          </span>
+                        )}
+                      </div>
                       {switchItem.dateObtained && (
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {(() => {
@@ -109,12 +120,6 @@ export default async function SharePage({ params }: SharePageProps) {
                     <p className="text-sm text-gray-600 dark:text-gray-300">
                       <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer || 'Unknown'}
                     </p>
-
-                    {switchItem.technology && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-medium">Technology:</span> {switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                      </p>
-                    )}
 
 
                     {switchItem.compatibility && (
