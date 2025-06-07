@@ -34,6 +34,7 @@ model Switch {
   technology      SwitchTechnology?
   magnetOrientation String?
   magnetPosition  String?
+  magnetPolarity  String?
   initialForce    Float?
   totalTravel     Float?
   initialMagneticFlux Float?

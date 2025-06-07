@@ -167,7 +167,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
             </div>
           )}
 
-          {switchItem.technology === 'MAGNETIC' && (switchItem.initialForce || switchItem.totalTravel || switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness) && (
+          {switchItem.technology === 'MAGNETIC' && (switchItem.initialForce || switchItem.totalTravel || switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Magnet Details</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -204,6 +204,11 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
                 {switchItem.pcbThickness && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">PCB Thickness:</span> {switchItem.pcbThickness}
+                  </p>
+                )}
+                {switchItem.magnetPolarity && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Magnet Polarity:</span> {switchItem.magnetPolarity}
                   </p>
                 )}
               </div>

@@ -23,6 +23,7 @@ export const switchSchema = z.object({
   technology: z.enum(["MECHANICAL", "OPTICAL", "MAGNETIC", "INDUCTIVE", "ELECTRO_CAPACITIVE"]).optional().or(z.literal("")),
   magnetOrientation: z.string().max(200).optional().or(z.literal("")),
   magnetPosition: z.string().max(200).optional().or(z.literal("")),
+  magnetPolarity: z.string().max(10).optional().or(z.literal("")),
   initialForce: z.number().min(0).max(1000).optional().or(z.nan().transform(() => undefined)),
   totalTravel: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   initialMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan().transform(() => undefined)),

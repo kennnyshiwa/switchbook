@@ -14,6 +14,7 @@ interface EditableSwitchData {
   technology?: string
   magnetOrientation?: string
   magnetPosition?: string
+  magnetPolarity?: string
   initialForce?: number
   totalTravel?: number
   initialMagneticFlux?: number
@@ -64,6 +65,7 @@ export default function BulkEditPage() {
             technology: sw.technology || '',
             magnetOrientation: sw.magnetOrientation || '',
             magnetPosition: sw.magnetPosition || '',
+            magnetPolarity: sw.magnetPolarity || '',
             initialForce: sw.initialForce || undefined,
             totalTravel: sw.totalTravel || undefined,
             initialMagneticFlux: sw.initialMagneticFlux || undefined,
@@ -269,6 +271,9 @@ export default function BulkEditPage() {
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           PCB Thickness
                         </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Magnet Polarity
+                        </th>
                       </>
                     )}
                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -449,6 +454,17 @@ export default function BulkEditPage() {
                               <option value="">No thickness</option>
                               <option value="1.2mm">1.2mm</option>
                               <option value="1.6mm">1.6mm</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <select
+                              value={switchItem.magnetPolarity || ''}
+                              onChange={(e) => updateSwitch(index, 'magnetPolarity', e.target.value || undefined)}
+                              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                            >
+                              <option value="">No polarity</option>
+                              <option value="North">North</option>
+                              <option value="South">South</option>
                             </select>
                           </td>
                         </>
@@ -703,6 +719,7 @@ export default function BulkEditPage() {
                           technology: sw.technology || '',
                           magnetOrientation: sw.magnetOrientation || '',
                           magnetPosition: sw.magnetPosition || '',
+                          magnetPolarity: sw.magnetPolarity || '',
                           initialForce: sw.initialForce || undefined,
                           totalTravel: sw.totalTravel || undefined,
                           initialMagneticFlux: sw.initialMagneticFlux || undefined,

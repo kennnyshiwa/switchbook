@@ -13,6 +13,7 @@ interface ParsedSwitch {
   technology?: string
   magnetOrientation?: string
   magnetPosition?: string
+  magnetPolarity?: string
   initialForce?: number
   totalTravel?: number
   initialMagneticFlux?: number
@@ -70,6 +71,7 @@ export default function BulkUploadPage() {
     { key: 'technology', label: 'Technology', required: false },
     { key: 'magnetOrientation', label: 'Magnetic Pole Orientation', required: false },
     { key: 'magnetPosition', label: 'Magnet Position', required: false },
+    { key: 'magnetPolarity', label: 'Magnet Polarity', required: false },
     { key: 'initialForce', label: 'Initial Force (g)', required: false },
     { key: 'totalTravel', label: 'Total Travel (mm)', required: false },
     { key: 'initialMagneticFlux', label: 'Initial Magnetic Flux (Gs)', required: false },
@@ -110,7 +112,7 @@ export default function BulkUploadPage() {
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
     const sampleData = [
-      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', '', '', '', '', '', '', '', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
+      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', '', '', '', '', '', '', '', '', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
     ]
     
     const csvContent = [templateHeaders, sampleData].map(row => 
@@ -277,6 +279,17 @@ export default function BulkUploadPage() {
               (switchData as any)[field] = 'Center'
             } else if (normalizedPosition === 'off-center' || normalizedPosition === 'offcenter' || normalizedPosition === 'off center' || normalizedPosition === 'oc') {
               (switchData as any)[field] = 'Off-Center'
+            } else if (value.trim()) {
+              // If not empty but not recognized, keep original value
+              (switchData as any)[field] = value
+            }
+          } else if (field === 'magnetPolarity') {
+            // Normalize magnet polarity to proper case
+            const normalizedPolarity = value.trim().toLowerCase()
+            if (normalizedPolarity === 'north' || normalizedPolarity === 'n') {
+              (switchData as any)[field] = 'North'
+            } else if (normalizedPolarity === 'south' || normalizedPolarity === 's') {
+              (switchData as any)[field] = 'South'
             } else if (value.trim()) {
               // If not empty but not recognized, keep original value
               (switchData as any)[field] = value
@@ -470,7 +483,7 @@ export default function BulkUploadPage() {
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
               <li><strong>Required field:</strong> Switch Name</li>
-              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Initial Force, Total Travel, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
+              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Polarity, Initial Force, Total Travel, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>
             </ol>
@@ -489,6 +502,7 @@ export default function BulkUploadPage() {
                 <li>• Initial Magnetic Flux should be a numeric value in Gauss (e.g., 1200, 1500)</li>
                 <li>• Bottom Out Magnetic Flux should be a numeric value in Gauss (e.g., 3000, 3500)</li>
                 <li>• PCB Thickness (if provided) must be: 1.2mm or 1.6mm</li>
+                <li>• Magnet Polarity (if provided) must be: North or South (case-insensitive)</li>
                 <li>• Compatibility is a free text field (e.g., &quot;MX-style&quot;, &quot;Cherry MX&quot;, &quot;3-pin&quot;, &quot;5-pin&quot;)</li>
                 <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
                 <li>• Forces should be numeric values in grams</li>
@@ -655,6 +669,9 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     PCB Thickness
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Magnet Polarity
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Compatibility
@@ -868,6 +885,18 @@ export default function BulkUploadPage() {
                         <option value="">No thickness</option>
                         <option value="1.2mm">1.2mm</option>
                         <option value="1.6mm">1.6mm</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <select
+                        value={switchItem.magnetPolarity || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'magnetPolarity', e.target.value || undefined)}
+                        className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      >
+                        <option value="">No polarity</option>
+                        <option value="North">North</option>
+                        <option value="South">South</option>
                       </select>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
