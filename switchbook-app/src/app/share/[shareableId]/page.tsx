@@ -123,10 +123,15 @@ export default async function SharePage({ params }: SharePageProps) {
                       </p>
                     )}
 
-                    {(switchItem.actuationForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut || switchItem.springWeight || switchItem.springLength) && (
+                    {(switchItem.initialForce || switchItem.actuationForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut || switchItem.springWeight || switchItem.springLength) && (
                       <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Specs</p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {switchItem.initialForce && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Initial Force:</span> {switchItem.initialForce}g
+                            </p>
+                          )}
                           {switchItem.actuationForce && (
                             <p className="text-sm text-gray-600 dark:text-gray-300">
                               <span className="font-medium">Actuation:</span> {switchItem.actuationForce}g
@@ -161,15 +166,10 @@ export default async function SharePage({ params }: SharePageProps) {
                       </div>
                     )}
 
-                    {switchItem.technology === 'MAGNETIC' && (switchItem.initialForce || switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
+                    {switchItem.technology === 'MAGNETIC' && (switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
                       <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Magnet Details</p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          {switchItem.initialForce && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Initial Force:</span> {switchItem.initialForce}g
-                            </p>
-                          )}
                           {switchItem.initialMagneticFlux && (
                             <p className="text-sm text-gray-600 dark:text-gray-300">
                               <span className="font-medium">Initial Flux:</span> {switchItem.initialMagneticFlux}Gs
