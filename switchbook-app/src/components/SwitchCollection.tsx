@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { Switch } from '@prisma/client'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { Switch, ForceCurvePreference } from '@prisma/client'
 import Link from 'next/link'
 import SwitchCard from './SwitchCard'
 import SwitchTable from './SwitchTable'
@@ -14,9 +14,10 @@ interface SwitchCollectionProps {
   switches: Switch[]
   userId: string
   showForceCurves: boolean
+  forceCurvePreferences: ForceCurvePreference[]
 }
 
-export default function SwitchCollection({ switches: initialSwitches, userId, showForceCurves }: SwitchCollectionProps) {
+export default function SwitchCollection({ switches: initialSwitches, userId, showForceCurves, forceCurvePreferences }: SwitchCollectionProps) {
   const [switches, setSwitches] = useState(initialSwitches)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingSwitch, setEditingSwitch] = useState<Switch | null>(null)
@@ -51,6 +52,14 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   const handleSwitchDeleted = (switchId: string) => {
     setSwitches(switches.filter(s => s.id !== switchId))
   }
+
+  // Helper function to check if a switch has force curves
+  const switchHasForceCurves = useCallback((switchItem: Switch): boolean => {
+    return forceCurvePreferences.some(pref => 
+      pref.switchName === switchItem.name && 
+      pref.manufacturer === switchItem.manufacturer
+    )
+  }, [forceCurvePreferences])
 
   // Generate filter options from current switches
   const filterOptions = useMemo((): FilterOptions => {
@@ -178,17 +187,12 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
     // Apply force curves filter
     if (activeFilters.hasForceCurves !== undefined) {
-      // For now, we'll do a synchronous check based on the switch collection
-      // In a real implementation, you might want to pre-compute this or use a different approach
       if (activeFilters.hasForceCurves) {
-        // Show only switches that likely have force curves (this is a simplified check)
-        filtered = filtered.filter(s => {
-          // This is a simplified check - in reality you'd want to cache force curve availability
-          return s.name && s.manufacturer // Basic requirement for force curve lookup
-        })
+        // Show only switches that have force curves
+        filtered = filtered.filter(s => switchHasForceCurves(s))
       } else {
-        // This is tricky to implement properly without async calls in the filter
-        // For now, we'll leave this as-is, but ideally you'd pre-compute force curve availability
+        // Show only switches that do NOT have force curves
+        filtered = filtered.filter(s => !switchHasForceCurves(s))
       }
     }
 
@@ -233,7 +237,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     }
 
     return sorted
-  }, [switches, searchTerm, sortOption, activeFilters])
+  }, [switches, searchTerm, sortOption, activeFilters, switchHasForceCurves])
 
   if (switches.length === 0) {
     return (

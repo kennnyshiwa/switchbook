@@ -19,7 +19,8 @@ export default async function DashboardPage() {
     include: {
       switches: {
         orderBy: { createdAt: "desc" }
-      }
+      },
+      forceCurvePreferences: true
     }
   })
 
@@ -63,6 +64,7 @@ export default async function DashboardPage() {
           switches={user.switches} 
           userId={user.id}
           showForceCurves={user.showForceCurves}
+          forceCurvePreferences={user.forceCurvePreferences}
         />
       </div>
     </div>
