@@ -17,16 +17,47 @@ export type SortOption =
 
 export type ViewMode = 'grid' | 'table'
 
+export interface FilterOptions {
+  manufacturers: string[]
+  types: string[]
+  technologies: string[]
+  topHousings: string[]
+  bottomHousings: string[]
+  stems: string[]
+  springWeights: string[]
+}
+
+export interface ActiveFilters {
+  manufacturer?: string
+  type?: string
+  technology?: string
+  topHousing?: string
+  bottomHousing?: string
+  stem?: string
+  springWeight?: string
+}
+
 interface CollectionControlsProps {
   onSearchChange: (search: string) => void
   onSortChange: (sort: SortOption) => void
   onViewChange: (view: ViewMode) => void
+  onFiltersChange: (filters: ActiveFilters) => void
   currentView: ViewMode
+  filterOptions: FilterOptions
 }
 
-export default function CollectionControls({ onSearchChange, onSortChange, onViewChange, currentView }: CollectionControlsProps) {
+export default function CollectionControls({ 
+  onSearchChange, 
+  onSortChange, 
+  onViewChange, 
+  onFiltersChange,
+  currentView, 
+  filterOptions 
+}: CollectionControlsProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('recent')
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({})
+  const [showFilters, setShowFilters] = useState(false)
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -39,6 +70,23 @@ export default function CollectionControls({ onSearchChange, onSortChange, onVie
     setSortOption(value)
     onSortChange(value)
   }
+
+  const handleFilterChange = (field: keyof ActiveFilters, value: string) => {
+    const newFilters = {
+      ...activeFilters,
+      [field]: value === '' ? undefined : value
+    }
+    setActiveFilters(newFilters)
+    onFiltersChange(newFilters)
+  }
+
+  const clearAllFilters = () => {
+    const emptyFilters: ActiveFilters = {}
+    setActiveFilters(emptyFilters)
+    onFiltersChange(emptyFilters)
+  }
+
+  const activeFilterCount = Object.values(activeFilters).filter(Boolean).length
 
   return (
     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
@@ -63,6 +111,25 @@ export default function CollectionControls({ onSearchChange, onSortChange, onVie
         </div>
 
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-3 py-2 text-sm font-medium rounded-md border transition-colors ${
+              showFilters
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+            }`}
+          >
+            <svg className="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
           <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex">
             <button
               onClick={() => onViewChange('grid')}
@@ -113,6 +180,148 @@ export default function CollectionControls({ onSearchChange, onSortChange, onVie
           </div>
         </div>
       </div>
+
+      {showFilters && (
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Manufacturer
+              </label>
+              <select
+                value={activeFilters.manufacturer || ''}
+                onChange={(e) => handleFilterChange('manufacturer', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Manufacturers</option>
+                {filterOptions.manufacturers.map(manufacturer => (
+                  <option key={manufacturer} value={manufacturer}>
+                    {manufacturer}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Type
+              </label>
+              <select
+                value={activeFilters.type || ''}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Types</option>
+                {filterOptions.types.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Technology
+              </label>
+              <select
+                value={activeFilters.technology || ''}
+                onChange={(e) => handleFilterChange('technology', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Technologies</option>
+                {filterOptions.technologies.map(technology => (
+                  <option key={technology} value={technology}>
+                    {technology}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Spring Weight
+              </label>
+              <select
+                value={activeFilters.springWeight || ''}
+                onChange={(e) => handleFilterChange('springWeight', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Spring Weights</option>
+                {filterOptions.springWeights.map(weight => (
+                  <option key={weight} value={weight}>
+                    {weight}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Top Housing
+              </label>
+              <select
+                value={activeFilters.topHousing || ''}
+                onChange={(e) => handleFilterChange('topHousing', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Top Housings</option>
+                {filterOptions.topHousings.map(housing => (
+                  <option key={housing} value={housing}>
+                    {housing}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Bottom Housing
+              </label>
+              <select
+                value={activeFilters.bottomHousing || ''}
+                onChange={(e) => handleFilterChange('bottomHousing', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Bottom Housings</option>
+                {filterOptions.bottomHousings.map(housing => (
+                  <option key={housing} value={housing}>
+                    {housing}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Stem
+              </label>
+              <select
+                value={activeFilters.stem || ''}
+                onChange={(e) => handleFilterChange('stem', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Stems</option>
+                {filterOptions.stems.map(stem => (
+                  <option key={stem} value={stem}>
+                    {stem}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                onClick={clearAllFilters}
+                disabled={activeFilterCount === 0}
+                className="w-full px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

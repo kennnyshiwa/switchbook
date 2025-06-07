@@ -7,7 +7,7 @@ import SwitchCard from './SwitchCard'
 import SwitchTable from './SwitchTable'
 import AddSwitchModal from './AddSwitchModal'
 import EditSwitchModal from './EditSwitchModal'
-import CollectionControls, { SortOption, ViewMode } from './CollectionControls'
+import CollectionControls, { SortOption, ViewMode, FilterOptions, ActiveFilters } from './CollectionControls'
 
 interface SwitchCollectionProps {
   switches: Switch[]
@@ -22,6 +22,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('recent')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({})
 
   // Load view mode from localStorage on mount
   useEffect(() => {
@@ -50,13 +51,34 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     setSwitches(switches.filter(s => s.id !== switchId))
   }
 
+  // Generate filter options from current switches
+  const filterOptions = useMemo((): FilterOptions => {
+    const manufacturers = [...new Set(switches.map(s => s.manufacturer).filter(Boolean) as string[])].sort()
+    const types = [...new Set(switches.map(s => s.type).filter(Boolean) as string[])].sort()
+    const technologies = [...new Set(switches.map(s => s.technology).filter(Boolean) as string[])].sort()
+    const topHousings = [...new Set(switches.map(s => s.topHousing).filter(Boolean) as string[])].sort()
+    const bottomHousings = [...new Set(switches.map(s => s.bottomHousing).filter(Boolean) as string[])].sort()
+    const stems = [...new Set(switches.map(s => s.stem).filter(Boolean) as string[])].sort()
+    const springWeights = [...new Set(switches.map(s => s.springWeight).filter(Boolean) as string[])].sort()
+
+    return {
+      manufacturers,
+      types,
+      technologies,
+      topHousings,
+      bottomHousings,
+      stems,
+      springWeights
+    }
+  }, [switches])
+
   const filteredAndSortedSwitches = useMemo(() => {
     let filtered = switches
 
     // Apply search filter
     if (searchTerm) {
       const search = searchTerm.toLowerCase()
-      filtered = switches.filter(s => 
+      filtered = filtered.filter(s => 
         s.name.toLowerCase().includes(search) ||
         (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
         (s.type?.toLowerCase().includes(search) ?? false) ||
@@ -66,6 +88,29 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         (s.bottomHousing?.toLowerCase().includes(search) ?? false) ||
         (s.stem?.toLowerCase().includes(search) ?? false)
       )
+    }
+
+    // Apply active filters
+    if (activeFilters.manufacturer) {
+      filtered = filtered.filter(s => s.manufacturer === activeFilters.manufacturer)
+    }
+    if (activeFilters.type) {
+      filtered = filtered.filter(s => s.type === activeFilters.type)
+    }
+    if (activeFilters.technology) {
+      filtered = filtered.filter(s => s.technology === activeFilters.technology)
+    }
+    if (activeFilters.topHousing) {
+      filtered = filtered.filter(s => s.topHousing === activeFilters.topHousing)
+    }
+    if (activeFilters.bottomHousing) {
+      filtered = filtered.filter(s => s.bottomHousing === activeFilters.bottomHousing)
+    }
+    if (activeFilters.stem) {
+      filtered = filtered.filter(s => s.stem === activeFilters.stem)
+    }
+    if (activeFilters.springWeight) {
+      filtered = filtered.filter(s => s.springWeight === activeFilters.springWeight)
     }
 
     // Apply sorting
@@ -109,7 +154,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     }
 
     return sorted
-  }, [switches, searchTerm, sortOption])
+  }, [switches, searchTerm, sortOption, activeFilters])
 
   if (switches.length === 0) {
     return (
@@ -166,7 +211,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Your Switches ({switches.length}{searchTerm && ` • ${filteredAndSortedSwitches.length} shown`})
+            Your Switches ({switches.length}{(searchTerm || Object.values(activeFilters).some(Boolean)) && ` • ${filteredAndSortedSwitches.length} shown`})
           </h2>
           <div className="flex space-x-3">
             <Link
@@ -193,13 +238,19 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           onSearchChange={setSearchTerm}
           onSortChange={setSortOption}
           onViewChange={setViewMode}
+          onFiltersChange={setActiveFilters}
           currentView={viewMode}
+          filterOptions={filterOptions}
         />
       </div>
       
-      {filteredAndSortedSwitches.length === 0 && searchTerm ? (
+      {filteredAndSortedSwitches.length === 0 && (searchTerm || Object.values(activeFilters).some(Boolean)) ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">No switches found matching &quot;{searchTerm}&quot;</p>
+          <p className="text-gray-500">
+            No switches found matching {searchTerm && `"${searchTerm}"`}
+            {searchTerm && Object.values(activeFilters).some(Boolean) && ' with '}
+            {Object.values(activeFilters).some(Boolean) && 'the selected filters'}
+          </p>
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
