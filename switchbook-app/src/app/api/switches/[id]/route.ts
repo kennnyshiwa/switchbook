@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
+import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -27,6 +28,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
     
     // Transform empty strings to null for optional fields
     const transformedData = transformSwitchData(validatedData)
+
+    // Normalize manufacturer name if provided
+    if (transformedData.manufacturer) {
+      transformedData.manufacturer = await normalizeManufacturerName(transformedData.manufacturer)
+    }
 
     // Verify the switch belongs to the user
     const switchItem = await prisma.switch.findFirst({

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
+import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,11 @@ export async function POST(request: Request) {
     
     // Transform empty strings to null for optional fields
     const transformedData = transformSwitchData(validatedData)
+
+    // Normalize manufacturer name if provided
+    if (transformedData.manufacturer) {
+      transformedData.manufacturer = await normalizeManufacturerName(transformedData.manufacturer)
+    }
 
     const newSwitch = await prisma.switch.create({
       data: {
