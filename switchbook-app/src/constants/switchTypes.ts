@@ -7,11 +7,11 @@ export const SWITCH_TYPE_COLORS = {
 } as const;
 
 export const SWITCH_TECHNOLOGY_COLORS = {
-  MECHANICAL: 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
-  OPTICAL: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100',
-  MAGNETIC: 'bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100',
-  INDUCTIVE: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-800 dark:text-cyan-100',
-  ELECTRO_CAPACITIVE: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100',
+  MECHANICAL: 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100',
+  OPTICAL: 'bg-orange-100 text-orange-800 dark:bg-orange-700 dark:text-orange-100',
+  MAGNETIC: 'bg-pink-100 text-pink-800 dark:bg-pink-700 dark:text-pink-100',
+  INDUCTIVE: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-700 dark:text-cyan-100',
+  ELECTRO_CAPACITIVE: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-700 dark:text-indigo-100',
 } as const;
 
 export type SwitchType = keyof typeof SWITCH_TYPE_COLORS;
