@@ -7,7 +7,10 @@ interface SwitchData {
   technology?: SwitchTechnology | null | '';
   magnetOrientation?: string | null;
   magnetPosition?: string | null;
-  magnetStrength?: number | null;
+  initialForce?: number | null;
+  totalTravel?: number | null;
+  initialMagneticFlux?: number | null;
+  bottomOutMagneticFlux?: number | null;
   compatibility?: string | null;
   manufacturer?: string | null;
   springWeight?: string | null;
@@ -32,7 +35,10 @@ export function transformSwitchData(data: SwitchData) {
     technology: data.technology === '' ? null : (data.technology || null),
     magnetOrientation: data.magnetOrientation || null,
     magnetPosition: data.magnetPosition || null,
-    magnetStrength: data.magnetStrength || null,
+    initialForce: data.initialForce || null,
+    totalTravel: data.totalTravel || null,
+    initialMagneticFlux: data.initialMagneticFlux || null,
+    bottomOutMagneticFlux: data.bottomOutMagneticFlux || null,
     compatibility: data.compatibility || null,
     manufacturer: data.manufacturer || null,
     springWeight: data.springWeight || null,
