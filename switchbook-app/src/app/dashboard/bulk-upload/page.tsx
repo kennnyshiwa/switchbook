@@ -418,6 +418,7 @@ export default function BulkUploadPage() {
         } else {
           // Create new switch
           const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, ...switchData } = switchItem
+          console.log('Creating switch with data:', switchData)
           response = await fetch('/api/switches', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -429,6 +430,7 @@ export default function BulkUploadPage() {
           results.success++
         } else {
           const error = await response.text()
+          console.error(`Failed to save switch ${switchItem.name}:`, error)
           results.errors.push(`Row ${i + 1}: ${error}`)
         }
       } catch (error) {
@@ -813,6 +815,7 @@ export default function BulkUploadPage() {
                           value={switchItem.manufacturer || ''}
                           onChange={(value) => updateParsedSwitch(index, 'manufacturer', value)}
                           onNewManufacturerSubmitted={(name) => {
+                            console.log('New manufacturer submitted:', name)
                             setSubmittedManufacturers(prev => new Set(prev).add(name))
                           }}
                           disabled={switchItem.isDuplicate && !switchItem.overwrite}
