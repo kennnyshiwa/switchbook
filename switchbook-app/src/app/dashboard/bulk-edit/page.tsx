@@ -41,6 +41,7 @@ export default function BulkEditPage() {
   const [saveProgress, setSaveProgress] = useState(0)
   const [saveResults, setSaveResults] = useState<{ success: number; errors: string[] }>({ success: 0, errors: [] })
   const [isValidating, setIsValidating] = useState(false)
+  const [submittedManufacturers, setSubmittedManufacturers] = useState<Set<string>>(new Set())
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
@@ -100,7 +101,7 @@ export default function BulkEditPage() {
           
           // Scroll to first invalid manufacturer after a short delay
           setTimeout(() => {
-            const firstInvalidIndex = switchesWithValidation.findIndex((sw: EditableSwitchData) => sw.manufacturer && !sw.manufacturerValid)
+            const firstInvalidIndex = switchesWithValidation.findIndex((sw: EditableSwitchData) => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
             if (firstInvalidIndex !== -1) {
               const invalidRow = invalidRowRefs.current.get(firstInvalidIndex)
               if (invalidRow) {
@@ -143,10 +144,10 @@ export default function BulkEditPage() {
   const showMagneticFields = switches.some(sw => sw.technology === 'MAGNETIC')
 
   const saveSwitches = async () => {
-    // Check for invalid manufacturers
-    const invalidManufacturers = switches.filter(sw => sw.manufacturer && !sw.manufacturerValid)
+    // Check for invalid manufacturers (excluding submitted ones)
+    const invalidManufacturers = switches.filter(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
     if (invalidManufacturers.length > 0) {
-      alert(`Cannot save: ${invalidManufacturers.length} switches have invalid manufacturers. Please fix them or remove the manufacturer names.`)
+      alert(`Cannot save: ${invalidManufacturers.length} switches have invalid manufacturers. Please fix them or submit for verification.`)
       return
     }
     
@@ -208,7 +209,7 @@ export default function BulkEditPage() {
             <p className="text-gray-600 dark:text-gray-300">
               Edit your {switches.length} switches in bulk
             </p>
-            {switches.some(sw => sw.manufacturer && !sw.manufacturerValid) && (
+            {switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) && (
               <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
                 <p className="text-sm text-red-800 dark:text-red-200 font-medium">
                   ⚠️ Some switches have invalid manufacturers. Please fix them before saving.
@@ -299,13 +300,13 @@ export default function BulkEditPage() {
                     <tr 
                       key={switchItem.id}
                       ref={(el) => {
-                        if (el && switchItem.manufacturer && !switchItem.manufacturerValid) {
+                        if (el && switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer)) {
                           invalidRowRefs.current.set(index, el)
                         } else {
                           invalidRowRefs.current.delete(index)
                         }
                       }}
-                      className={switchItem.manufacturer && !switchItem.manufacturerValid ? 'bg-red-50 dark:bg-red-900/20' : ''}
+                      className={switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) ? 'bg-red-50 dark:bg-red-900/20' : ''}
                     >
                       <td className="px-3 py-4">
                         <input
@@ -402,10 +403,21 @@ export default function BulkEditPage() {
                         <div className="min-w-[200px]">
                           <ManufacturerAutocomplete
                             value={switchItem.manufacturer || ''}
-                            onChange={(value) => updateSwitch(index, 'manufacturer', value)}
+                            onChange={async (value) => {
+                              await updateSwitch(index, 'manufacturer', value)
+                              // Check if this was a new submission by checking if it's now invalid after being previously invalid
+                              if (switchItem.manufacturer && !switchItem.manufacturerValid) {
+                                const validationResults = await validateManufacturers([value])
+                                const result = validationResults.get(value)
+                                // If it's still invalid but the value exists, it means it was submitted
+                                if (!result?.isValid && value) {
+                                  setSubmittedManufacturers(prev => new Set(prev).add(value))
+                                }
+                              }
+                            }}
                             placeholder="Type manufacturer..."
                           />
-                          {switchItem.manufacturer && !switchItem.manufacturerValid && (
+                          {switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) && (
                             <div className="mt-1">
                               <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
                               {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
@@ -413,6 +425,11 @@ export default function BulkEditPage() {
                                   Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
                                 </p>
                               )}
+                            </div>
+                          )}
+                          {switchItem.manufacturer && submittedManufacturers.has(switchItem.manufacturer) && (
+                            <div className="mt-1">
+                              <p className="text-xs text-green-600 dark:text-green-400">✓ Submitted for verification</p>
                             </div>
                           )}
                         </div>
@@ -538,15 +555,15 @@ export default function BulkEditPage() {
               </Link>
               <button
                 onClick={saveSwitches}
-                disabled={switches.some(sw => sw.manufacturer && !sw.manufacturerValid)}
+                disabled={switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))}
                 className={`px-6 py-2 rounded-md ${
-                  switches.some(sw => sw.manufacturer && !sw.manufacturerValid)
+                  switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
                     ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                     : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
               >
-                {switches.some(sw => sw.manufacturer && !sw.manufacturerValid) ? (
-                  `Fix ${switches.filter(sw => sw.manufacturer && !sw.manufacturerValid).length} Invalid Manufacturers`
+                {switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) ? (
+                  `Fix ${switches.filter(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)).length} Invalid Manufacturers`
                 ) : (
                   `Save All Changes (${switches.length} switches)`
                 )}
