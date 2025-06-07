@@ -12,6 +12,7 @@ interface Manufacturer {
 interface ManufacturerAutocompleteProps {
   value?: string
   onChange: (value: string) => void
+  onNewManufacturerSubmitted?: (name: string) => void
   register?: UseFormRegister<any>
   error?: string
   disabled?: boolean
@@ -21,6 +22,7 @@ interface ManufacturerAutocompleteProps {
 export default function ManufacturerAutocomplete({
   value = '',
   onChange,
+  onNewManufacturerSubmitted,
   error,
   disabled = false,
   placeholder = "Type to search manufacturers..."
@@ -115,6 +117,8 @@ export default function ManufacturerAutocomplete({
         onChange(newManufacturer.name)
         setShowSuggestions(false)
         setShowNewManufacturer(false)
+        // Notify parent component that a new manufacturer was submitted
+        onNewManufacturerSubmitted?.(newManufacturer.name)
       }
     } catch (error) {
       console.error('Failed to add manufacturer:', error)

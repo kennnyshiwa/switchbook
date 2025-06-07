@@ -811,17 +811,9 @@ export default function BulkUploadPage() {
                       <div className="min-w-[200px]">
                         <ManufacturerAutocomplete
                           value={switchItem.manufacturer || ''}
-                          onChange={async (value) => {
-                            await updateParsedSwitch(index, 'manufacturer', value)
-                            // Check if this was a new submission by checking if it's now valid after being invalid
-                            if (switchItem.manufacturer && !switchItem.manufacturerValid) {
-                              const validationResults = await validateManufacturers([value])
-                              const result = validationResults.get(value)
-                              // If it's still invalid but the value exists, it means it was submitted
-                              if (!result?.isValid && value) {
-                                setSubmittedManufacturers(prev => new Set(prev).add(value))
-                              }
-                            }
+                          onChange={(value) => updateParsedSwitch(index, 'manufacturer', value)}
+                          onNewManufacturerSubmitted={(name) => {
+                            setSubmittedManufacturers(prev => new Set(prev).add(name))
                           }}
                           disabled={switchItem.isDuplicate && !switchItem.overwrite}
                           placeholder="Type manufacturer..."
