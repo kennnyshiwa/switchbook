@@ -29,6 +29,10 @@ export interface FilterOptions {
   magnetOrientations: string[]
   magnetPositions: string[]
   compatibilities: string[]
+  actuationForces: number[]
+  bottomOutForces: number[]
+  preTravels: number[]
+  bottomOuts: number[]
 }
 
 export interface ActiveFilters {
@@ -43,6 +47,15 @@ export interface ActiveFilters {
   magnetOrientation?: string
   magnetPosition?: string
   compatibility?: string
+  actuationForceMin?: number
+  actuationForceMax?: number
+  bottomOutForceMin?: number
+  bottomOutForceMax?: number
+  preTravelMin?: number
+  preTravelMax?: number
+  bottomOutMin?: number
+  bottomOutMax?: number
+  hasForceCurves?: boolean
 }
 
 interface CollectionControlsProps {
@@ -80,9 +93,16 @@ export default function CollectionControls({
   }
 
   const handleFilterChange = (field: keyof ActiveFilters, value: string) => {
+    let processedValue: string | boolean | undefined = value === '' ? undefined : value
+    
+    // Handle boolean fields
+    if (field === 'hasForceCurves') {
+      processedValue = value === '' ? undefined : value === 'true'
+    }
+    
     const newFilters = {
       ...activeFilters,
-      [field]: value === '' ? undefined : value
+      [field]: processedValue
     }
     setActiveFilters(newFilters)
     onFiltersChange(newFilters)
@@ -95,6 +115,19 @@ export default function CollectionControls({
   }
 
   const activeFilterCount = Object.values(activeFilters).filter(Boolean).length
+
+  const handleNumericRangeChange = (field: string, type: 'min' | 'max', value: string) => {
+    const numValue = value === '' ? undefined : parseFloat(value)
+    const minField = `${field}Min` as keyof ActiveFilters
+    const maxField = `${field}Max` as keyof ActiveFilters
+    
+    const newFilters = {
+      ...activeFilters,
+      [type === 'min' ? minField : maxField]: numValue
+    }
+    setActiveFilters(newFilters)
+    onFiltersChange(newFilters)
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
@@ -191,7 +224,7 @@ export default function CollectionControls({
 
       {showFilters && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Manufacturer
@@ -387,6 +420,113 @@ export default function CollectionControls({
                     {compatibility}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Actuation Force (g)
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={activeFilters.actuationForceMin || ''}
+                  onChange={(e) => handleNumericRangeChange('actuationForce', 'min', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={activeFilters.actuationForceMax || ''}
+                  onChange={(e) => handleNumericRangeChange('actuationForce', 'max', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Bottom Out Force (g)
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={activeFilters.bottomOutForceMin || ''}
+                  onChange={(e) => handleNumericRangeChange('bottomOutForce', 'min', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={activeFilters.bottomOutForceMax || ''}
+                  onChange={(e) => handleNumericRangeChange('bottomOutForce', 'max', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Pre Travel (mm)
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Min"
+                  value={activeFilters.preTravelMin || ''}
+                  onChange={(e) => handleNumericRangeChange('preTravel', 'min', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Max"
+                  value={activeFilters.preTravelMax || ''}
+                  onChange={(e) => handleNumericRangeChange('preTravel', 'max', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Bottom Out (mm)
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Min"
+                  value={activeFilters.bottomOutMin || ''}
+                  onChange={(e) => handleNumericRangeChange('bottomOut', 'min', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Max"
+                  value={activeFilters.bottomOutMax || ''}
+                  onChange={(e) => handleNumericRangeChange('bottomOut', 'max', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Force Curves
+              </label>
+              <select
+                value={activeFilters.hasForceCurves === undefined ? '' : activeFilters.hasForceCurves ? 'true' : 'false'}
+                onChange={(e) => handleFilterChange('hasForceCurves', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Switches</option>
+                <option value="true">With Force Curves</option>
+                <option value="false">Without Force Curves</option>
               </select>
             </div>
 
