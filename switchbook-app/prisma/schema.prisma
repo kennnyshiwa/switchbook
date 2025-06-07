@@ -34,7 +34,10 @@ model Switch {
   technology      SwitchTechnology?
   magnetOrientation String?
   magnetPosition  String?
-  magnetStrength  Float?
+  initialForce    Float?
+  totalTravel     Float?
+  initialMagneticFlux Float?
+  bottomOutMagneticFlux Float?
   compatibility   String?
   springWeight    String?
   springLength    String?

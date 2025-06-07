@@ -116,23 +116,6 @@ export default async function SharePage({ params }: SharePageProps) {
                       </p>
                     )}
 
-                    {switchItem.magnetOrientation && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-medium">Magnetic Pole Orientation:</span> {switchItem.magnetOrientation}
-                      </p>
-                    )}
-
-                    {switchItem.magnetPosition && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-medium">Magnet Position:</span> {switchItem.magnetPosition}
-                      </p>
-                    )}
-
-                    {switchItem.magnetStrength && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-medium">Magnet Strength:</span> {switchItem.magnetStrength}Gs
-                      </p>
-                    )}
 
                     {switchItem.compatibility && (
                       <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -162,6 +145,44 @@ export default async function SharePage({ params }: SharePageProps) {
                           {switchItem.bottomOut && (
                             <p className="text-sm text-gray-600 dark:text-gray-300">
                               <span className="font-medium">Bottom Out:</span> {switchItem.bottomOut}mm
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {(switchItem.initialForce || switchItem.totalTravel || switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition) && (
+                      <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Magnet Details</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {switchItem.initialForce && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Initial Force:</span> {switchItem.initialForce}g
+                            </p>
+                          )}
+                          {switchItem.totalTravel && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Total Travel:</span> {switchItem.totalTravel}mm
+                            </p>
+                          )}
+                          {switchItem.initialMagneticFlux && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Initial Flux:</span> {switchItem.initialMagneticFlux}Gs
+                            </p>
+                          )}
+                          {switchItem.bottomOutMagneticFlux && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Bottom Out Flux:</span> {switchItem.bottomOutMagneticFlux}Gs
+                            </p>
+                          )}
+                          {switchItem.magnetOrientation && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Pole Orientation:</span> {switchItem.magnetOrientation}
+                            </p>
+                          )}
+                          {switchItem.magnetPosition && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Magnet Position:</span> {switchItem.magnetPosition}
                             </p>
                           )}
                         </div>

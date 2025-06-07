@@ -94,55 +94,6 @@ export default function SwitchForm({ register, errors, setValue, watch }: Switch
         )}
       </div>
 
-      {showMagneticFields && (
-        <>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Magnetic Pole Orientation</label>
-            <select
-              {...register('magnetOrientation')}
-              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2"
-            >
-              <option value="">Select orientation (optional)</option>
-              <option value="Horizontal">Horizontal</option>
-              <option value="Vertical">Vertical</option>
-            </select>
-            {errors.magnetOrientation && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.magnetOrientation.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Magnet Position</label>
-            <select
-              {...register('magnetPosition')}
-              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2"
-            >
-              <option value="">Select position (optional)</option>
-              <option value="Center">Center</option>
-              <option value="Off-Center">Off-Center</option>
-            </select>
-            {errors.magnetPosition && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.magnetPosition.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Magnet Strength (Gs)</label>
-            <input
-              {...register('magnetStrength', { valueAsNumber: true })}
-              type="number"
-              step="0.1"
-              min="0"
-              max="10000"
-              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="e.g., 35, 3500"
-            />
-            {errors.magnetStrength && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.magnetStrength.message}</p>
-            )}
-          </div>
-        </>
-      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Compatibility</label>
@@ -220,6 +171,100 @@ export default function SwitchForm({ register, errors, setValue, watch }: Switch
           </div>
         </div>
       </div>
+
+      {showMagneticFields && (
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Magnet Details</h4>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Initial Force (g)</label>
+              <input
+                {...register('initialForce', { valueAsNumber: true })}
+                type="number"
+                step="0.1"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="20"
+              />
+              {errors.initialForce && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.initialForce.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Total Travel (mm)</label>
+              <input
+                {...register('totalTravel', { valueAsNumber: true })}
+                type="number"
+                step="0.1"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="4.0"
+              />
+              {errors.totalTravel && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.totalTravel.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Initial Magnetic Flux (Gs)</label>
+              <input
+                {...register('initialMagneticFlux', { valueAsNumber: true })}
+                type="number"
+                step="0.1"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="35"
+              />
+              {errors.initialMagneticFlux && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.initialMagneticFlux.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Bottom Out Magnetic Flux (Gs)</label>
+              <input
+                {...register('bottomOutMagneticFlux', { valueAsNumber: true })}
+                type="number"
+                step="0.1"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="3500"
+              />
+              {errors.bottomOutMagneticFlux && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.bottomOutMagneticFlux.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Magnetic Pole Orientation</label>
+              <select
+                {...register('magnetOrientation')}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2"
+              >
+                <option value="">Select orientation (optional)</option>
+                <option value="Horizontal">Horizontal</option>
+                <option value="Vertical">Vertical</option>
+              </select>
+              {errors.magnetOrientation && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.magnetOrientation.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Magnet Position</label>
+              <select
+                {...register('magnetPosition')}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2"
+              >
+                <option value="">Select position (optional)</option>
+                <option value="Center">Center</option>
+                <option value="Off-Center">Off-Center</option>
+              </select>
+              {errors.magnetPosition && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.magnetPosition.message}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Spring Details</h4>

@@ -13,7 +13,10 @@ interface ParsedSwitch {
   technology?: string
   magnetOrientation?: string
   magnetPosition?: string
-  magnetStrength?: number
+  initialForce?: number
+  totalTravel?: number
+  initialMagneticFlux?: number
+  bottomOutMagneticFlux?: number
   compatibility?: string
   manufacturer?: string
   springWeight?: string
@@ -66,7 +69,10 @@ export default function BulkUploadPage() {
     { key: 'technology', label: 'Technology', required: false },
     { key: 'magnetOrientation', label: 'Magnetic Pole Orientation', required: false },
     { key: 'magnetPosition', label: 'Magnet Position', required: false },
-    { key: 'magnetStrength', label: 'Magnet Strength (Gs)', required: false },
+    { key: 'initialForce', label: 'Initial Force (g)', required: false },
+    { key: 'totalTravel', label: 'Total Travel (mm)', required: false },
+    { key: 'initialMagneticFlux', label: 'Initial Magnetic Flux (Gs)', required: false },
+    { key: 'bottomOutMagneticFlux', label: 'Bottom Out Magnetic Flux (Gs)', required: false },
     { key: 'compatibility', label: 'Compatibility', required: false },
     { key: 'manufacturer', label: 'Manufacturer', required: false },
     { key: 'springWeight', label: 'Spring Weight', required: false },
@@ -102,7 +108,7 @@ export default function BulkUploadPage() {
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
     const sampleData = [
-      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', 'Horizontal', 'Center', '35', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
+      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', '', '', '', '', '', '', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
     ]
     
     const csvContent = [templateHeaders, sampleData].map(row => 
@@ -218,7 +224,7 @@ export default function BulkUploadPage() {
         if (field && row[parseInt(columnIndex)]) {
           const value = row[parseInt(columnIndex)].replace(/^"|"$/g, '') // Remove quotes
           
-          if (['actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'magnetStrength'].includes(field)) {
+          if (['actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'initialForce', 'totalTravel', 'initialMagneticFlux', 'bottomOutMagneticFlux'].includes(field)) {
             const numValue = parseFloat(value)
             if (!isNaN(numValue)) {
               (switchData as any)[field] = numValue
@@ -630,7 +636,16 @@ export default function BulkUploadPage() {
                     Magnet Position
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Magnet Strength (Gs)
+                    Initial Force (g)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Total Travel (mm)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Initial Flux (Gs)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bottom Out Flux (Gs)
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Compatibility
@@ -789,10 +804,45 @@ export default function BulkUploadPage() {
                     <td className="px-3 py-4 whitespace-nowrap">
                       <input
                         type="number"
-                        value={switchItem.magnetStrength || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'magnetStrength', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        placeholder="e.g. 35, 3500"
+                        value={switchItem.initialForce || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        min="0"
+                        max="1000"
+                        step="0.1"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.totalTravel || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'totalTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.initialMagneticFlux || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        min="0"
+                        max="10000"
+                        step="0.1"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <input
+                        type="number"
+                        value={switchItem.bottomOutMagneticFlux || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
                         min="0"
                         max="10000"
                         step="0.1"

@@ -14,7 +14,10 @@ interface EditableSwitchData {
   technology?: string
   magnetOrientation?: string
   magnetPosition?: string
-  magnetStrength?: number
+  initialForce?: number
+  totalTravel?: number
+  initialMagneticFlux?: number
+  bottomOutMagneticFlux?: number
   compatibility?: string
   manufacturer?: string
   springWeight?: string
@@ -60,7 +63,10 @@ export default function BulkEditPage() {
             technology: sw.technology || '',
             magnetOrientation: sw.magnetOrientation || '',
             magnetPosition: sw.magnetPosition || '',
-            magnetStrength: sw.magnetStrength || undefined,
+            initialForce: sw.initialForce || undefined,
+            totalTravel: sw.totalTravel || undefined,
+            initialMagneticFlux: sw.initialMagneticFlux || undefined,
+            bottomOutMagneticFlux: sw.bottomOutMagneticFlux || undefined,
             compatibility: sw.compatibility || '',
             manufacturer: sw.manufacturer || '',
             springWeight: sw.springWeight || '',
@@ -115,7 +121,7 @@ export default function BulkEditPage() {
       }
     }
     fetchSwitches()
-  }, [])
+  }, [submittedManufacturers])
 
   const updateSwitch = async (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => {
     // If manufacturer field is being updated, validate it
@@ -241,13 +247,22 @@ export default function BulkEditPage() {
                     {showMagneticFields && (
                       <>
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Magnetic Pole Orientation
+                          Initial Force (g)
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Total Travel (mm)
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Initial Flux (Gs)
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Bottom Out Flux (Gs)
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Pole Orientation
                         </th>
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Magnet Position
-                        </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Magnet Strength (Gs)
                         </th>
                       </>
                     )}
@@ -355,6 +370,50 @@ export default function BulkEditPage() {
                       {showMagneticFields && (
                         <>
                           <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="number"
+                              value={switchItem.initialForce || ''}
+                              onChange={(e) => updateSwitch(index, 'initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                              min="0"
+                              max="1000"
+                              step="0.1"
+                            />
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="number"
+                              value={switchItem.totalTravel || ''}
+                              onChange={(e) => updateSwitch(index, 'totalTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                            />
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="number"
+                              value={switchItem.initialMagneticFlux || ''}
+                              onChange={(e) => updateSwitch(index, 'initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                              min="0"
+                              max="10000"
+                              step="0.1"
+                            />
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <input
+                              type="number"
+                              value={switchItem.bottomOutMagneticFlux || ''}
+                              onChange={(e) => updateSwitch(index, 'bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+                              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                              min="0"
+                              max="10000"
+                              step="0.1"
+                            />
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
                             <select
                               value={switchItem.magnetOrientation || ''}
                               onChange={(e) => updateSwitch(index, 'magnetOrientation', e.target.value || undefined)}
@@ -375,18 +434,6 @@ export default function BulkEditPage() {
                               <option value="Center">Center</option>
                               <option value="Off-Center">Off-Center</option>
                             </select>
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <input
-                              type="number"
-                              value={switchItem.magnetStrength || ''}
-                              onChange={(e) => updateSwitch(index, 'magnetStrength', e.target.value ? parseFloat(e.target.value) : undefined)}
-                              className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                              placeholder="e.g. 35, 3500"
-                              min="0"
-                              max="10000"
-                              step="0.1"
-                            />
                           </td>
                         </>
                       )}
@@ -640,7 +687,10 @@ export default function BulkEditPage() {
                           technology: sw.technology || '',
                           magnetOrientation: sw.magnetOrientation || '',
                           magnetPosition: sw.magnetPosition || '',
-                          magnetStrength: sw.magnetStrength || undefined,
+                          initialForce: sw.initialForce || undefined,
+                          totalTravel: sw.totalTravel || undefined,
+                          initialMagneticFlux: sw.initialMagneticFlux || undefined,
+                          bottomOutMagneticFlux: sw.bottomOutMagneticFlux || undefined,
                           compatibility: sw.compatibility || '',
                           manufacturer: sw.manufacturer || '',
                           springWeight: sw.springWeight || '',
