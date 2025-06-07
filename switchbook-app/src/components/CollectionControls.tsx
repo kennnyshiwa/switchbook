@@ -25,6 +25,10 @@ export interface FilterOptions {
   bottomHousings: string[]
   stems: string[]
   springWeights: string[]
+  springLengths: string[]
+  magnetOrientations: string[]
+  magnetPositions: string[]
+  compatibilities: string[]
 }
 
 export interface ActiveFilters {
@@ -35,6 +39,10 @@ export interface ActiveFilters {
   bottomHousing?: string
   stem?: string
   springWeight?: string
+  springLength?: string
+  magnetOrientation?: string
+  magnetPosition?: string
+  compatibility?: string
 }
 
 interface CollectionControlsProps {
@@ -104,7 +112,7 @@ export default function CollectionControls({
               id="search"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search by name, manufacturer, type, materials, or notes..."
+              placeholder="Search by name, manufacturer, type, technology, materials, specs, or notes..."
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
           </div>
@@ -183,7 +191,7 @@ export default function CollectionControls({
 
       {showFilters && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Manufacturer
@@ -305,6 +313,78 @@ export default function CollectionControls({
                 {filterOptions.stems.map(stem => (
                   <option key={stem} value={stem}>
                     {stem}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Spring Length
+              </label>
+              <select
+                value={activeFilters.springLength || ''}
+                onChange={(e) => handleFilterChange('springLength', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Spring Lengths</option>
+                {filterOptions.springLengths.map(length => (
+                  <option key={length} value={length}>
+                    {length}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Magnet Orientation
+              </label>
+              <select
+                value={activeFilters.magnetOrientation || ''}
+                onChange={(e) => handleFilterChange('magnetOrientation', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Magnet Orientations</option>
+                {filterOptions.magnetOrientations.map(orientation => (
+                  <option key={orientation} value={orientation}>
+                    {orientation}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Magnet Position
+              </label>
+              <select
+                value={activeFilters.magnetPosition || ''}
+                onChange={(e) => handleFilterChange('magnetPosition', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Magnet Positions</option>
+                {filterOptions.magnetPositions.map(position => (
+                  <option key={position} value={position}>
+                    {position}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Compatibility
+              </label>
+              <select
+                value={activeFilters.compatibility || ''}
+                onChange={(e) => handleFilterChange('compatibility', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Compatibilities</option>
+                {filterOptions.compatibilities.map(compatibility => (
+                  <option key={compatibility} value={compatibility}>
+                    {compatibility}
                   </option>
                 ))}
               </select>

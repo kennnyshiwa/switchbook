@@ -60,6 +60,10 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     const bottomHousings = [...new Set(switches.map(s => s.bottomHousing).filter(Boolean) as string[])].sort()
     const stems = [...new Set(switches.map(s => s.stem).filter(Boolean) as string[])].sort()
     const springWeights = [...new Set(switches.map(s => s.springWeight).filter(Boolean) as string[])].sort()
+    const springLengths = [...new Set(switches.map(s => s.springLength).filter(Boolean) as string[])].sort()
+    const magnetOrientations = [...new Set(switches.map(s => s.magnetOrientation).filter(Boolean) as string[])].sort()
+    const magnetPositions = [...new Set(switches.map(s => s.magnetPosition).filter(Boolean) as string[])].sort()
+    const compatibilities = [...new Set(switches.map(s => s.compatibility).filter(Boolean) as string[])].sort()
 
     return {
       manufacturers,
@@ -68,7 +72,11 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       topHousings,
       bottomHousings,
       stems,
-      springWeights
+      springWeights,
+      springLengths,
+      magnetOrientations,
+      magnetPositions,
+      compatibilities
     }
   }, [switches])
 
@@ -80,13 +88,19 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       const search = searchTerm.toLowerCase()
       filtered = filtered.filter(s => 
         s.name.toLowerCase().includes(search) ||
+        (s.chineseName?.toLowerCase().includes(search) ?? false) ||
         (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
         (s.type?.toLowerCase().includes(search) ?? false) ||
+        (s.technology?.toLowerCase().includes(search) ?? false) ||
         (s.notes?.toLowerCase().includes(search) ?? false) ||
         (s.springWeight?.toLowerCase().includes(search) ?? false) ||
+        (s.springLength?.toLowerCase().includes(search) ?? false) ||
         (s.topHousing?.toLowerCase().includes(search) ?? false) ||
         (s.bottomHousing?.toLowerCase().includes(search) ?? false) ||
-        (s.stem?.toLowerCase().includes(search) ?? false)
+        (s.stem?.toLowerCase().includes(search) ?? false) ||
+        (s.magnetOrientation?.toLowerCase().includes(search) ?? false) ||
+        (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
+        (s.compatibility?.toLowerCase().includes(search) ?? false)
       )
     }
 
@@ -111,6 +125,18 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     }
     if (activeFilters.springWeight) {
       filtered = filtered.filter(s => s.springWeight === activeFilters.springWeight)
+    }
+    if (activeFilters.springLength) {
+      filtered = filtered.filter(s => s.springLength === activeFilters.springLength)
+    }
+    if (activeFilters.magnetOrientation) {
+      filtered = filtered.filter(s => s.magnetOrientation === activeFilters.magnetOrientation)
+    }
+    if (activeFilters.magnetPosition) {
+      filtered = filtered.filter(s => s.magnetPosition === activeFilters.magnetPosition)
+    }
+    if (activeFilters.compatibility) {
+      filtered = filtered.filter(s => s.compatibility === activeFilters.compatibility)
     }
 
     // Apply sorting
