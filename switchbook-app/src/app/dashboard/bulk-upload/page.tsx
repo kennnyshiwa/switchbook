@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
 import ManufacturerAutocomplete from '@/components/ManufacturerAutocomplete'
+import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 
 interface ParsedSwitch {
   name: string
@@ -39,6 +40,8 @@ interface ParsedSwitchWithDuplicate extends ParsedSwitch {
   isDuplicate?: boolean
   existingId?: string
   overwrite?: boolean
+  manufacturerValid?: boolean
+  manufacturerSuggestions?: string[]
 }
 
 export default function BulkUploadPage() {
@@ -50,6 +53,10 @@ export default function BulkUploadPage() {
   const [existingSwitches, setExistingSwitches] = useState<Switch[]>([])
   const [importProgress, setImportProgress] = useState(0)
   const [importResults, setImportResults] = useState<{ success: number; errors: string[]; skipped: number }>({ success: 0, errors: [], skipped: 0 })
+  const [manufacturerValidationResults, setManufacturerValidationResults] = useState<Map<string, ManufacturerValidationResult>>(new Map())
+  const [isValidating, setIsValidating] = useState(false)
+  const tableRef = useRef<HTMLDivElement>(null)
+  const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
   const switchFields = [
     { key: 'name', label: 'Switch Name', required: true },
@@ -200,7 +207,9 @@ export default function BulkUploadPage() {
     return `${number}${unit.toLowerCase()}`
   }
 
-  const parseAndPreview = () => {
+  const parseAndPreview = async () => {
+    setIsValidating(true)
+    
     const parsed: ParsedSwitchWithDuplicate[] = csvData.map(row => {
       const switchData: Partial<ParsedSwitchWithDuplicate> = {}
       
@@ -275,40 +284,92 @@ export default function BulkUploadPage() {
       return switchData as ParsedSwitchWithDuplicate
     }).filter(sw => sw.name) // Only include switches with required fields (just name now)
     
-    // Check for duplicates
+    // Get all manufacturers for validation
+    const manufacturers = parsed.map(sw => sw.manufacturer || '').filter(m => m)
+    const validationResults = await validateManufacturers(manufacturers)
+    setManufacturerValidationResults(validationResults)
+    
+    // Check for duplicates and add manufacturer validation
     const parsedWithDuplicateCheck = parsed.map(switchItem => {
       const existingSwitch = existingSwitches.find(
         existing => existing.name.toLowerCase() === switchItem.name.toLowerCase()
       )
+      
+      // Add manufacturer validation results
+      let manufacturerValid = true
+      let manufacturerSuggestions: string[] = []
+      
+      if (switchItem.manufacturer) {
+        const validationResult = validationResults.get(switchItem.manufacturer)
+        if (validationResult) {
+          manufacturerValid = validationResult.isValid
+          manufacturerSuggestions = validationResult.suggestions || []
+        }
+      }
       
       if (existingSwitch) {
         return {
           ...switchItem,
           isDuplicate: true,
           existingId: existingSwitch.id,
-          overwrite: false // Default to not overwriting
+          overwrite: false, // Default to not overwriting
+          manufacturerValid,
+          manufacturerSuggestions
         }
       }
       
-      return switchItem
+      return {
+        ...switchItem,
+        manufacturerValid,
+        manufacturerSuggestions
+      }
     })
     
     setParsedSwitches(parsedWithDuplicateCheck)
+    setIsValidating(false)
     setCurrentStep('preview')
+    
+    // Scroll to first invalid manufacturer after a short delay
+    setTimeout(() => {
+      const firstInvalidIndex = parsedWithDuplicateCheck.findIndex(sw => sw.manufacturer && !sw.manufacturerValid)
+      if (firstInvalidIndex !== -1) {
+        const invalidRow = invalidRowRefs.current.get(firstInvalidIndex)
+        if (invalidRow) {
+          invalidRow.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }
+    }, 100)
   }
 
-  const updateParsedSwitch = (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | undefined) => {
-    setParsedSwitches(prev => prev.map((sw, i) => {
-      if (i !== index) return sw
+  const updateParsedSwitch = async (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | undefined) => {
+    // Clean up spring weight and length values when editing
+    let cleanedValue = value
+    if ((field === 'springWeight' || field === 'springLength') && typeof value === 'string') {
+      cleanedValue = cleanUnitValue(value)
+    }
+    
+    // If manufacturer field is being updated, validate it
+    if (field === 'manufacturer' && typeof cleanedValue === 'string') {
+      const validationResults = await validateManufacturers([cleanedValue])
+      const validationResult = validationResults.get(cleanedValue)
       
-      // Clean up spring weight and length values when editing
-      let cleanedValue = value
-      if ((field === 'springWeight' || field === 'springLength') && typeof value === 'string') {
-        cleanedValue = cleanUnitValue(value)
-      }
-      
-      return { ...sw, [field]: cleanedValue }
-    }))
+      setParsedSwitches(prev => prev.map((sw, i) => {
+        if (i !== index) return sw
+        
+        return {
+          ...sw,
+          [field]: cleanedValue,
+          manufacturerValid: validationResult?.isValid ?? true,
+          manufacturerSuggestions: validationResult?.suggestions || []
+        }
+      }))
+    } else {
+      setParsedSwitches(prev => prev.map((sw, i) => {
+        if (i !== index) return sw
+        
+        return { ...sw, [field]: cleanedValue }
+      }))
+    }
   }
 
   const toggleOverwrite = (index: number) => {
@@ -318,6 +379,13 @@ export default function BulkUploadPage() {
   }
 
   const importSwitches = async () => {
+    // Check for invalid manufacturers
+    const invalidManufacturers = parsedSwitches.filter(sw => sw.manufacturer && !sw.manufacturerValid)
+    if (invalidManufacturers.length > 0) {
+      alert(`Cannot import: ${invalidManufacturers.length} switches have invalid manufacturers. Please fix them or remove the manufacturer names.`)
+      return
+    }
+    
     setCurrentStep('importing')
     setImportProgress(0)
     
@@ -338,7 +406,7 @@ export default function BulkUploadPage() {
         
         if (switchItem.isDuplicate && switchItem.overwrite && switchItem.existingId) {
           // Update existing switch
-          const { isDuplicate, existingId, overwrite, ...switchData } = switchItem
+          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, ...switchData } = switchItem
           response = await fetch(`/api/switches/${switchItem.existingId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -346,7 +414,7 @@ export default function BulkUploadPage() {
           })
         } else {
           // Create new switch
-          const { isDuplicate, existingId, overwrite, ...switchData } = switchItem
+          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, ...switchData } = switchItem
           response = await fetch('/api/switches', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -493,9 +561,14 @@ export default function BulkUploadPage() {
             </button>
             <button
               onClick={parseAndPreview}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              disabled={isValidating}
+              className={`px-6 py-2 rounded-md ${
+                isValidating
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
-              Continue to Preview
+              {isValidating ? 'Validating...' : 'Continue to Preview'}
             </button>
           </div>
         </div>
@@ -513,6 +586,16 @@ export default function BulkUploadPage() {
           <p className="text-gray-600 dark:text-gray-300">
             Review your {parsedSwitches.length} switches before importing
           </p>
+          {parsedSwitches.some(sw => sw.manufacturer && !sw.manufacturerValid) && (
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+              <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+                ⚠️ Some switches have invalid manufacturers. Please fix them before importing.
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                Invalid manufacturers are highlighted in red. Use the autocomplete to select valid manufacturers or submit new ones.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -593,7 +676,17 @@ export default function BulkUploadPage() {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {parsedSwitches.map((switchItem, index) => (
-                  <tr key={index} className={switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}>
+                  <tr 
+                    key={index} 
+                    ref={(el) => {
+                      if (el && switchItem.manufacturer && !switchItem.manufacturerValid) {
+                        invalidRowRefs.current.set(index, el)
+                      } else {
+                        invalidRowRefs.current.delete(index)
+                      }
+                    }}
+                    className={`${switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''} ${switchItem.manufacturer && !switchItem.manufacturerValid ? 'bg-red-50 dark:bg-red-900/20' : ''}`}
+                  >
                     <td className="px-3 py-4 whitespace-nowrap">
                       {switchItem.isDuplicate ? (
                         <div className="flex flex-col space-y-1">
@@ -712,13 +805,23 @@ export default function BulkUploadPage() {
                       />
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="min-w-[100px]">
+                      <div className="min-w-[200px]">
                         <ManufacturerAutocomplete
                           value={switchItem.manufacturer || ''}
                           onChange={(value) => updateParsedSwitch(index, 'manufacturer', value)}
                           disabled={switchItem.isDuplicate && !switchItem.overwrite}
                           placeholder="Type manufacturer..."
                         />
+                        {switchItem.manufacturer && !switchItem.manufacturerValid && (
+                          <div className="mt-1">
+                            <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
+                            {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
@@ -862,9 +965,18 @@ export default function BulkUploadPage() {
             </button>
             <button
               onClick={importSwitches}
-              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              disabled={parsedSwitches.some(sw => sw.manufacturer && !sw.manufacturerValid)}
+              className={`px-6 py-2 rounded-md ${
+                parsedSwitches.some(sw => sw.manufacturer && !sw.manufacturerValid)
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
             >
-              Import {parsedSwitches.filter(s => !s.isDuplicate || s.overwrite).length} of {parsedSwitches.length} Switches
+              {parsedSwitches.some(sw => sw.manufacturer && !sw.manufacturerValid) ? (
+                `Fix ${parsedSwitches.filter(sw => sw.manufacturer && !sw.manufacturerValid).length} Invalid Manufacturers`
+              ) : (
+                `Import ${parsedSwitches.filter(s => !s.isDuplicate || s.overwrite).length} of ${parsedSwitches.length} Switches`
+              )}
             </button>
           </div>
         </div>

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
 import ManufacturerAutocomplete from '@/components/ManufacturerAutocomplete'
+import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 
 interface EditableSwitchData {
   id: string
@@ -28,6 +29,8 @@ interface EditableSwitchData {
   bottomHousing?: string
   stem?: string
   dateObtained?: string
+  manufacturerValid?: boolean
+  manufacturerSuggestions?: string[]
 }
 
 type BulkEditStep = 'loading' | 'editing' | 'saving' | 'complete'
@@ -37,6 +40,9 @@ export default function BulkEditPage() {
   const [switches, setSwitches] = useState<EditableSwitchData[]>([])
   const [saveProgress, setSaveProgress] = useState(0)
   const [saveResults, setSaveResults] = useState<{ success: number; errors: string[] }>({ success: 0, errors: [] })
+  const [isValidating, setIsValidating] = useState(false)
+  const tableRef = useRef<HTMLDivElement>(null)
+  const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
   // Fetch user's switches on component mount
   useEffect(() => {
@@ -69,8 +75,39 @@ export default function BulkEditPage() {
             stem: sw.stem || '',
             dateObtained: sw.dateObtained ? new Date(sw.dateObtained).toISOString().split('T')[0] : ''
           }))
-          setSwitches(editableSwitches)
+          
+          // Validate manufacturers
+          const manufacturers = editableSwitches.map((sw: EditableSwitchData) => sw.manufacturer || '').filter((m: string) => m)
+          const validationResults = await validateManufacturers(manufacturers)
+          
+          // Add validation results to switches
+          const switchesWithValidation = editableSwitches.map((sw: EditableSwitchData) => {
+            if (sw.manufacturer) {
+              const validationResult = validationResults.get(sw.manufacturer)
+              if (validationResult) {
+                return {
+                  ...sw,
+                  manufacturerValid: validationResult.isValid,
+                  manufacturerSuggestions: validationResult.suggestions || []
+                }
+              }
+            }
+            return { ...sw, manufacturerValid: true }
+          })
+          
+          setSwitches(switchesWithValidation)
           setCurrentStep('editing')
+          
+          // Scroll to first invalid manufacturer after a short delay
+          setTimeout(() => {
+            const firstInvalidIndex = switchesWithValidation.findIndex((sw: EditableSwitchData) => sw.manufacturer && !sw.manufacturerValid)
+            if (firstInvalidIndex !== -1) {
+              const invalidRow = invalidRowRefs.current.get(firstInvalidIndex)
+              if (invalidRow) {
+                invalidRow.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }
+            }
+          }, 100)
         }
       } catch (error) {
         console.error('Failed to fetch switches:', error)
@@ -79,16 +116,40 @@ export default function BulkEditPage() {
     fetchSwitches()
   }, [])
 
-  const updateSwitch = (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => {
-    setSwitches(prev => prev.map((sw, i) => 
-      i === index ? { ...sw, [field]: value } : sw
-    ))
+  const updateSwitch = async (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => {
+    // If manufacturer field is being updated, validate it
+    if (field === 'manufacturer' && typeof value === 'string') {
+      const validationResults = await validateManufacturers([value])
+      const validationResult = validationResults.get(value)
+      
+      setSwitches(prev => prev.map((sw, i) => {
+        if (i !== index) return sw
+        
+        return {
+          ...sw,
+          [field]: value,
+          manufacturerValid: validationResult?.isValid ?? true,
+          manufacturerSuggestions: validationResult?.suggestions || []
+        }
+      }))
+    } else {
+      setSwitches(prev => prev.map((sw, i) => 
+        i === index ? { ...sw, [field]: value } : sw
+      ))
+    }
   }
 
   // Check if any switches have MAGNETIC technology to show/hide magnetic fields
   const showMagneticFields = switches.some(sw => sw.technology === 'MAGNETIC')
 
   const saveSwitches = async () => {
+    // Check for invalid manufacturers
+    const invalidManufacturers = switches.filter(sw => sw.manufacturer && !sw.manufacturerValid)
+    if (invalidManufacturers.length > 0) {
+      alert(`Cannot save: ${invalidManufacturers.length} switches have invalid manufacturers. Please fix them or remove the manufacturer names.`)
+      return
+    }
+    
     setCurrentStep('saving')
     setSaveProgress(0)
     
@@ -98,7 +159,7 @@ export default function BulkEditPage() {
       const switchItem = switches[i]
       
       try {
-        const { id, ...switchData } = switchItem
+        const { id, manufacturerValid, manufacturerSuggestions, ...switchData } = switchItem
         const response = await fetch(`/api/switches/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -147,6 +208,16 @@ export default function BulkEditPage() {
             <p className="text-gray-600 dark:text-gray-300">
               Edit your {switches.length} switches in bulk
             </p>
+            {switches.some(sw => sw.manufacturer && !sw.manufacturerValid) && (
+              <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+                  ⚠️ Some switches have invalid manufacturers. Please fix them before saving.
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                  Invalid manufacturers are highlighted in red. Use the autocomplete to select valid manufacturers or submit new ones.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -225,7 +296,17 @@ export default function BulkEditPage() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {switches.map((switchItem, index) => (
-                    <tr key={switchItem.id}>
+                    <tr 
+                      key={switchItem.id}
+                      ref={(el) => {
+                        if (el && switchItem.manufacturer && !switchItem.manufacturerValid) {
+                          invalidRowRefs.current.set(index, el)
+                        } else {
+                          invalidRowRefs.current.delete(index)
+                        }
+                      }}
+                      className={switchItem.manufacturer && !switchItem.manufacturerValid ? 'bg-red-50 dark:bg-red-900/20' : ''}
+                    >
                       <td className="px-3 py-4">
                         <input
                           type="text"
@@ -318,12 +399,22 @@ export default function BulkEditPage() {
                         />
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
-                        <div className="min-w-[100px]">
+                        <div className="min-w-[200px]">
                           <ManufacturerAutocomplete
                             value={switchItem.manufacturer || ''}
                             onChange={(value) => updateSwitch(index, 'manufacturer', value)}
                             placeholder="Type manufacturer..."
                           />
+                          {switchItem.manufacturer && !switchItem.manufacturerValid && (
+                            <div className="mt-1">
+                              <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
+                              {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                  Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
@@ -447,9 +538,18 @@ export default function BulkEditPage() {
               </Link>
               <button
                 onClick={saveSwitches}
-                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                disabled={switches.some(sw => sw.manufacturer && !sw.manufacturerValid)}
+                className={`px-6 py-2 rounded-md ${
+                  switches.some(sw => sw.manufacturer && !sw.manufacturerValid)
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
               >
-                Save All Changes ({switches.length} switches)
+                {switches.some(sw => sw.manufacturer && !sw.manufacturerValid) ? (
+                  `Fix ${switches.filter(sw => sw.manufacturer && !sw.manufacturerValid).length} Invalid Manufacturers`
+                ) : (
+                  `Save All Changes (${switches.length} switches)`
+                )}
               </button>
             </div>
           </div>
@@ -547,7 +647,27 @@ export default function BulkEditPage() {
                           stem: sw.stem || '',
                           dateObtained: sw.dateObtained ? new Date(sw.dateObtained).toISOString().split('T')[0] : ''
                         }))
-                        setSwitches(editableSwitches)
+                        
+                        // Validate manufacturers
+                        const manufacturers = editableSwitches.map((sw: EditableSwitchData) => sw.manufacturer || '').filter((m: string) => m)
+                        const validationResults = await validateManufacturers(manufacturers)
+                        
+                        // Add validation results to switches
+                        const switchesWithValidation = editableSwitches.map((sw: EditableSwitchData) => {
+                          if (sw.manufacturer) {
+                            const validationResult = validationResults.get(sw.manufacturer)
+                            if (validationResult) {
+                              return {
+                                ...sw,
+                                manufacturerValid: validationResult.isValid,
+                                manufacturerSuggestions: validationResult.suggestions || []
+                              }
+                            }
+                          }
+                          return { ...sw, manufacturerValid: true }
+                        })
+                        
+                        setSwitches(switchesWithValidation)
                         setCurrentStep('editing')
                       }
                     } catch (error) {
