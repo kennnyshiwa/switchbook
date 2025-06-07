@@ -18,6 +18,7 @@ interface EditableSwitchData {
   totalTravel?: number
   initialMagneticFlux?: number
   bottomOutMagneticFlux?: number
+  pcbThickness?: string
   compatibility?: string
   manufacturer?: string
   springWeight?: string
@@ -67,6 +68,7 @@ export default function BulkEditPage() {
             totalTravel: sw.totalTravel || undefined,
             initialMagneticFlux: sw.initialMagneticFlux || undefined,
             bottomOutMagneticFlux: sw.bottomOutMagneticFlux || undefined,
+            pcbThickness: sw.pcbThickness || '',
             compatibility: sw.compatibility || '',
             manufacturer: sw.manufacturer || '',
             springWeight: sw.springWeight || '',
@@ -264,6 +266,9 @@ export default function BulkEditPage() {
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Magnet Position
                         </th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          PCB Thickness
+                        </th>
                       </>
                     )}
                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -433,6 +438,17 @@ export default function BulkEditPage() {
                               <option value="">No position</option>
                               <option value="Center">Center</option>
                               <option value="Off-Center">Off-Center</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <select
+                              value={switchItem.pcbThickness || ''}
+                              onChange={(e) => updateSwitch(index, 'pcbThickness', e.target.value || undefined)}
+                              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                            >
+                              <option value="">No thickness</option>
+                              <option value="1.2mm">1.2mm</option>
+                              <option value="1.6mm">1.6mm</option>
                             </select>
                           </td>
                         </>
@@ -691,6 +707,7 @@ export default function BulkEditPage() {
                           totalTravel: sw.totalTravel || undefined,
                           initialMagneticFlux: sw.initialMagneticFlux || undefined,
                           bottomOutMagneticFlux: sw.bottomOutMagneticFlux || undefined,
+                          pcbThickness: sw.pcbThickness || '',
                           compatibility: sw.compatibility || '',
                           manufacturer: sw.manufacturer || '',
                           springWeight: sw.springWeight || '',

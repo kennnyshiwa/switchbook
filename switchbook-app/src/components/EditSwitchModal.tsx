@@ -39,6 +39,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       totalTravel: switchItem.totalTravel || undefined,
       initialMagneticFlux: switchItem.initialMagneticFlux || undefined,
       bottomOutMagneticFlux: switchItem.bottomOutMagneticFlux || undefined,
+      pcbThickness: switchItem.pcbThickness || '',
       compatibility: switchItem.compatibility || '',
       manufacturer: switchItem.manufacturer || '',
       actuationForce: switchItem.actuationForce || undefined,

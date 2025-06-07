@@ -27,6 +27,7 @@ export const switchSchema = z.object({
   totalTravel: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   initialMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan().transform(() => undefined)),
   bottomOutMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan().transform(() => undefined)),
+  pcbThickness: z.string().max(10).optional().or(z.literal("")),
   compatibility: z.string().max(200).optional().or(z.literal("")),
   manufacturer: z.string().max(100).optional().or(z.literal("")),
   springWeight: z.string().optional(),

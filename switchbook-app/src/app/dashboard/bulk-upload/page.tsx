@@ -17,6 +17,7 @@ interface ParsedSwitch {
   totalTravel?: number
   initialMagneticFlux?: number
   bottomOutMagneticFlux?: number
+  pcbThickness?: string
   compatibility?: string
   manufacturer?: string
   springWeight?: string
@@ -73,6 +74,7 @@ export default function BulkUploadPage() {
     { key: 'totalTravel', label: 'Total Travel (mm)', required: false },
     { key: 'initialMagneticFlux', label: 'Initial Magnetic Flux (Gs)', required: false },
     { key: 'bottomOutMagneticFlux', label: 'Bottom Out Magnetic Flux (Gs)', required: false },
+    { key: 'pcbThickness', label: 'PCB Thickness', required: false },
     { key: 'compatibility', label: 'Compatibility', required: false },
     { key: 'manufacturer', label: 'Manufacturer', required: false },
     { key: 'springWeight', label: 'Spring Weight', required: false },
@@ -108,7 +110,7 @@ export default function BulkUploadPage() {
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
     const sampleData = [
-      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', '', '', '', '', '', '', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
+      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', '', '', '', '', '', '', '', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
     ]
     
     const csvContent = [templateHeaders, sampleData].map(row => 
@@ -648,6 +650,9 @@ export default function BulkUploadPage() {
                     Bottom Out Flux (Gs)
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    PCB Thickness
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Compatibility
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -848,6 +853,18 @@ export default function BulkUploadPage() {
                         step="0.1"
                         disabled={switchItem.isDuplicate && !switchItem.overwrite}
                       />
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <select
+                        value={switchItem.pcbThickness || ''}
+                        onChange={(e) => updateParsedSwitch(index, 'pcbThickness', e.target.value || undefined)}
+                        className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
+                      >
+                        <option value="">No thickness</option>
+                        <option value="1.2mm">1.2mm</option>
+                        <option value="1.6mm">1.6mm</option>
+                      </select>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap">
                       <input

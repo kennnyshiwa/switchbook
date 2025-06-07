@@ -38,6 +38,7 @@ model Switch {
   totalTravel     Float?
   initialMagneticFlux Float?
   bottomOutMagneticFlux Float?
+  pcbThickness    String?
   compatibility   String?
   springWeight    String?
   springLength    String?

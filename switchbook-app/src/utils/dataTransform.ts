@@ -11,6 +11,7 @@ interface SwitchData {
   totalTravel?: number | null;
   initialMagneticFlux?: number | null;
   bottomOutMagneticFlux?: number | null;
+  pcbThickness?: string | null;
   compatibility?: string | null;
   manufacturer?: string | null;
   springWeight?: string | null;
@@ -39,6 +40,7 @@ export function transformSwitchData(data: SwitchData) {
     totalTravel: data.totalTravel || null,
     initialMagneticFlux: data.initialMagneticFlux || null,
     bottomOutMagneticFlux: data.bottomOutMagneticFlux || null,
+    pcbThickness: data.pcbThickness || null,
     compatibility: data.compatibility || null,
     manufacturer: data.manufacturer || null,
     springWeight: data.springWeight || null,
