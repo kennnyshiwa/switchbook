@@ -10,6 +10,7 @@ interface User {
   username: string
   role: UserRole
   emailVerified: Date | null
+  shareableId: string
   createdAt: Date
   _count: {
     switches: number
@@ -26,6 +27,19 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [isUpdatingRole, setIsUpdatingRole] = useState<string | null>(null)
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const getShareUrl = (shareableId: string) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : process.env.NEXTAUTH_URL || ''
+    return `${baseUrl}/share/${shareableId}`
+  }
+
+  const copyShareLink = (shareableId: string) => {
+    const shareUrl = getShareUrl(shareableId)
+    navigator.clipboard.writeText(shareUrl)
+    setCopiedId(shareableId)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   const handleResetPassword = async (userId: string) => {
     if (!confirm('Are you sure you want to reset this user\'s password?')) return
@@ -125,6 +139,9 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
               Switches
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Share Link
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
               Joined
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -163,6 +180,31 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {user._count.switches}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => copyShareLink(user.shareableId)}
+                    className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center space-x-1"
+                    title="Copy share link"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>{copiedId === user.shareableId ? 'Copied!' : 'Copy Link'}</span>
+                  </button>
+                  <a
+                    href={getShareUrl(user.shareableId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                    title="Open share link"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {new Date(user.createdAt).toLocaleDateString()}

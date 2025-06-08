@@ -18,6 +18,7 @@ export default async function AdminUsersPage() {
       username: true,
       role: true,
       emailVerified: true,
+      shareableId: true,
       createdAt: true,
       _count: {
         select: { switches: true }
