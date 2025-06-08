@@ -84,6 +84,10 @@ export default async function HomePage() {
                 </Link>
               </div>
             </div>
+            
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+              Sign up with email or Discord to start cataloguing your collection
+            </p>
           </div>
 
           <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-3 lg:gap-12">
