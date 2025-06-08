@@ -698,6 +698,21 @@ export default function BulkEditPage() {
   const handleDragStart = useCallback((e: React.DragEvent<HTMLTableHeaderCellElement>, columnId: string) => {
     setDraggedColumn(columnId)
     e.dataTransfer.effectAllowed = 'move'
+    
+    // Optimize drag performance
+    if (tableRef.current) {
+      tableRef.current.style.pointerEvents = 'none'
+    }
+    
+    // Add ghost image
+    const dragImage = document.createElement('div')
+    dragImage.textContent = defaultColumns.find(col => col.id === columnId)?.label || columnId
+    dragImage.style.cssText = 'position: absolute; top: -1000px; padding: 8px; background: white; border: 1px solid #ccc; border-radius: 4px;'
+    document.body.appendChild(dragImage)
+    e.dataTransfer.setDragImage(dragImage, 0, 0)
+    
+    // Clean up ghost image after drag starts
+    setTimeout(() => document.body.removeChild(dragImage), 0)
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLTableHeaderCellElement>) => {
@@ -714,20 +729,28 @@ export default function BulkEditPage() {
       return
     }
 
-    const newColumnOrder = [...columnOrder]
-    const draggedIndex = newColumnOrder.indexOf(draggedColumn)
-    const targetIndex = newColumnOrder.indexOf(targetColumnId)
-    
-    // Remove dragged column and insert at target position
-    newColumnOrder.splice(draggedIndex, 1)
-    newColumnOrder.splice(targetIndex, 0, draggedColumn)
-    
-    setColumnOrder(newColumnOrder)
-    setDraggedColumn(null)
+    // Use requestAnimationFrame for smooth state updates
+    requestAnimationFrame(() => {
+      const newColumnOrder = [...columnOrder]
+      const draggedIndex = newColumnOrder.indexOf(draggedColumn)
+      const targetIndex = newColumnOrder.indexOf(targetColumnId)
+      
+      // Remove dragged column and insert at target position
+      newColumnOrder.splice(draggedIndex, 1)
+      newColumnOrder.splice(targetIndex, 0, draggedColumn)
+      
+      setColumnOrder(newColumnOrder)
+      setDraggedColumn(null)
+    })
   }, [draggedColumn, columnOrder])
 
   const handleDragEnd = useCallback(() => {
     setDraggedColumn(null)
+    
+    // Re-enable pointer events
+    if (tableRef.current) {
+      tableRef.current.style.pointerEvents = 'auto'
+    }
   }, [])
 
   // Check if any switches have MAGNETIC technology to show/hide magnetic fields
@@ -834,10 +857,10 @@ export default function BulkEditPage() {
                           onDrop={!isNameColumn ? (e) => handleDrop(e, columnId) : undefined}
                           onDragEnd={!isNameColumn ? handleDragEnd : undefined}
                           className={`px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${column.minWidth} ${
-                            draggedColumn === columnId ? 'opacity-50' : ''
+                            draggedColumn === columnId ? 'opacity-50 transform scale-95' : ''
                           } ${column.isRequired ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${
-                            isNameColumn ? 'sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600' : 'cursor-move'
-                          }`}
+                            isNameColumn ? 'sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600' : 'cursor-move hover:bg-gray-100 dark:hover:bg-gray-600'
+                          } transition-all duration-150`}
                           style={isNameColumn ? { position: 'sticky', left: 0 } : undefined}
                           title={isNameColumn ? "Name column is always visible" : "Drag to reorder columns"}
                         >
