@@ -6,6 +6,7 @@ import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switch
 import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
 import { formatWithUnit } from '@/utils/formatters'
+import { linkify } from '@/utils/linkify'
 
 interface SwitchTableProps {
   switches: Switch[]
@@ -201,8 +202,8 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                     {!switchItem.topHousing && !switchItem.bottomHousing && !switchItem.stem && '-'}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                  {switchItem.notes || '-'}
+                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+                  {switchItem.notes ? linkify(switchItem.notes) : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center space-x-2">

@@ -5,6 +5,7 @@ import CollectionStats from "@/components/CollectionStats"
 import ForceCurvesButton from "@/components/ForceCurvesButton"
 import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from "@/constants/switchTypes"
 import { formatWithUnit } from "@/utils/formatters"
+import { linkify } from "@/utils/linkify"
 
 interface SharePageProps {
   params: Promise<{ shareableId: string }>
@@ -235,7 +236,7 @@ export default async function SharePage({ params }: SharePageProps) {
                     )}
 
                     {switchItem.notes && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{switchItem.notes}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{linkify(switchItem.notes)}</p>
                     )}
 
                     {/* Force Curves Button */}

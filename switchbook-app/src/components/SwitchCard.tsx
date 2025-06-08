@@ -7,6 +7,7 @@ import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switch
 import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
 import { formatWithUnit } from '@/utils/formatters'
+import { linkify } from '@/utils/linkify'
 
 interface SwitchCardProps {
   switch: Switch
@@ -242,7 +243,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
           )}
 
           {switchItem.notes && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{switchItem.notes}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{linkify(switchItem.notes)}</p>
           )}
 
           {/* Force Curves Button */}
