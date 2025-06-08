@@ -223,9 +223,6 @@ const SwitchEditRow = memo(({
     const column = defaultColumns.find(col => col.id === columnId)
     if (!column) return null
 
-    // Skip magnetic fields if not showing them
-    if (column.showOnlyForMagnetic && !showMagneticFields) return null
-
     const field = column.field
     const className = `block w-full ${column.minWidth} text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2`
     const isNameColumn = columnId === 'name'
@@ -587,6 +584,7 @@ export default function BulkEditPage() {
   const [submittedManufacturers, setSubmittedManufacturers] = useState<Set<string>>(new Set())
   const [columnOrder, setColumnOrder] = useState<string[]>(defaultColumns.map(col => col.id))
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(defaultColumns.map(col => col.id)))
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
@@ -756,6 +754,43 @@ export default function BulkEditPage() {
   // Check if any switches have MAGNETIC technology to show/hide magnetic fields
   const showMagneticFields = switches.some(sw => sw.technology === 'MAGNETIC')
 
+  // Toggle column visibility
+  const toggleColumnVisibility = useCallback((columnId: string) => {
+    // Prevent hiding the name column (required)
+    if (columnId === 'name') return
+    
+    setVisibleColumns(prev => {
+      const newVisible = new Set(prev)
+      if (newVisible.has(columnId)) {
+        newVisible.delete(columnId)
+      } else {
+        newVisible.add(columnId)
+      }
+      return newVisible
+    })
+  }, [])
+
+  // Get filtered columns based on visibility and magnetic field settings
+  const getVisibleColumns = useCallback(() => {
+    return columnOrder.filter(columnId => {
+      const column = defaultColumns.find(col => col.id === columnId)
+      if (!column) return false
+      
+      // Always show name column
+      if (columnId === 'name') return true
+      
+      // Check if column is marked as visible
+      if (!visibleColumns.has(columnId)) return false
+      
+      // Skip magnetic fields if not showing them
+      if (column.showOnlyForMagnetic && !showMagneticFields) return false
+      
+      return true
+    })
+  }, [columnOrder, visibleColumns, showMagneticFields])
+
+  const visibleColumnIds = getVisibleColumns()
+
   const saveSwitches = async () => {
     // Check for invalid manufacturers (excluding submitted ones)
     const invalidManufacturers = switches.filter(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
@@ -818,10 +853,79 @@ export default function BulkEditPage() {
             <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center mb-4">
               ← Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Edit Switches</h1>
-            <p className="text-gray-600 dark:text-gray-300">
-              Edit your {switches.length} switches in bulk
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Edit Switches</h1>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Edit your {switches.length} switches in bulk
+                </p>
+              </div>
+              
+              {/* Column Visibility Controls */}
+              <div className="relative">
+                <details className="group">
+                  <summary className="cursor-pointer px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
+                    <span className="text-sm font-medium">Show/Hide Columns</span>
+                    <svg className="w-4 h-4 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <div className="p-3">
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        Toggle Column Visibility
+                      </div>
+                      <div className="space-y-2">
+                        {defaultColumns.map(column => {
+                          // Skip magnetic fields if not showing them
+                          if (column.showOnlyForMagnetic && !showMagneticFields) return null
+                          
+                          const isVisible = visibleColumns.has(column.id)
+                          const isRequired = column.id === 'name'
+                          
+                          return (
+                            <label key={column.id} className={`flex items-center space-x-2 cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${isRequired ? 'opacity-50' : ''}`}>
+                              <input
+                                type="checkbox"
+                                checked={isVisible}
+                                onChange={() => toggleColumnVisibility(column.id)}
+                                disabled={isRequired}
+                                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                                {column.label}
+                                {isRequired && <span className="text-xs text-gray-500 ml-1">(required)</span>}
+                              </span>
+                            </label>
+                          )
+                        }).filter(Boolean)}
+                      </div>
+                      
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setVisibleColumns(new Set(defaultColumns.filter(col => !col.showOnlyForMagnetic || showMagneticFields).map(col => col.id)))}
+                            className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                          >
+                            Show All
+                          </button>
+                          <button
+                            onClick={() => setVisibleColumns(new Set(['name']))}
+                            className="flex-1 px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700"
+                          >
+                            Hide All
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              </div>
+            </div>
             {switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) && (
               <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
                 <p className="text-sm text-red-800 dark:text-red-200 font-medium">
@@ -839,12 +943,9 @@ export default function BulkEditPage() {
               <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
                   <tr>
-                    {columnOrder.map((columnId, index) => {
+                    {visibleColumnIds.map((columnId, index) => {
                       const column = defaultColumns.find(col => col.id === columnId)
                       if (!column) return null
-                      
-                      // Skip magnetic fields if not showing them
-                      if (column.showOnlyForMagnetic && !showMagneticFields) return null
                       
                       const isNameColumn = columnId === 'name'
                       
@@ -879,7 +980,7 @@ export default function BulkEditPage() {
                           </div>
                         </th>
                       )
-                    }).filter(Boolean)}
+                    })}
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -892,7 +993,7 @@ export default function BulkEditPage() {
                       onManufacturerSubmitted={handleManufacturerSubmitted}
                       submittedManufacturers={submittedManufacturers}
                       showMagneticFields={showMagneticFields}
-                      columnOrder={columnOrder}
+                      columnOrder={visibleColumnIds}
                       invalidRowRef={(el) => {
                         if (el && switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer)) {
                           invalidRowRefs.current.set(index, el)
