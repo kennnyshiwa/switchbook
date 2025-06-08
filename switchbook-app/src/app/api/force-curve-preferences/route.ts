@@ -3,11 +3,27 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+// Allowed domains for force curve URLs to prevent SSRF
+const ALLOWED_DOMAINS = [
+  'raw.githubusercontent.com',
+  'github.com',
+  'api.github.com'
+]
+
 const PreferenceSchema = z.object({
   switchName: z.string().min(1),
   manufacturer: z.string().nullable().optional(),
   selectedFolder: z.string().min(1),
-  selectedUrl: z.string().url(),
+  selectedUrl: z.string().url().refine((url) => {
+    try {
+      const urlObj = new URL(url)
+      return ALLOWED_DOMAINS.includes(urlObj.hostname)
+    } catch {
+      return false
+    }
+  }, {
+    message: "URL must be from an allowed domain (GitHub only)"
+  }),
 })
 
 export async function POST(request: NextRequest) {

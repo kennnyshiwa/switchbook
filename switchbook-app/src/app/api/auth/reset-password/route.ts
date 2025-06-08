@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 12)
 
     // Update user password and clean up reset token
     await Promise.all([

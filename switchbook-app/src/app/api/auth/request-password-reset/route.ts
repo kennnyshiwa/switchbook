@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { sendUserPasswordResetEmail } from "@/lib/email"
 import { passwordResetRequestSchema } from "@/lib/validation"
 import { z } from "zod"
+import { withRateLimit } from "@/lib/with-rate-limit"
+import { strictRateLimit } from "@/lib/rate-limit"
 
-export async function POST(request: NextRequest) {
+async function passwordResetRequestHandler(request: NextRequest) {
   try {
     const body = await request.json()
     const { email } = passwordResetRequestSchema.parse(body)
@@ -41,3 +43,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+export const POST = withRateLimit(strictRateLimit, passwordResetRequestHandler)

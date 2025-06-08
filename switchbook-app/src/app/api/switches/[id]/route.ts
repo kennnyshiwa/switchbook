@@ -1,16 +1,19 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
 import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
+import { getClientIdentifier } from "@/lib/rate-limit"
+import { checkImageValidationRateLimit } from "@/lib/image-security"
+import { withSmartRateLimit } from "@/lib/with-rate-limit"
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-export async function PUT(request: Request, { params }: RouteParams) {
+async function updateSwitchHandler(request: NextRequest, { params }: RouteParams) {
   let body: unknown
   try {
     const session = await auth()
@@ -24,6 +27,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     body = await request.json()
+    
+    // Additional rate limiting for image URL validation
+    if (body && typeof body === 'object' && 'imageUrl' in body && body.imageUrl) {
+      const clientIP = getClientIdentifier(request)
+      if (!checkImageValidationRateLimit(clientIP)) {
+        return NextResponse.json(
+          { error: "Too many image validation requests. Please try again later." },
+          { status: 429 }
+        )
+      }
+    }
+    
     const validatedData = switchSchema.parse(body)
     
     // Transform empty strings to null for optional fields
@@ -70,6 +85,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
     )
   }
 }
+
+export const PUT = withSmartRateLimit(updateSwitchHandler)
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { validateImageUrl } from "./image-security"
 
 export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -37,7 +38,13 @@ export const switchSchema = z.object({
   preTravel: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   bottomOut: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   notes: z.string().max(500).optional(),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: z.string().optional().or(z.literal("")).refine((url) => {
+    if (!url || url === "") return true
+    const validation = validateImageUrl(url)
+    return validation.valid
+  }, {
+    message: "Invalid image URL or security violation"
+  }),
   topHousing: z.string().max(100).optional().or(z.literal("")),
   bottomHousing: z.string().max(100).optional().or(z.literal("")),
   stem: z.string().max(100).optional().or(z.literal("")),

@@ -18,18 +18,17 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'No account found with this email address' },
-        { status: 404 }
-      )
+      // Don't reveal if email exists or not for security
+      return NextResponse.json({
+        message: 'If an account with this email exists and is not verified, a verification email has been sent.',
+      })
     }
 
     // Check if email is already verified
     if (user.emailVerified) {
-      return NextResponse.json(
-        { error: 'Email is already verified' },
-        { status: 400 }
-      )
+      return NextResponse.json({
+        message: 'If an account with this email exists and is not verified, a verification email has been sent.',
+      })
     }
 
     // Delete any existing verification tokens for this user
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Verification email sent successfully',
+      message: 'If an account with this email exists and is not verified, a verification email has been sent.',
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

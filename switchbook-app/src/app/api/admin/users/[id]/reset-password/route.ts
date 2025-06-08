@@ -1,8 +1,11 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { sendPasswordResetEmail } from "@/lib/email"
+import crypto from "crypto"
+import { withRateLimit } from "@/lib/with-rate-limit"
+import { strictRateLimit } from "@/lib/rate-limit"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -12,12 +15,14 @@ function generateRandomPassword() {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%'
   let password = ''
   for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
+    const randomBytes = crypto.randomBytes(1)
+    const randomIndex = randomBytes[0] % chars.length
+    password += chars.charAt(randomIndex)
   }
   return password
 }
 
-export async function POST(request: Request, { params }: RouteParams) {
+async function adminPasswordResetHandler(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
     const { id: userId } = await params
@@ -74,3 +79,5 @@ export async function POST(request: Request, { params }: RouteParams) {
     )
   }
 }
+
+export const POST = withRateLimit(strictRateLimit, adminPasswordResetHandler)

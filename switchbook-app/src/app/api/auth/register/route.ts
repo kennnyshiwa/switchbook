@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { registerSchema } from "@/lib/validation"
 import { sendVerificationEmail } from "@/lib/email"
 import { z } from "zod"
+import { withRateLimit } from "@/lib/with-rate-limit"
+import { authRateLimit } from "@/lib/rate-limit"
 
-export async function POST(request: Request) {
+async function registerHandler(request: NextRequest) {
   try {
     const body = await request.json()
     
@@ -85,3 +87,5 @@ export async function POST(request: Request) {
     )
   }
 }
+
+export const POST = withRateLimit(authRateLimit, registerHandler)
