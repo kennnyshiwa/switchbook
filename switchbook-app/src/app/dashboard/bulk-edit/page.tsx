@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
@@ -585,6 +585,7 @@ export default function BulkEditPage() {
   const [columnOrder, setColumnOrder] = useState<string[]>(defaultColumns.map(col => col.id))
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(defaultColumns.map(col => col.id)))
+  const [searchTerm, setSearchTerm] = useState<string>('')
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
@@ -791,8 +792,36 @@ export default function BulkEditPage() {
 
   const visibleColumnIds = getVisibleColumns()
 
+  // Filter switches based on search term
+  const filteredSwitches = useMemo(() => {
+    if (!searchTerm.trim()) return switches
+    
+    const searchLower = searchTerm.toLowerCase().trim()
+    return switches.filter(switchItem => {
+      // Search across multiple fields
+      const searchableFields = [
+        switchItem.name,
+        switchItem.chineseName,
+        switchItem.manufacturer,
+        switchItem.type,
+        switchItem.technology,
+        switchItem.compatibility,
+        switchItem.notes,
+        switchItem.topHousing,
+        switchItem.bottomHousing,
+        switchItem.stem,
+        switchItem.springWeight,
+        switchItem.springLength
+      ]
+      
+      return searchableFields.some(field => 
+        field && field.toString().toLowerCase().includes(searchLower)
+      )
+    })
+  }, [switches, searchTerm])
+
   const saveSwitches = async () => {
-    // Check for invalid manufacturers (excluding submitted ones)
+    // Check for invalid manufacturers (excluding submitted ones) - use all switches, not just filtered
     const invalidManufacturers = switches.filter(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
     if (invalidManufacturers.length > 0) {
       alert(`Cannot save: ${invalidManufacturers.length} switches have invalid manufacturers. Please fix them or submit for verification.`)
@@ -854,11 +883,42 @@ export default function BulkEditPage() {
               ← Back to Dashboard
             </Link>
             <div className="flex justify-between items-start">
-              <div>
+              <div className="flex-1 mr-6">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Edit Switches</h1>
                 <p className="text-gray-600 dark:text-gray-300">
                   Edit your {switches.length} switches in bulk
+                  {searchTerm && (
+                    <span className="block text-sm mt-1">
+                      Showing {filteredSwitches.length} of {switches.length} switches
+                    </span>
+                  )}
                 </p>
+                
+                {/* Search Input */}
+                <div className="mt-4 relative max-w-md">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search switches by name, manufacturer, type..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
               
               {/* Column Visibility Controls */}
@@ -926,7 +986,7 @@ export default function BulkEditPage() {
                 </details>
               </div>
             </div>
-            {switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) && (
+            {filteredSwitches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) && (
               <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
                 <p className="text-sm text-red-800 dark:text-red-200 font-medium">
                   ⚠️ Some switches have invalid manufacturers. Please fix them before saving.
@@ -984,7 +1044,7 @@ export default function BulkEditPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {switches.map((switchItem, index) => (
+                  {filteredSwitches.map((switchItem, index) => (
                     <SwitchEditRow
                       key={switchItem.id}
                       switchItem={switchItem}
