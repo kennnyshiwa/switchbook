@@ -17,7 +17,6 @@ export async function normalizeManufacturerName(
 
   try {
     const trimmedName = manufacturerName.trim()
-    console.log(`[Manufacturer Normalization] Processing: "${trimmedName}"`)
     
     // Get all manufacturers with their names and aliases
     const manufacturers = await prisma.manufacturer.findMany({
@@ -27,15 +26,12 @@ export async function normalizeManufacturerName(
         verified: true
       }
     })
-    
-    console.log(`[Manufacturer Normalization] Checking against ${manufacturers.length} existing manufacturers`)
 
     // Check for exact match (case-insensitive) with manufacturer name or aliases
     let matchedManufacturer = null
     for (const manufacturer of manufacturers) {
       // Check canonical name
       if (manufacturer.name.toLowerCase() === trimmedName.toLowerCase()) {
-        console.log(`[Manufacturer Normalization] Found exact match: "${manufacturer.name}" (verified: ${manufacturer.verified})`)
         matchedManufacturer = manufacturer
         break
       }
@@ -44,7 +40,6 @@ export async function normalizeManufacturerName(
       if (manufacturer.aliases) {
         for (const alias of manufacturer.aliases) {
           if (alias.toLowerCase() === trimmedName.toLowerCase()) {
-            console.log(`[Manufacturer Normalization] Found alias match: "${alias}" -> "${manufacturer.name}" (verified: ${manufacturer.verified})`)
             matchedManufacturer = manufacturer
             break
           }
@@ -57,8 +52,6 @@ export async function normalizeManufacturerName(
     if (matchedManufacturer) {
       // If it's unverified, notify admins about the usage
       if (!matchedManufacturer.verified) {
-        console.log(`[Manufacturer Normalization] Found unverified manufacturer, sending notification`)
-        
         // Get user info for notification
         let submittedBy = 'Unknown User'
         let userEmail: string | undefined
@@ -84,23 +77,13 @@ export async function normalizeManufacturerName(
           userEmail,
           undefined, // No original name since it matched
           false // This is not a new manufacturer, it's unverified usage
-        )
-          .then((result) => {
-            if (result.success) {
-              console.log(`Admin notification sent for unverified manufacturer usage: ${matchedManufacturer.name}`)
-            } else {
-              console.warn(`Failed to send admin notification for unverified manufacturer: ${matchedManufacturer.name}`, result.error)
-            }
-          })
-          .catch((error) => {
-            console.error(`Error sending admin notification for unverified manufacturer: ${matchedManufacturer.name}`, error)
-          })
+        ).catch(() => {
+          // Silently handle email errors - don't block switch creation
+        })
       }
       
       return matchedManufacturer.name
     }
-    
-    console.log(`[Manufacturer Normalization] No match found, creating new manufacturer`)
 
     // If no match found, create a new manufacturer entry (unverified)
     // Normalize the name: capitalize first letter of each word
@@ -108,8 +91,6 @@ export async function normalizeManufacturerName(
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ')
-    
-    console.log(`Creating new manufacturer: ${normalizedName}${normalizedName !== trimmedName ? ` (normalized from: ${trimmedName})` : ''}`)
     
     try {
       const newManufacturer = await prisma.manufacturer.create({
@@ -144,23 +125,14 @@ export async function normalizeManufacturerName(
         submittedBy, 
         userEmail, 
         normalizedName !== trimmedName ? trimmedName : undefined
-      )
-        .then((result) => {
-          if (result.success) {
-            console.log(`Admin notification sent for new manufacturer: ${normalizedName}`)
-          } else {
-            console.warn(`Failed to send admin notification for new manufacturer: ${normalizedName}`, result.error)
-          }
-        })
-        .catch((error) => {
-          console.error(`Error sending admin notification for new manufacturer: ${normalizedName}`, error)
-        })
+      ).catch(() => {
+        // Silently handle email errors - don't block switch creation
+      })
 
       return newManufacturer.name
     } catch (createError) {
       // Handle potential race condition where another request created the same manufacturer
       if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
-        console.log(`Manufacturer ${normalizedName} was created by another request, fetching...`)
         const existingManufacturer = await prisma.manufacturer.findFirst({
           where: { name: { equals: normalizedName, mode: 'insensitive' } }
         })
