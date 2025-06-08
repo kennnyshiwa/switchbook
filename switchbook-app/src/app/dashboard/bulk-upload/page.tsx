@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
 import ManufacturerAutocomplete from '@/components/ManufacturerAutocomplete'
@@ -47,6 +47,391 @@ interface ParsedSwitchWithDuplicate extends ParsedSwitch {
   manufacturerValid?: boolean
   manufacturerSuggestions?: string[]
 }
+
+// Memoized table row component to prevent unnecessary re-renders
+const SwitchTableRow = memo(({ 
+  switchItem, 
+  index, 
+  onUpdate, 
+  onToggleOverwrite, 
+  onRemove,
+  onManufacturerSubmitted,
+  isManufacturerSubmitted,
+  invalidRowRef
+}: {
+  switchItem: ParsedSwitchWithDuplicate
+  index: number
+  onUpdate: (index: number, field: keyof ParsedSwitchWithDuplicate, value: any) => void
+  onToggleOverwrite: (index: number) => void
+  onRemove: (index: number) => void
+  onManufacturerSubmitted: (name: string) => void
+  isManufacturerSubmitted: boolean
+  invalidRowRef?: (el: HTMLTableRowElement | null) => void
+}) => {
+  // Local state for each input to prevent re-renders of other rows
+  const [localValues, setLocalValues] = useState(switchItem)
+
+  // Update local state when switchItem changes
+  useEffect(() => {
+    setLocalValues(switchItem)
+  }, [switchItem])
+
+  // Ref to store timeout IDs for debouncing
+  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map())
+
+  const handleChange = useCallback((field: keyof ParsedSwitchWithDuplicate, value: any) => {
+    setLocalValues(prev => ({ ...prev, [field]: value }))
+    
+    // Clear existing timeout for this field
+    const existingTimeout = timeoutRefs.current.get(field)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+    
+    // Set new timeout for debounced update
+    const timeoutId = setTimeout(() => {
+      onUpdate(index, field, value)
+      timeoutRefs.current.delete(field)
+    }, 300)
+    
+    timeoutRefs.current.set(field, timeoutId)
+  }, [index, onUpdate])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    const timeouts = timeoutRefs.current
+    return () => {
+      timeouts.forEach(timeoutId => clearTimeout(timeoutId))
+      timeouts.clear()
+    }
+  }, [])
+
+  return (
+    <tr 
+      ref={invalidRowRef}
+      className={`${switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''} ${switchItem.manufacturer && !switchItem.manufacturerValid && !isManufacturerSubmitted ? 'bg-red-50 dark:bg-red-900/20' : ''}`}
+    >
+      <td className="px-3 py-4 whitespace-nowrap">
+        {switchItem.isDuplicate ? (
+          <div className="flex flex-col space-y-1">
+            <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+              Duplicate
+            </span>
+            <label className="flex items-center text-xs">
+              <input
+                type="checkbox"
+                checked={switchItem.overwrite}
+                onChange={() => onToggleOverwrite(index)}
+                className="mr-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-gray-600 dark:text-gray-400">
+                Overwrite
+              </span>
+            </label>
+          </div>
+        ) : (
+          <span className="text-xs text-green-600 dark:text-green-400">New</span>
+        )}
+      </td>
+      <td className="px-3 py-4">
+        <input
+          type="text"
+          value={localValues.name}
+          onChange={(e) => handleChange('name', e.target.value)}
+          className="block w-full min-w-[250px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.chineseName || ''}
+          onChange={(e) => handleChange('chineseName', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.type || ''}
+          onChange={(e) => handleChange('type', e.target.value || undefined)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        >
+          <option value="">No type</option>
+          <option value="LINEAR">LINEAR</option>
+          <option value="TACTILE">TACTILE</option>
+          <option value="CLICKY">CLICKY</option>
+          <option value="SILENT_LINEAR">SILENT_LINEAR</option>
+          <option value="SILENT_TACTILE">SILENT_TACTILE</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.technology || ''}
+          onChange={(e) => handleChange('technology', e.target.value || undefined)}
+          className="block w-full min-w-[180px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        >
+          <option value="">No technology</option>
+          <option value="MECHANICAL">MECHANICAL</option>
+          <option value="OPTICAL">OPTICAL</option>
+          <option value="MAGNETIC">MAGNETIC</option>
+          <option value="INDUCTIVE">INDUCTIVE</option>
+          <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.magnetOrientation || ''}
+          onChange={(e) => handleChange('magnetOrientation', e.target.value || undefined)}
+          className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        >
+          <option value="">No orientation</option>
+          <option value="Horizontal">Horizontal</option>
+          <option value="Vertical">Vertical</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.magnetPosition || ''}
+          onChange={(e) => handleChange('magnetPosition', e.target.value || undefined)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        >
+          <option value="">No position</option>
+          <option value="Center">Center</option>
+          <option value="Off-Center">Off-Center</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.initialForce || ''}
+          onChange={(e) => handleChange('initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          min="0"
+          max="1000"
+          step="0.1"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.initialMagneticFlux || ''}
+          onChange={(e) => handleChange('initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          min="0"
+          max="10000"
+          step="0.1"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.bottomOutMagneticFlux || ''}
+          onChange={(e) => handleChange('bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          min="0"
+          max="10000"
+          step="0.1"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.pcbThickness || ''}
+          onChange={(e) => handleChange('pcbThickness', e.target.value || undefined)}
+          className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        >
+          <option value="">No thickness</option>
+          <option value="1.2mm">1.2mm</option>
+          <option value="1.6mm">1.6mm</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.magnetPolarity || ''}
+          onChange={(e) => handleChange('magnetPolarity', e.target.value || undefined)}
+          className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        >
+          <option value="">No polarity</option>
+          <option value="North">North</option>
+          <option value="South">South</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.compatibility || ''}
+          onChange={(e) => handleChange('compatibility', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          placeholder="e.g. MX-style"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <div className="min-w-[200px]">
+          <ManufacturerAutocomplete
+            value={switchItem.manufacturer || ''}
+            onChange={(value) => onUpdate(index, 'manufacturer', value)}
+            onNewManufacturerSubmitted={onManufacturerSubmitted}
+            disabled={switchItem.isDuplicate && !switchItem.overwrite}
+            placeholder="Type manufacturer..."
+          />
+          {switchItem.manufacturer && !switchItem.manufacturerValid && !isManufacturerSubmitted && (
+            <div className="mt-1">
+              <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
+              {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
+                </p>
+              )}
+            </div>
+          )}
+          {switchItem.manufacturer && isManufacturerSubmitted && (
+            <div className="mt-1">
+              <p className="text-xs text-green-600 dark:text-green-400">✓ Submitted for verification</p>
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.springWeight || ''}
+          onChange={(e) => handleChange('springWeight', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.springLength || ''}
+          onChange={(e) => handleChange('springLength', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.actuationForce || ''}
+          onChange={(e) => handleChange('actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+          min="0"
+          max="1000"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.bottomOutForce || ''}
+          onChange={(e) => handleChange('bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+          min="0"
+          max="1000"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.preTravel || ''}
+          onChange={(e) => handleChange('preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+          min="0"
+          max="10"
+          step="0.1"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.bottomOut || ''}
+          onChange={(e) => handleChange('bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+          min="0"
+          max="10"
+          step="0.1"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.topHousing || ''}
+          onChange={(e) => handleChange('topHousing', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.bottomHousing || ''}
+          onChange={(e) => handleChange('bottomHousing', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.stem || ''}
+          onChange={(e) => handleChange('stem', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4">
+        <textarea
+          value={localValues.notes || ''}
+          onChange={(e) => handleChange('notes', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+          rows={2}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="url"
+          value={localValues.imageUrl || ''}
+          onChange={(e) => handleChange('imageUrl', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="date"
+          value={localValues.dateObtained || ''}
+          onChange={(e) => handleChange('dateObtained', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <button
+          onClick={() => onRemove(index)}
+          className="text-red-600 hover:text-red-700 text-sm"
+        >
+          Remove
+        </button>
+      </td>
+    </tr>
+  )
+})
+
+SwitchTableRow.displayName = 'SwitchTableRow'
 
 export default function BulkUploadPage() {
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload')
@@ -361,7 +746,7 @@ export default function BulkUploadPage() {
     }, 100)
   }
 
-  const updateParsedSwitch = async (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | undefined) => {
+  const updateParsedSwitch = useCallback(async (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | undefined) => {
     // Clean up spring weight and length values when editing
     let cleanedValue = value
     if ((field === 'springWeight' || field === 'springLength') && typeof value === 'string') {
@@ -390,13 +775,22 @@ export default function BulkUploadPage() {
         return { ...sw, [field]: cleanedValue }
       }))
     }
-  }
+  }, [])
 
-  const toggleOverwrite = (index: number) => {
+  const toggleOverwrite = useCallback((index: number) => {
     setParsedSwitches(prev => prev.map((sw, i) => 
       i === index ? { ...sw, overwrite: !sw.overwrite } : sw
     ))
-  }
+  }, [])
+
+  const removeParsedSwitch = useCallback((index: number) => {
+    setParsedSwitches(prev => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const handleManufacturerSubmitted = useCallback((name: string) => {
+    console.log('New manufacturer submitted:', name)
+    setSubmittedManufacturers(prev => new Set(prev).add(name))
+  }, [])
 
   const importSwitches = async () => {
     // Check for invalid manufacturers (excluding submitted ones)
@@ -716,337 +1110,23 @@ export default function BulkUploadPage() {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {parsedSwitches.map((switchItem, index) => (
-                  <tr 
-                    key={index} 
-                    ref={(el) => {
+                  <SwitchTableRow
+                    key={index}
+                    switchItem={switchItem}
+                    index={index}
+                    onUpdate={updateParsedSwitch}
+                    onToggleOverwrite={toggleOverwrite}
+                    onRemove={removeParsedSwitch}
+                    onManufacturerSubmitted={handleManufacturerSubmitted}
+                    isManufacturerSubmitted={switchItem.manufacturer ? submittedManufacturers.has(switchItem.manufacturer) : false}
+                    invalidRowRef={(el) => {
                       if (el && switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer)) {
                         invalidRowRefs.current.set(index, el)
                       } else {
                         invalidRowRefs.current.delete(index)
                       }
                     }}
-                    className={`${switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''} ${switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) ? 'bg-red-50 dark:bg-red-900/20' : ''}`}
-                  >
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      {switchItem.isDuplicate ? (
-                        <div className="flex flex-col space-y-1">
-                          <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
-                            Duplicate
-                          </span>
-                          <label className="flex items-center text-xs">
-                            <input
-                              type="checkbox"
-                              checked={switchItem.overwrite}
-                              onChange={() => toggleOverwrite(index)}
-                              className="mr-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Overwrite
-                            </span>
-                          </label>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-green-600 dark:text-green-400">New</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-4">
-                      <input
-                        type="text"
-                        value={switchItem.name}
-                        onChange={(e) => updateParsedSwitch(index, 'name', e.target.value)}
-                        className="block w-full min-w-[250px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.chineseName || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'chineseName', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <select
-                        value={switchItem.type || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'type', e.target.value || undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      >
-                        <option value="">No type</option>
-                        <option value="LINEAR">LINEAR</option>
-                        <option value="TACTILE">TACTILE</option>
-                        <option value="CLICKY">CLICKY</option>
-                        <option value="SILENT_LINEAR">SILENT_LINEAR</option>
-                        <option value="SILENT_TACTILE">SILENT_TACTILE</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <select
-                        value={switchItem.technology || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'technology', e.target.value || undefined)}
-                        className="block w-full min-w-[180px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      >
-                        <option value="">No technology</option>
-                        <option value="MECHANICAL">MECHANICAL</option>
-                        <option value="OPTICAL">OPTICAL</option>
-                        <option value="MAGNETIC">MAGNETIC</option>
-                        <option value="INDUCTIVE">INDUCTIVE</option>
-                        <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <select
-                        value={switchItem.magnetOrientation || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'magnetOrientation', e.target.value || undefined)}
-                        className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      >
-                        <option value="">No orientation</option>
-                        <option value="Horizontal">Horizontal</option>
-                        <option value="Vertical">Vertical</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <select
-                        value={switchItem.magnetPosition || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'magnetPosition', e.target.value || undefined)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      >
-                        <option value="">No position</option>
-                        <option value="Center">Center</option>
-                        <option value="Off-Center">Off-Center</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.initialForce || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        min="0"
-                        max="1000"
-                        step="0.1"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.initialMagneticFlux || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        min="0"
-                        max="10000"
-                        step="0.1"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.bottomOutMagneticFlux || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        min="0"
-                        max="10000"
-                        step="0.1"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <select
-                        value={switchItem.pcbThickness || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'pcbThickness', e.target.value || undefined)}
-                        className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      >
-                        <option value="">No thickness</option>
-                        <option value="1.2mm">1.2mm</option>
-                        <option value="1.6mm">1.6mm</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <select
-                        value={switchItem.magnetPolarity || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'magnetPolarity', e.target.value || undefined)}
-                        className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      >
-                        <option value="">No polarity</option>
-                        <option value="North">North</option>
-                        <option value="South">South</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.compatibility || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'compatibility', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        placeholder="e.g. MX-style"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <div className="min-w-[200px]">
-                        <ManufacturerAutocomplete
-                          value={switchItem.manufacturer || ''}
-                          onChange={(value) => updateParsedSwitch(index, 'manufacturer', value)}
-                          onNewManufacturerSubmitted={(name) => {
-                            console.log('New manufacturer submitted:', name)
-                            setSubmittedManufacturers(prev => new Set(prev).add(name))
-                          }}
-                          disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                          placeholder="Type manufacturer..."
-                        />
-                        {switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) && (
-                          <div className="mt-1">
-                            <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
-                            {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
-                              </p>
-                            )}
-                          </div>
-                        )}
-                        {switchItem.manufacturer && submittedManufacturers.has(switchItem.manufacturer) && (
-                          <div className="mt-1">
-                            <p className="text-xs text-green-600 dark:text-green-400">✓ Submitted for verification</p>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.springWeight || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'springWeight', e.target.value)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.springLength || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'springLength', e.target.value)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.actuationForce || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                        min="0"
-                        max="1000"
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.bottomOutForce || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                        min="0"
-                        max="1000"
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.preTravel || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                        min="0"
-                        max="10"
-                        step="0.1"
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        value={switchItem.bottomOut || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                        min="0"
-                        max="10"
-                        step="0.1"
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.topHousing || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'topHousing', e.target.value)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.bottomHousing || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'bottomHousing', e.target.value)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        value={switchItem.stem || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'stem', e.target.value)}
-                        className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4">
-                      <textarea
-                        value={switchItem.notes || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'notes', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                        rows={2}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="url"
-                        value={switchItem.imageUrl || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'imageUrl', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <input
-                        type="date"
-                        value={switchItem.dateObtained || ''}
-                        onChange={(e) => updateParsedSwitch(index, 'dateObtained', e.target.value)}
-                        className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        disabled={switchItem.isDuplicate && !switchItem.overwrite}
-                      />
-                    </td>
-                    <td className="px-3 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => setParsedSwitches(prev => prev.filter((_, i) => i !== index))}
-                        className="text-red-600 hover:text-red-700 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
+                  />
                 ))}
               </tbody>
             </table>
