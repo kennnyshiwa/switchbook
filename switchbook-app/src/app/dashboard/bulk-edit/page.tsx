@@ -69,6 +69,7 @@ const SwitchEditRow = memo(({
   onManufacturerSubmitted,
   submittedManufacturers,
   showMagneticFields,
+  columnOrder,
   invalidRowRef
 }: {
   switchItem: EditableSwitchData
@@ -77,6 +78,7 @@ const SwitchEditRow = memo(({
   onManufacturerSubmitted: (name: string) => void
   submittedManufacturers: Set<string>
   showMagneticFields: boolean
+  columnOrder: string[]
   invalidRowRef?: (el: HTMLTableRowElement | null) => void
 }) => {
   // Local state for each input to prevent re-renders of other rows
@@ -216,307 +218,365 @@ const SwitchEditRow = memo(({
     }
   }, [])
 
-  return (
-    <tr 
-      ref={invalidRowRef}
-      className={switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) ? 'bg-red-50 dark:bg-red-900/20' : ''}
-    >
-      <td className="px-3 py-4">
-        <input
-          type="text"
-          value={localValues.name}
-          onChange={(e) => handleChange('name', e.target.value)}
-          className="block w-full min-w-[250px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
-          value={localValues.chineseName || ''}
-          onChange={(e) => handleChange('chineseName', e.target.value)}
-          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <select
-          value={localValues.type || ''}
-          onChange={(e) => handleChange('type', e.target.value || undefined)}
-          className="block w-full min-w-[160px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        >
-          <option value="">No type</option>
-          <option value="LINEAR">LINEAR</option>
-          <option value="TACTILE">TACTILE</option>
-          <option value="CLICKY">CLICKY</option>
-          <option value="SILENT_LINEAR">SILENT_LINEAR</option>
-          <option value="SILENT_TACTILE">SILENT_TACTILE</option>
-        </select>
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <select
-          value={localValues.technology || ''}
-          onChange={(e) => handleChange('technology', e.target.value || undefined)}
-          className="block w-full min-w-[180px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        >
-          <option value="">No technology</option>
-          <option value="MECHANICAL">MECHANICAL</option>
-          <option value="OPTICAL">OPTICAL</option>
-          <option value="MAGNETIC">MAGNETIC</option>
-          <option value="INDUCTIVE">INDUCTIVE</option>
-          <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
-        </select>
-      </td>
-      {showMagneticFields && (
-        <>
-          <td className="px-3 py-4 whitespace-nowrap">
+  // Function to render individual cells based on column configuration
+  const renderCell = (columnId: string) => {
+    const column = defaultColumns.find(col => col.id === columnId)
+    if (!column) return null
+
+    // Skip magnetic fields if not showing them
+    if (column.showOnlyForMagnetic && !showMagneticFields) return null
+
+    const field = column.field
+    const className = `block w-full ${column.minWidth} text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2`
+    const isNameColumn = columnId === 'name'
+
+    switch (field) {
+      case 'name':
+        return (
+          <td 
+            key={columnId} 
+            className={`px-3 py-4 ${isNameColumn ? 'sticky left-0 z-10 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600' : ''}`}
+            style={isNameColumn ? { position: 'sticky', left: 0 } : undefined}
+          >
+            <input
+              type="text"
+              value={localValues.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              className={className}
+            />
+          </td>
+        )
+
+      case 'chineseName':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="text"
+              value={localValues.chineseName || ''}
+              onChange={(e) => handleChange('chineseName', e.target.value)}
+              className={className}
+            />
+          </td>
+        )
+
+      case 'type':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <select
+              value={localValues.type || ''}
+              onChange={(e) => handleChange('type', e.target.value || undefined)}
+              className={className}
+            >
+              <option value="">No type</option>
+              <option value="LINEAR">LINEAR</option>
+              <option value="TACTILE">TACTILE</option>
+              <option value="CLICKY">CLICKY</option>
+              <option value="SILENT_LINEAR">SILENT_LINEAR</option>
+              <option value="SILENT_TACTILE">SILENT_TACTILE</option>
+            </select>
+          </td>
+        )
+
+      case 'technology':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <select
+              value={localValues.technology || ''}
+              onChange={(e) => handleChange('technology', e.target.value || undefined)}
+              className={className}
+            >
+              <option value="">No technology</option>
+              <option value="MECHANICAL">MECHANICAL</option>
+              <option value="OPTICAL">OPTICAL</option>
+              <option value="MAGNETIC">MAGNETIC</option>
+              <option value="INDUCTIVE">INDUCTIVE</option>
+              <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
+            </select>
+          </td>
+        )
+
+      case 'initialForce':
+      case 'initialMagneticFlux':
+      case 'bottomOutMagneticFlux':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
             <input
               type="number"
-              value={localValues.initialForce || ''}
-              onChange={(e) => handleChange('initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              value={localValues[field] || ''}
+              onChange={(e) => handleChange(field, e.target.value ? parseFloat(e.target.value) : undefined)}
+              className={className}
               min="0"
-              max="1000"
+              max={field === 'initialForce' ? "1000" : "10000"}
               step="0.1"
             />
           </td>
-          <td className="px-3 py-4 whitespace-nowrap">
-            <input
-              type="number"
-              value={localValues.initialMagneticFlux || ''}
-              onChange={(e) => handleChange('initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
-              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-              min="0"
-              max="10000"
-              step="0.1"
-            />
-          </td>
-          <td className="px-3 py-4 whitespace-nowrap">
-            <input
-              type="number"
-              value={localValues.bottomOutMagneticFlux || ''}
-              onChange={(e) => handleChange('bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
-              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-              min="0"
-              max="10000"
-              step="0.1"
-            />
-          </td>
-          <td className="px-3 py-4 whitespace-nowrap">
+        )
+
+      case 'magnetOrientation':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
             <select
               value={localValues.magnetOrientation || ''}
               onChange={(e) => handleChange('magnetOrientation', e.target.value || undefined)}
-              className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              className={className}
             >
               <option value="">No orientation</option>
               <option value="Horizontal">Horizontal</option>
               <option value="Vertical">Vertical</option>
             </select>
           </td>
-          <td className="px-3 py-4 whitespace-nowrap">
+        )
+
+      case 'magnetPosition':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
             <select
               value={localValues.magnetPosition || ''}
               onChange={(e) => handleChange('magnetPosition', e.target.value || undefined)}
-              className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              className={className}
             >
               <option value="">No position</option>
               <option value="Center">Center</option>
               <option value="Off-Center">Off-Center</option>
             </select>
           </td>
-          <td className="px-3 py-4 whitespace-nowrap">
+        )
+
+      case 'pcbThickness':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
             <select
               value={localValues.pcbThickness || ''}
               onChange={(e) => handleChange('pcbThickness', e.target.value || undefined)}
-              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              className={className}
             >
               <option value="">No thickness</option>
               <option value="1.2mm">1.2mm</option>
               <option value="1.6mm">1.6mm</option>
             </select>
           </td>
-          <td className="px-3 py-4 whitespace-nowrap">
+        )
+
+      case 'magnetPolarity':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
             <select
               value={localValues.magnetPolarity || ''}
               onChange={(e) => handleChange('magnetPolarity', e.target.value || undefined)}
-              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              className={className}
             >
               <option value="">No polarity</option>
               <option value="North">North</option>
               <option value="South">South</option>
             </select>
           </td>
-        </>
-      )}
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
-          value={localValues.compatibility || ''}
-          onChange={(e) => handleChange('compatibility', e.target.value)}
-          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          placeholder="e.g. MX-style"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <div className="min-w-[200px] relative">
-          <input
-            ref={manufacturerInputRef}
-            type="text"
-            value={localValues.manufacturer || ''}
-            onChange={(e) => handleManufacturerChange(e.target.value)}
-            onKeyDown={handleManufacturerKeyDown}
-            className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-            placeholder="Type manufacturer..."
-          />
-          
-          {/* Autocomplete suggestions dropdown */}
-          {showSuggestions && manufacturerSuggestions.length > 0 && (
-            <div 
-              ref={suggestionsRef}
-              className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg max-h-40 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
-            >
-              {manufacturerSuggestions.map((manufacturer, suggestionIndex) => (
-                <div
-                  key={manufacturer.id}
-                  onClick={() => selectSuggestion(manufacturer.name)}
-                  className={`cursor-pointer select-none relative py-2 pl-3 pr-9 ${
-                    suggestionIndex === selectedSuggestionIndex
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
+        )
+
+      case 'compatibility':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="text"
+              value={localValues.compatibility || ''}
+              onChange={(e) => handleChange('compatibility', e.target.value)}
+              className={className}
+              placeholder="e.g. MX-style"
+            />
+          </td>
+        )
+
+      case 'manufacturer':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <div className="min-w-[200px] relative">
+              <input
+                ref={manufacturerInputRef}
+                type="text"
+                value={localValues.manufacturer || ''}
+                onChange={(e) => handleManufacturerChange(e.target.value)}
+                onKeyDown={handleManufacturerKeyDown}
+                className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+                placeholder="Type manufacturer..."
+              />
+              
+              {/* Autocomplete suggestions dropdown */}
+              {showSuggestions && manufacturerSuggestions.length > 0 && (
+                <div 
+                  ref={suggestionsRef}
+                  className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg max-h-40 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
                 >
-                  {manufacturer.name}
+                  {manufacturerSuggestions.map((manufacturer, suggestionIndex) => (
+                    <div
+                      key={manufacturer.id}
+                      onClick={() => selectSuggestion(manufacturer.name)}
+                      className={`cursor-pointer select-none relative py-2 pl-3 pr-9 ${
+                        suggestionIndex === selectedSuggestionIndex
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {manufacturer.name}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-          
-          {switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) && (
-            <div className="mt-1">
-              <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
-              {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                  Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
-                </p>
+              )}
+              
+              {switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) && (
+                <div className="mt-1">
+                  <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
+                  {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
+                    </p>
+                  )}
+                </div>
+              )}
+              {switchItem.manufacturer && submittedManufacturers.has(switchItem.manufacturer) && (
+                <div className="mt-1">
+                  <p className="text-xs text-green-600 dark:text-green-400">✓ Submitted for verification</p>
+                </div>
               )}
             </div>
-          )}
-          {switchItem.manufacturer && submittedManufacturers.has(switchItem.manufacturer) && (
-            <div className="mt-1">
-              <p className="text-xs text-green-600 dark:text-green-400">✓ Submitted for verification</p>
-            </div>
-          )}
-        </div>
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
-          value={localValues.springWeight || ''}
-          onChange={(e) => handleChange('springWeight', e.target.value)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
-          value={localValues.springLength || ''}
-          onChange={(e) => handleChange('springLength', e.target.value)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="number"
-          value={localValues.actuationForce || ''}
-          onChange={(e) => handleChange('actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          min="0"
-          max="1000"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="number"
-          value={localValues.bottomOutForce || ''}
-          onChange={(e) => handleChange('bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          min="0"
-          max="1000"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="number"
-          value={localValues.preTravel || ''}
-          onChange={(e) => handleChange('preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          min="0"
-          max="10"
-          step="0.1"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="number"
-          value={localValues.bottomOut || ''}
-          onChange={(e) => handleChange('bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          min="0"
-          max="10"
-          step="0.1"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
-          value={localValues.topHousing || ''}
-          onChange={(e) => handleChange('topHousing', e.target.value)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
-          value={localValues.bottomHousing || ''}
-          onChange={(e) => handleChange('bottomHousing', e.target.value)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
-          value={localValues.stem || ''}
-          onChange={(e) => handleChange('stem', e.target.value)}
-          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4">
-        <textarea
-          value={localValues.notes || ''}
-          onChange={(e) => handleChange('notes', e.target.value)}
-          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          rows={2}
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="url"
-          value={localValues.imageUrl || ''}
-          onChange={(e) => handleChange('imageUrl', e.target.value)}
-          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="date"
-          value={localValues.dateObtained || ''}
-          onChange={(e) => handleChange('dateObtained', e.target.value)}
-          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-        />
-      </td>
+          </td>
+        )
+
+      case 'springWeight':
+      case 'springLength':
+      case 'topHousing':
+      case 'bottomHousing':
+      case 'stem':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="text"
+              value={localValues[field] || ''}
+              onChange={(e) => handleChange(field, e.target.value)}
+              className={className}
+            />
+          </td>
+        )
+
+      case 'actuationForce':
+      case 'bottomOutForce':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="number"
+              value={localValues[field] || ''}
+              onChange={(e) => handleChange(field, e.target.value ? parseFloat(e.target.value) : undefined)}
+              className={className}
+              min="0"
+              max="1000"
+            />
+          </td>
+        )
+
+      case 'preTravel':
+      case 'bottomOut':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="number"
+              value={localValues[field] || ''}
+              onChange={(e) => handleChange(field, e.target.value ? parseFloat(e.target.value) : undefined)}
+              className={className}
+              min="0"
+              max="10"
+              step="0.1"
+            />
+          </td>
+        )
+
+      case 'notes':
+        return (
+          <td key={columnId} className="px-3 py-4">
+            <textarea
+              value={localValues.notes || ''}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              className={className}
+              rows={2}
+            />
+          </td>
+        )
+
+      case 'imageUrl':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="url"
+              value={localValues.imageUrl || ''}
+              onChange={(e) => handleChange('imageUrl', e.target.value)}
+              className={className}
+            />
+          </td>
+        )
+
+      case 'dateObtained':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="date"
+              value={localValues.dateObtained || ''}
+              onChange={(e) => handleChange('dateObtained', e.target.value)}
+              className={className}
+            />
+          </td>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <tr 
+      ref={invalidRowRef}
+      className={switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) ? 'bg-red-50 dark:bg-red-900/20' : ''}
+    >
+      {columnOrder.map(columnId => renderCell(columnId)).filter(Boolean)}
     </tr>
   )
 })
 
 SwitchEditRow.displayName = 'SwitchEditRow'
+
+// Column configuration
+interface ColumnConfig {
+  id: string
+  label: string
+  field: keyof EditableSwitchData
+  minWidth: string
+  isRequired?: boolean
+  showOnlyForMagnetic?: boolean
+}
+
+const defaultColumns: ColumnConfig[] = [
+  { id: 'name', label: 'Name*', field: 'name', minWidth: 'min-w-[250px]', isRequired: true },
+  { id: 'chineseName', label: 'Chinese Name', field: 'chineseName', minWidth: 'min-w-[120px]' },
+  { id: 'type', label: 'Type', field: 'type', minWidth: 'min-w-[160px]' },
+  { id: 'technology', label: 'Technology', field: 'technology', minWidth: 'min-w-[180px]' },
+  { id: 'initialForce', label: 'Initial Force (g)', field: 'initialForce', minWidth: 'min-w-[80px]', showOnlyForMagnetic: true },
+  { id: 'initialMagneticFlux', label: 'Initial Flux (Gs)', field: 'initialMagneticFlux', minWidth: 'min-w-[80px]', showOnlyForMagnetic: true },
+  { id: 'bottomOutMagneticFlux', label: 'Bottom Out Flux (Gs)', field: 'bottomOutMagneticFlux', minWidth: 'min-w-[80px]', showOnlyForMagnetic: true },
+  { id: 'magnetOrientation', label: 'Pole Orientation', field: 'magnetOrientation', minWidth: 'min-w-[140px]', showOnlyForMagnetic: true },
+  { id: 'magnetPosition', label: 'Magnet Position', field: 'magnetPosition', minWidth: 'min-w-[120px]', showOnlyForMagnetic: true },
+  { id: 'pcbThickness', label: 'PCB Thickness', field: 'pcbThickness', minWidth: 'min-w-[100px]', showOnlyForMagnetic: true },
+  { id: 'magnetPolarity', label: 'Magnet Polarity', field: 'magnetPolarity', minWidth: 'min-w-[100px]', showOnlyForMagnetic: true },
+  { id: 'compatibility', label: 'Compatibility', field: 'compatibility', minWidth: 'min-w-[120px]' },
+  { id: 'manufacturer', label: 'Manufacturer', field: 'manufacturer', minWidth: 'min-w-[200px]' },
+  { id: 'springWeight', label: 'Spring Weight', field: 'springWeight', minWidth: 'min-w-[80px]' },
+  { id: 'springLength', label: 'Spring Length', field: 'springLength', minWidth: 'min-w-[80px]' },
+  { id: 'actuationForce', label: 'Actuation Force (g)', field: 'actuationForce', minWidth: 'min-w-[80px]' },
+  { id: 'bottomOutForce', label: 'Bottom Out Force (g)', field: 'bottomOutForce', minWidth: 'min-w-[80px]' },
+  { id: 'preTravel', label: 'Pre-travel (mm)', field: 'preTravel', minWidth: 'min-w-[80px]' },
+  { id: 'bottomOut', label: 'Bottom Out (mm)', field: 'bottomOut', minWidth: 'min-w-[80px]' },
+  { id: 'topHousing', label: 'Top Housing', field: 'topHousing', minWidth: 'min-w-[80px]' },
+  { id: 'bottomHousing', label: 'Bottom Housing', field: 'bottomHousing', minWidth: 'min-w-[80px]' },
+  { id: 'stem', label: 'Stem', field: 'stem', minWidth: 'min-w-[80px]' },
+  { id: 'notes', label: 'Notes', field: 'notes', minWidth: 'min-w-[120px]' },
+  { id: 'imageUrl', label: 'Image URL', field: 'imageUrl', minWidth: 'min-w-[120px]' },
+  { id: 'dateObtained', label: 'Date Obtained', field: 'dateObtained', minWidth: 'min-w-[120px]' },
+]
 
 export default function BulkEditPage() {
   const [currentStep, setCurrentStep] = useState<BulkEditStep>('loading')
@@ -525,6 +585,8 @@ export default function BulkEditPage() {
   const [saveResults, setSaveResults] = useState<{ success: number; errors: string[] }>({ success: 0, errors: [] })
   const [isValidating, setIsValidating] = useState(false)
   const [submittedManufacturers, setSubmittedManufacturers] = useState<Set<string>>(new Set())
+  const [columnOrder, setColumnOrder] = useState<string[]>(defaultColumns.map(col => col.id))
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
@@ -632,6 +694,42 @@ export default function BulkEditPage() {
     setSubmittedManufacturers(prev => new Set(prev).add(name))
   }, [])
 
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent<HTMLTableHeaderCellElement>, columnId: string) => {
+    setDraggedColumn(columnId)
+    e.dataTransfer.effectAllowed = 'move'
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLTableHeaderCellElement>) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLTableHeaderCellElement>, targetColumnId: string) => {
+    e.preventDefault()
+    
+    // Prevent dropping on the name column or dropping the name column
+    if (!draggedColumn || draggedColumn === targetColumnId || targetColumnId === 'name' || draggedColumn === 'name') {
+      setDraggedColumn(null)
+      return
+    }
+
+    const newColumnOrder = [...columnOrder]
+    const draggedIndex = newColumnOrder.indexOf(draggedColumn)
+    const targetIndex = newColumnOrder.indexOf(targetColumnId)
+    
+    // Remove dragged column and insert at target position
+    newColumnOrder.splice(draggedIndex, 1)
+    newColumnOrder.splice(targetIndex, 0, draggedColumn)
+    
+    setColumnOrder(newColumnOrder)
+    setDraggedColumn(null)
+  }, [draggedColumn, columnOrder])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedColumn(null)
+  }, [])
+
   // Check if any switches have MAGNETIC technology to show/hide magnetic fields
   const showMagneticFields = switches.some(sw => sw.technology === 'MAGNETIC')
 
@@ -718,85 +816,47 @@ export default function BulkEditPage() {
               <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
                   <tr>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[250px]">
-                      Name*
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Chinese Name
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Technology
-                    </th>
-                    {showMagneticFields && (
-                      <>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Initial Force (g)
+                    {columnOrder.map((columnId, index) => {
+                      const column = defaultColumns.find(col => col.id === columnId)
+                      if (!column) return null
+                      
+                      // Skip magnetic fields if not showing them
+                      if (column.showOnlyForMagnetic && !showMagneticFields) return null
+                      
+                      const isNameColumn = columnId === 'name'
+                      
+                      return (
+                        <th
+                          key={columnId}
+                          draggable={!isNameColumn}
+                          onDragStart={!isNameColumn ? (e) => handleDragStart(e, columnId) : undefined}
+                          onDragOver={!isNameColumn ? handleDragOver : undefined}
+                          onDrop={!isNameColumn ? (e) => handleDrop(e, columnId) : undefined}
+                          onDragEnd={!isNameColumn ? handleDragEnd : undefined}
+                          className={`px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${column.minWidth} ${
+                            draggedColumn === columnId ? 'opacity-50' : ''
+                          } ${column.isRequired ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${
+                            isNameColumn ? 'sticky left-0 z-10 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600' : 'cursor-move'
+                          }`}
+                          style={isNameColumn ? { position: 'sticky', left: 0 } : undefined}
+                          title={isNameColumn ? "Name column is always visible" : "Drag to reorder columns"}
+                        >
+                          <div className="flex items-center space-x-1">
+                            <span>{column.label}</span>
+                            {!isNameColumn && (
+                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              </svg>
+                            )}
+                            {isNameColumn && (
+                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12l5 5L20 7" />
+                              </svg>
+                            )}
+                          </div>
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Initial Flux (Gs)
-                        </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Bottom Out Flux (Gs)
-                        </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Pole Orientation
-                        </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Magnet Position
-                        </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          PCB Thickness
-                        </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Magnet Polarity
-                        </th>
-                      </>
-                    )}
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Compatibility
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Manufacturer
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Spring Weight
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Spring Length
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Actuation Force (g)
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Bottom Out Force (g)
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Pre-travel (mm)
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Bottom Out (mm)
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Top Housing
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Bottom Housing
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Stem
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Notes
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Image URL
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Date Obtained
-                    </th>
+                      )
+                    }).filter(Boolean)}
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -809,6 +869,7 @@ export default function BulkEditPage() {
                       onManufacturerSubmitted={handleManufacturerSubmitted}
                       submittedManufacturers={submittedManufacturers}
                       showMagneticFields={showMagneticFields}
+                      columnOrder={columnOrder}
                       invalidRowRef={(el) => {
                         if (el && switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer)) {
                           invalidRowRefs.current.set(index, el)
