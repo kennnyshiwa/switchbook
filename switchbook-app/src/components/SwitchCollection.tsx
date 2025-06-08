@@ -87,6 +87,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     const springLengths = [...new Set(switches.map(s => s.springLength).filter(Boolean) as string[])].sort()
     const magnetOrientations = [...new Set(switches.map(s => s.magnetOrientation).filter(Boolean) as string[])].sort()
     const magnetPositions = [...new Set(switches.map(s => s.magnetPosition).filter(Boolean) as string[])].sort()
+    const magnetPolarities = [...new Set(switches.map(s => s.magnetPolarity).filter(Boolean) as string[])].sort()
+    const pcbThicknesses = [...new Set(switches.map(s => s.pcbThickness).filter(Boolean) as string[])].sort()
     const compatibilities = [...new Set(switches.map(s => s.compatibility).filter(Boolean) as string[])].sort()
     
     // Get unique numeric values for ranges
@@ -94,6 +96,9 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     const bottomOutForces = [...new Set(switches.map(s => s.bottomOutForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const preTravels = [...new Set(switches.map(s => s.preTravel).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOuts = [...new Set(switches.map(s => s.bottomOut).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const initialForces = [...new Set(switches.map(s => s.initialForce).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const initialMagneticFluxes = [...new Set(switches.map(s => s.initialMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const bottomOutMagneticFluxes = [...new Set(switches.map(s => s.bottomOutMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
 
     return {
       manufacturers,
@@ -106,11 +111,16 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       springLengths,
       magnetOrientations,
       magnetPositions,
+      magnetPolarities,
+      pcbThicknesses,
       compatibilities,
       actuationForces,
       bottomOutForces,
       preTravels,
-      bottomOuts
+      bottomOuts,
+      initialForces,
+      initialMagneticFluxes,
+      bottomOutMagneticFluxes
     }
   }, [switches])
 
@@ -140,6 +150,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           (s.stem?.toLowerCase().includes(search) ?? false) ||
           (s.magnetOrientation?.toLowerCase().includes(search) ?? false) ||
           (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
+          (s.magnetPolarity?.toLowerCase().includes(search) ?? false) ||
+          (s.pcbThickness?.toLowerCase().includes(search) ?? false) ||
           (s.compatibility?.toLowerCase().includes(search) ?? false)
         )
       }
@@ -175,6 +187,12 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       if (activeFilters.magnetPosition) {
         filtered = filtered.filter(s => s.magnetPosition === activeFilters.magnetPosition)
       }
+      if (activeFilters.magnetPolarity) {
+        filtered = filtered.filter(s => s.magnetPolarity === activeFilters.magnetPolarity)
+      }
+      if (activeFilters.pcbThickness) {
+        filtered = filtered.filter(s => s.pcbThickness === activeFilters.pcbThickness)
+      }
       if (activeFilters.compatibility) {
         filtered = filtered.filter(s => s.compatibility === activeFilters.compatibility)
       }
@@ -203,6 +221,24 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       }
       if (activeFilters.bottomOutMax !== undefined) {
         filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut <= activeFilters.bottomOutMax!)
+      }
+      if (activeFilters.initialForceMin !== undefined) {
+        filtered = filtered.filter(s => s.initialForce !== null && s.initialForce >= activeFilters.initialForceMin!)
+      }
+      if (activeFilters.initialForceMax !== undefined) {
+        filtered = filtered.filter(s => s.initialForce !== null && s.initialForce <= activeFilters.initialForceMax!)
+      }
+      if (activeFilters.initialMagneticFluxMin !== undefined) {
+        filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux >= activeFilters.initialMagneticFluxMin!)
+      }
+      if (activeFilters.initialMagneticFluxMax !== undefined) {
+        filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux <= activeFilters.initialMagneticFluxMax!)
+      }
+      if (activeFilters.bottomOutMagneticFluxMin !== undefined) {
+        filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux >= activeFilters.bottomOutMagneticFluxMin!)
+      }
+      if (activeFilters.bottomOutMagneticFluxMax !== undefined) {
+        filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux <= activeFilters.bottomOutMagneticFluxMax!)
       }
 
       // Apply force curves filter (async)
