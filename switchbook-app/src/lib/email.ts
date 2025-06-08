@@ -151,3 +151,68 @@ export async function sendPasswordResetEmail(email: string, newPassword: string)
     return { success: false, error: 'Failed to send password reset email' }
   }
 }
+
+export async function sendNewManufacturerNotification(
+  manufacturerName: string, 
+  submittedBy: string,
+  userEmail?: string,
+  originalName?: string
+) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  // Get all admin users
+  const adminUsers = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: { email: true, username: true }
+  })
+
+  if (adminUsers.length === 0) {
+    console.warn('No admin users found to notify about new manufacturer submission')
+    return { success: true, warning: 'No admin users to notify' }
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const adminUrl = `${baseUrl}/admin/manufacturers`
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
+    to: adminUsers.map(admin => admin.email).join(', '),
+    subject: 'New Switch Manufacturer Pending Verification',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">New Manufacturer Submission</h1>
+        <p>A new switch manufacturer has been submitted and requires verification:</p>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
+          <p><strong>Manufacturer Name:</strong> ${manufacturerName}</p>
+          ${originalName && originalName !== manufacturerName ? `<p><strong>Original Submission:</strong> ${originalName} <em>(auto-capitalized)</em></p>` : ''}
+          <p><strong>Submitted by:</strong> ${submittedBy}${userEmail ? ` (${userEmail})` : ''}</p>
+          <p><strong>Submission Time:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+        
+        <p>Please review this submission in the admin panel:</p>
+        <a href="${adminUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px;">Review Manufacturers</a>
+        
+        <p>You can verify, edit, or reject this manufacturer submission from the admin panel.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #666;">
+          This is an automated notification from Switchbook. 
+          If you no longer wish to receive these notifications, please contact the system administrator.
+        </p>
+      </div>
+    `,
+  }
+
+  try {
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send new manufacturer notification:', error)
+    return { success: false, error: 'Failed to send notification email' }
+  }
+}

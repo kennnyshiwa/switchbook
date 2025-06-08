@@ -102,7 +102,10 @@ async function bulkCreateHandler(request: NextRequest) {
 
             // Normalize manufacturer name if provided (cached for performance)
             if (transformedData.manufacturer) {
-              transformedData.manufacturer = await normalizeManufacturerName(transformedData.manufacturer)
+              transformedData.manufacturer = await normalizeManufacturerName(
+                transformedData.manufacturer, 
+                userId
+              )
             }
 
             // Create switch in database

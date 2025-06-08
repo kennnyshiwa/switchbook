@@ -59,7 +59,10 @@ async function createSwitchHandler(request: NextRequest) {
 
     // Normalize manufacturer name if provided
     if (transformedData.manufacturer) {
-      transformedData.manufacturer = await normalizeManufacturerName(transformedData.manufacturer)
+      transformedData.manufacturer = await normalizeManufacturerName(
+        transformedData.manufacturer, 
+        userId
+      )
     }
 
     const newSwitch = await prisma.switch.create({

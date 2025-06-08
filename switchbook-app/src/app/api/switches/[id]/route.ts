@@ -46,7 +46,10 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
 
     // Normalize manufacturer name if provided
     if (transformedData.manufacturer) {
-      transformedData.manufacturer = await normalizeManufacturerName(transformedData.manufacturer)
+      transformedData.manufacturer = await normalizeManufacturerName(
+        transformedData.manufacturer, 
+        session.user.id
+      )
     }
 
     // Verify the switch belongs to the user
