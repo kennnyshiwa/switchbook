@@ -12,7 +12,11 @@ function getMailgunClient() {
   const baseUrl = process.env.MAILGUN_URL || 'https://api.mailgun.net'
   
   if (!apiKey || !domain) {
-    console.error('Mailgun configuration missing. Please set MAILGUN_API_KEY and MAILGUN_DOMAIN environment variables.')
+    console.error('Mailgun configuration missing:', {
+      hasApiKey: !!apiKey,
+      hasDomain: !!domain,
+      domain: domain
+    })
     return null
   }
   
@@ -176,8 +180,9 @@ export async function sendNewManufacturerNotification(
     return { success: true, warning: 'No admin users to notify' }
   }
 
-  // Always use production URL for admin links in emails (admins should always use production)
-  const baseUrl = 'https://switchbook.app'
+  // Use production URL for admin links, but fall back to environment URL if needed
+  const envUrl = process.env.NEXTAUTH_URL
+  const baseUrl = (envUrl && envUrl.includes('localhost')) ? envUrl : 'https://switchbook.app'
   const adminUrl = `${baseUrl}/admin/manufacturers`
 
   const subject = isNewManufacturer 
