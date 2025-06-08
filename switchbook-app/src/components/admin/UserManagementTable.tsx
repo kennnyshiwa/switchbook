@@ -28,6 +28,7 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
   const [isUpdatingRole, setIsUpdatingRole] = useState<string | null>(null)
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [isResendingVerification, setIsResendingVerification] = useState<string | null>(null)
 
   const getShareUrl = (shareableId: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : process.env.NEXTAUTH_URL || ''
@@ -39,6 +40,29 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
     navigator.clipboard.writeText(shareUrl)
     setCopiedId(shareableId)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const handleResendVerification = async (userId: string) => {
+    if (!confirm('Are you sure you want to resend the verification email for this user?')) return
+
+    setIsResendingVerification(userId)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/resend-verification`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        alert('Verification email sent successfully.')
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to send verification email')
+      }
+    } catch (error) {
+      console.error('Error resending verification:', error)
+      alert('An error occurred')
+    } finally {
+      setIsResendingVerification(null)
+    }
   }
 
   const handleResetPassword = async (userId: string) => {
@@ -227,6 +251,15 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
                         className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 disabled:opacity-50"
                       >
                         {isUpdatingRole === user.id ? 'Updating...' : 'Remove Admin'}
+                      </button>
+                    )}
+                    {!user.emailVerified && (
+                      <button
+                        onClick={() => handleResendVerification(user.id)}
+                        disabled={isResendingVerification === user.id}
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 disabled:opacity-50"
+                      >
+                        {isResendingVerification === user.id ? 'Sending...' : 'Resend Verification'}
                       </button>
                     )}
                     <button
