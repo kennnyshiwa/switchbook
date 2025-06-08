@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
-import ManufacturerAutocomplete from '@/components/ManufacturerAutocomplete'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 
 interface ParsedSwitch {
@@ -48,6 +47,29 @@ interface ParsedSwitchWithDuplicate extends ParsedSwitch {
   manufacturerSuggestions?: string[]
 }
 
+// Shared manufacturer cache
+let manufacturerCache: { id: string; name: string }[] = []
+let manufacturerCachePromise: Promise<void> | null = null
+
+const fetchManufacturers = async () => {
+  if (manufacturerCache.length > 0) return manufacturerCache
+  
+  if (!manufacturerCachePromise) {
+    manufacturerCachePromise = fetch('/api/manufacturers')
+      .then(res => res.json())
+      .then(data => {
+        manufacturerCache = data || []
+      })
+      .catch(err => {
+        console.error('Failed to fetch manufacturers:', err)
+        manufacturerCache = []
+      })
+  }
+  
+  await manufacturerCachePromise
+  return manufacturerCache
+}
+
 // Memoized table row component to prevent unnecessary re-renders
 const SwitchTableRow = memo(({ 
   switchItem, 
@@ -70,14 +92,100 @@ const SwitchTableRow = memo(({
 }) => {
   // Local state for each input to prevent re-renders of other rows
   const [localValues, setLocalValues] = useState(switchItem)
+  const [manufacturerSuggestions, setManufacturerSuggestions] = useState<{ id: string; name: string }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+  const manufacturerInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
 
   // Update local state when switchItem changes
   useEffect(() => {
     setLocalValues(switchItem)
   }, [switchItem])
 
+  // Load manufacturers on component mount
+  useEffect(() => {
+    fetchManufacturers()
+  }, [])
+
   // Ref to store timeout IDs for debouncing
   const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map())
+
+  // Handle manufacturer input changes with autocomplete
+  const handleManufacturerChange = useCallback((value: string) => {
+    setLocalValues(prev => ({ ...prev, manufacturer: value }))
+    
+    // Filter suggestions based on input
+    if (value.length > 0) {
+      const filtered = manufacturerCache.filter(m => 
+        m.name.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 5) // Limit to 5 suggestions
+      setManufacturerSuggestions(filtered)
+      setShowSuggestions(filtered.length > 0)
+      setSelectedSuggestionIndex(-1)
+    } else {
+      setShowSuggestions(false)
+      setManufacturerSuggestions([])
+    }
+    
+    // Debounced update to parent
+    const existingTimeout = timeoutRefs.current.get('manufacturer')
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+    
+    const timeoutId = setTimeout(() => {
+      onUpdate(index, 'manufacturer', value)
+      timeoutRefs.current.delete('manufacturer')
+    }, 300)
+    
+    timeoutRefs.current.set('manufacturer', timeoutId)
+  }, [index, onUpdate])
+
+  // Handle suggestion selection
+  const selectSuggestion = useCallback((manufacturerName: string) => {
+    setLocalValues(prev => ({ ...prev, manufacturer: manufacturerName }))
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+    
+    // Immediate update for suggestion selection
+    onUpdate(index, 'manufacturer', manufacturerName)
+    
+    // Clear any pending timeout
+    const existingTimeout = timeoutRefs.current.get('manufacturer')
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+      timeoutRefs.current.delete('manufacturer')
+    }
+  }, [index, onUpdate])
+
+  // Handle keyboard navigation
+  const handleManufacturerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions) return
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedSuggestionIndex(prev => 
+          prev < manufacturerSuggestions.length - 1 ? prev + 1 : prev
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedSuggestionIndex >= 0) {
+          selectSuggestion(manufacturerSuggestions[selectedSuggestionIndex].name)
+        }
+        break
+      case 'Escape':
+        setShowSuggestions(false)
+        setSelectedSuggestionIndex(-1)
+        break
+    }
+  }, [showSuggestions, manufacturerSuggestions, selectedSuggestionIndex, selectSuggestion])
 
   const handleChange = useCallback((field: keyof ParsedSwitchWithDuplicate, value: any) => {
     setLocalValues(prev => ({ ...prev, [field]: value }))
@@ -96,6 +204,19 @@ const SwitchTableRow = memo(({
     
     timeoutRefs.current.set(field, timeoutId)
   }, [index, onUpdate])
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node) &&
+          manufacturerInputRef.current && !manufacturerInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -276,14 +397,40 @@ const SwitchTableRow = memo(({
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
-        <div className="min-w-[200px]">
-          <ManufacturerAutocomplete
-            value={switchItem.manufacturer || ''}
-            onChange={(value) => onUpdate(index, 'manufacturer', value)}
-            onNewManufacturerSubmitted={onManufacturerSubmitted}
-            disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        <div className="min-w-[200px] relative">
+          <input
+            ref={manufacturerInputRef}
+            type="text"
+            value={localValues.manufacturer || ''}
+            onChange={(e) => handleManufacturerChange(e.target.value)}
+            onKeyDown={handleManufacturerKeyDown}
+            className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
             placeholder="Type manufacturer..."
+            disabled={switchItem.isDuplicate && !switchItem.overwrite}
           />
+          
+          {/* Autocomplete suggestions dropdown */}
+          {showSuggestions && manufacturerSuggestions.length > 0 && (
+            <div 
+              ref={suggestionsRef}
+              className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg max-h-40 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+            >
+              {manufacturerSuggestions.map((manufacturer, suggestionIndex) => (
+                <div
+                  key={manufacturer.id}
+                  onClick={() => selectSuggestion(manufacturer.name)}
+                  className={`cursor-pointer select-none relative py-2 pl-3 pr-9 ${
+                    suggestionIndex === selectedSuggestionIndex
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {manufacturer.name}
+                </div>
+              ))}
+            </div>
+          )}
+          
           {switchItem.manufacturer && !switchItem.manufacturerValid && !isManufacturerSubmitted && (
             <div className="mt-1">
               <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
