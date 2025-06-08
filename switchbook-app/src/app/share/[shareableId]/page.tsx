@@ -96,7 +96,10 @@ export default async function SharePage({ params }: SharePageProps) {
                           </span>
                         )}
                         {switchItem.technology && (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TECHNOLOGY_COLORS[switchItem.technology as keyof typeof SWITCH_TECHNOLOGY_COLORS]}`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            SWITCH_TECHNOLOGY_COLORS[switchItem.technology as keyof typeof SWITCH_TECHNOLOGY_COLORS] || 
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
                             {switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                           </span>
                         )}
