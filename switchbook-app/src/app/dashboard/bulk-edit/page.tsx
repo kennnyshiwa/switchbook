@@ -691,8 +691,8 @@ export default function BulkEditPage() {
 
   if (currentStep === 'editing') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="w-full mx-auto p-6">
+      <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col flex-1 w-full">
           <div className="mb-6">
             <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center mb-4">
               ← Back to Dashboard
@@ -713,7 +713,7 @@ export default function BulkEditPage() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 280px)' }}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
             <div className="flex-1 overflow-x-auto overflow-y-auto">
               <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
