@@ -226,13 +226,13 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                         className="w-4 h-4 rounded flex-shrink-0" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[120px] text-left">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-grow">
                         {item.name}:
                       </span>
-                      <span className="text-2xl font-bold text-gray-900 dark:text-white min-w-[40px] text-right">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white text-right">
                         {item.value}
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="text-sm text-gray-500 dark:text-gray-400 min-w-[60px] text-right">
                         ({((item.value / switches.length) * 100).toFixed(1)}%)
                       </span>
                     </div>
@@ -301,13 +301,13 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                         className="w-4 h-4 rounded flex-shrink-0" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[120px] text-left">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-grow">
                         {item.name}:
                       </span>
-                      <span className="text-2xl font-bold text-gray-900 dark:text-white min-w-[40px] text-right">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white text-right">
                         {item.value}
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="text-sm text-gray-500 dark:text-gray-400 min-w-[60px] text-right">
                         ({((item.value / switches.length) * 100).toFixed(1)}%)
                       </span>
                     </div>
@@ -373,16 +373,16 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                   .map((item, index) => (
                     <div key={item.name} className="flex items-center gap-3">
                       <div 
-                        className="w-4 h-4 rounded" 
+                        className="w-4 h-4 rounded flex-shrink-0" 
                         style={{ backgroundColor: COLORS[index % COLORS.length] }}
                       />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-grow">
                         {item.name}:
                       </span>
-                      <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white text-right">
                         {item.value}
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                      <span className="text-sm text-gray-500 dark:text-gray-400 min-w-[60px] text-right">
                         ({((item.value / switches.length) * 100).toFixed(1)}%)
                       </span>
                     </div>
