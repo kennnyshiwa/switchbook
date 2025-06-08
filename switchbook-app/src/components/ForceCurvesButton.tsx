@@ -8,13 +8,15 @@ interface ForceCurvesButtonProps {
   manufacturer?: string | null
   variant?: 'button' | 'badge' | 'icon'
   className?: string
+  isAuthenticated?: boolean
 }
 
 export default function ForceCurvesButton({ 
   switchName, 
   manufacturer, 
   variant = 'button',
-  className = ''
+  className = '',
+  isAuthenticated = false
 }: ForceCurvesButtonProps) {
   const [matches, setMatches] = useState<ForceCurveMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -30,23 +32,29 @@ export default function ForceCurvesButton({
 
     async function loadForceCurveData() {
       try {
-        // Load matches and preferences in parallel
-        const [foundMatches, preferenceResponse] = await Promise.all([
-          findAllForceCurveMatches(switchName, manufacturer || undefined),
-          fetch(`/api/force-curve-preferences?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`).catch(() => null)
-        ])
-
+        // Load matches first
+        const foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+        
         if (isMounted) {
           setMatches(foundMatches)
           
-          // Check for saved preference
-          if (preferenceResponse?.ok) {
-            const preference = await preferenceResponse.json()
-            if (preference?.selectedFolder) {
-              setSavedPreference({
-                folder: preference.selectedFolder,
-                url: preference.selectedUrl
-              })
+          // Only fetch preferences if user is authenticated
+          if (isAuthenticated) {
+            try {
+              const preferenceResponse = await fetch(`/api/force-curve-preferences?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`)
+              
+              if (preferenceResponse.ok) {
+                const preference = await preferenceResponse.json()
+                if (preference?.selectedFolder) {
+                  setSavedPreference({
+                    folder: preference.selectedFolder,
+                    url: preference.selectedUrl
+                  })
+                }
+              }
+            } catch (error) {
+              // Silently ignore preference fetch errors
+              console.debug('Could not fetch force curve preferences:', error)
             }
           }
           
@@ -64,7 +72,7 @@ export default function ForceCurvesButton({
     return () => {
       isMounted = false
     }
-  }, [switchName, manufacturer])
+  }, [switchName, manufacturer, isAuthenticated])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -88,6 +96,14 @@ export default function ForceCurvesButton({
   }
 
   const savePreference = async (folderName: string, url: string) => {
+    // Only allow saving preferences for authenticated users
+    if (!isAuthenticated) {
+      // For unauthenticated users, just open the URL
+      window.open(url, '_blank', 'noopener,noreferrer')
+      setIsDropdownOpen(false)
+      return
+    }
+    
     try {
       const response = await fetch('/api/force-curve-preferences', {
         method: 'POST',
@@ -121,8 +137,8 @@ export default function ForceCurvesButton({
       return
     }
 
-    // If saved preference exists and not showing all options, show preference options
-    if (savedPreference && !showAllOptions) {
+    // If saved preference exists and not showing all options, show preference options (authenticated users only)
+    if (savedPreference && !showAllOptions && isAuthenticated) {
       // Calculate position for icon variant to escape table
       if (variant === 'icon' && buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect()
@@ -137,8 +153,8 @@ export default function ForceCurvesButton({
       return
     }
 
-    // If only one match and no saved preference, open it directly
-    if (matches.length === 1 && !savedPreference) {
+    // If only one match and no saved preference (or unauthenticated), open it directly
+    if (matches.length === 1 && (!savedPreference || !isAuthenticated)) {
       window.open(matches[0].url, '_blank', 'noopener,noreferrer')
       return
     }
@@ -169,7 +185,7 @@ export default function ForceCurvesButton({
   // Render dropdown content (shared between positioning methods)
   const renderDropdownContent = () => (
     <div className="max-h-64 overflow-y-auto">
-      {savedPreference && !showAllOptions ? (
+      {savedPreference && !showAllOptions && isAuthenticated ? (
         <div>
           <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
@@ -193,7 +209,7 @@ export default function ForceCurvesButton({
         </div>
       ) : (
         <div>
-          {savedPreference && (
+          {savedPreference && isAuthenticated && (
             <button
               onClick={() => setShowAllOptions(false)}
               className="w-full px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600"
@@ -218,7 +234,7 @@ export default function ForceCurvesButton({
 
   // Render the dropdown (shared across all variants)
   const renderDropdown = () => {
-    if (!isDropdownOpen || (matches.length <= 1 && !savedPreference)) return null
+    if (!isDropdownOpen || (matches.length <= 1 && (!savedPreference || !isAuthenticated))) return null
 
     // For icon variant, use fixed positioning to escape table
     if (variant === 'icon') {
@@ -255,8 +271,8 @@ export default function ForceCurvesButton({
           <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Force Curves {savedPreference ? '✓' : matches.length > 1 ? `(${matches.length})` : ''}
-          {(matches.length > 1 || savedPreference) && (
+          Force Curves {savedPreference && isAuthenticated ? '✓' : matches.length > 1 ? `(${matches.length})` : ''}
+          {(matches.length > 1 || (savedPreference && isAuthenticated)) && (
             <svg className="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -280,9 +296,9 @@ export default function ForceCurvesButton({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            {(matches.length > 1 || savedPreference) && (
+            {(matches.length > 1 || (savedPreference && isAuthenticated)) && (
               <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                {savedPreference ? '✓' : matches.length}
+                {savedPreference && isAuthenticated ? '✓' : matches.length}
               </span>
             )}
           </div>
@@ -303,8 +319,8 @@ export default function ForceCurvesButton({
         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
-        Force Curves {savedPreference ? '✓' : matches.length > 1 ? `(${matches.length})` : ''}
-        {(matches.length > 1 || savedPreference) && (
+        Force Curves {savedPreference && isAuthenticated ? '✓' : matches.length > 1 ? `(${matches.length})` : ''}
+        {(matches.length > 1 || (savedPreference && isAuthenticated)) && (
           <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
           </svg>

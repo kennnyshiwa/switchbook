@@ -212,6 +212,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                         switchName={switchItem.name}
                         manufacturer={switchItem.manufacturer}
                         variant="icon"
+                        isAuthenticated={true}
                       />
                     )}
                     <button

@@ -246,6 +246,7 @@ export default async function SharePage({ params }: SharePageProps) {
                         manufacturer={switchItem.manufacturer}
                         variant="button"
                         className="w-full justify-center"
+                        isAuthenticated={false}
                       />
                     </div>
                   </div>

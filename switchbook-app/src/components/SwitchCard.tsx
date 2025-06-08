@@ -254,6 +254,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
                 manufacturer={switchItem.manufacturer}
                 variant="button"
                 className="w-full justify-center"
+                isAuthenticated={true}
               />
             </div>
           )}
