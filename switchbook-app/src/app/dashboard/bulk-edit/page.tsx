@@ -587,6 +587,7 @@ export default function BulkEditPage() {
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(defaultColumns.map(col => col.id)))
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('')
+  const [isSearching, setIsSearching] = useState<boolean>(false)
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
@@ -793,14 +794,27 @@ export default function BulkEditPage() {
 
   const visibleColumnIds = getVisibleColumns()
 
+  // Memoized search input handler
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }, [])
+
   // Debounce search term to improve performance
   useEffect(() => {
+    if (searchTerm !== debouncedSearchTerm) {
+      setIsSearching(true)
+    }
+    
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
-    }, 300) // 300ms debounce
+      setIsSearching(false)
+    }, 150) // Reduced to 150ms for better responsiveness
     
-    return () => clearTimeout(timer)
-  }, [searchTerm])
+    return () => {
+      clearTimeout(timer)
+      setIsSearching(false)
+    }
+  }, [searchTerm, debouncedSearchTerm])
 
   // Pre-compute searchable text for each switch to optimize filtering
   const switchesWithSearchText = useMemo(() => {
@@ -823,14 +837,17 @@ export default function BulkEditPage() {
     }))
   }, [switches])
 
-  // Filter switches based on debounced search term
+  // Filter switches based on debounced search term with result limiting
   const filteredSwitches = useMemo(() => {
     if (!debouncedSearchTerm.trim()) return switches
     
     const searchLower = debouncedSearchTerm.toLowerCase().trim()
-    return switchesWithSearchText
+    const filtered = switchesWithSearchText
       .filter(switchItem => switchItem.searchText.includes(searchLower))
       .map(({ searchText, ...switchItem }) => switchItem) // Remove searchText from result
+    
+    // Limit results to improve performance with large datasets
+    return filtered.length > 100 ? filtered.slice(0, 100) : filtered
   }, [switchesWithSearchText, debouncedSearchTerm, switches])
 
   const saveSwitches = async () => {
@@ -902,7 +919,16 @@ export default function BulkEditPage() {
                   Edit your {switches.length} switches in bulk
                   {debouncedSearchTerm && (
                     <span className="block text-sm mt-1">
-                      Showing {filteredSwitches.length} of {switches.length} switches
+                      {(() => {
+                        const totalFiltered = switchesWithSearchText.filter(item => 
+                          item.searchText.includes(debouncedSearchTerm.toLowerCase().trim())
+                        ).length
+                        const isLimited = totalFiltered > 100
+                        return isLimited 
+                          ? `Showing first 100 of ${totalFiltered} matches (${switches.length} total)`
+                          : `Showing ${filteredSwitches.length} of ${switches.length} switches`
+                      })()
+                      }
                     </span>
                   )}
                 </p>
@@ -910,15 +936,22 @@ export default function BulkEditPage() {
                 {/* Search Input */}
                 <div className="mt-4 relative max-w-md">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                    {isSearching ? (
+                      <svg className="h-4 w-4 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    )}
                   </div>
                   <input
                     type="text"
                     placeholder="Search switches by name, manufacturer, type..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={handleSearchChange}
                     className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors duration-150"
                   />
                   {searchTerm && (
