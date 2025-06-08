@@ -28,11 +28,16 @@ export interface FilterOptions {
   springLengths: string[]
   magnetOrientations: string[]
   magnetPositions: string[]
+  magnetPolarities: string[]
+  pcbThicknesses: string[]
   compatibilities: string[]
   actuationForces: number[]
   bottomOutForces: number[]
   preTravels: number[]
   bottomOuts: number[]
+  initialForces: number[]
+  initialMagneticFluxes: number[]
+  bottomOutMagneticFluxes: number[]
 }
 
 export interface ActiveFilters {
@@ -46,6 +51,8 @@ export interface ActiveFilters {
   springLength?: string
   magnetOrientation?: string
   magnetPosition?: string
+  magnetPolarity?: string
+  pcbThickness?: string
   compatibility?: string
   actuationForceMin?: number
   actuationForceMax?: number
@@ -55,6 +62,12 @@ export interface ActiveFilters {
   preTravelMax?: number
   bottomOutMin?: number
   bottomOutMax?: number
+  initialForceMin?: number
+  initialForceMax?: number
+  initialMagneticFluxMin?: number
+  initialMagneticFluxMax?: number
+  bottomOutMagneticFluxMin?: number
+  bottomOutMagneticFluxMax?: number
   hasForceCurves?: boolean
 }
 
@@ -407,6 +420,42 @@ export default function CollectionControls({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Magnet Polarity
+              </label>
+              <select
+                value={activeFilters.magnetPolarity || ''}
+                onChange={(e) => handleFilterChange('magnetPolarity', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Magnet Polarities</option>
+                {filterOptions.magnetPolarities.map(polarity => (
+                  <option key={polarity} value={polarity}>
+                    {polarity}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                PCB Thickness
+              </label>
+              <select
+                value={activeFilters.pcbThickness || ''}
+                onChange={(e) => handleFilterChange('pcbThickness', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All PCB Thicknesses</option>
+                {filterOptions.pcbThicknesses.map(thickness => (
+                  <option key={thickness} value={thickness}>
+                    {thickness}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Compatibility
               </label>
               <select
@@ -510,6 +559,76 @@ export default function CollectionControls({
                   placeholder="Max"
                   value={activeFilters.bottomOutMax || ''}
                   onChange={(e) => handleNumericRangeChange('bottomOut', 'max', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Initial Force (g)
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={activeFilters.initialForceMin || ''}
+                  onChange={(e) => handleNumericRangeChange('initialForce', 'min', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={activeFilters.initialForceMax || ''}
+                  onChange={(e) => handleNumericRangeChange('initialForce', 'max', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Initial Magnetic Flux (Gs)
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Min"
+                  value={activeFilters.initialMagneticFluxMin || ''}
+                  onChange={(e) => handleNumericRangeChange('initialMagneticFlux', 'min', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Max"
+                  value={activeFilters.initialMagneticFluxMax || ''}
+                  onChange={(e) => handleNumericRangeChange('initialMagneticFlux', 'max', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Bottom Out Magnetic Flux (Gs)
+              </label>
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Min"
+                  value={activeFilters.bottomOutMagneticFluxMin || ''}
+                  onChange={(e) => handleNumericRangeChange('bottomOutMagneticFlux', 'min', e.target.value)}
+                  className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="Max"
+                  value={activeFilters.bottomOutMagneticFluxMax || ''}
+                  onChange={(e) => handleNumericRangeChange('bottomOutMagneticFlux', 'max', e.target.value)}
                   className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
                 />
               </div>
