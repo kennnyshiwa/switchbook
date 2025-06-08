@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
-import ManufacturerAutocomplete from '@/components/ManufacturerAutocomplete'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 
 interface EditableSwitchData {
@@ -38,6 +37,486 @@ interface EditableSwitchData {
 }
 
 type BulkEditStep = 'loading' | 'editing' | 'saving' | 'complete'
+
+// Shared manufacturer cache
+let manufacturerCache: { id: string; name: string }[] = []
+let manufacturerCachePromise: Promise<void> | null = null
+
+const fetchManufacturers = async () => {
+  if (manufacturerCache.length > 0) return manufacturerCache
+  
+  if (!manufacturerCachePromise) {
+    manufacturerCachePromise = fetch('/api/manufacturers')
+      .then(res => res.json())
+      .then(data => {
+        manufacturerCache = data || []
+      })
+      .catch(err => {
+        console.error('Failed to fetch manufacturers:', err)
+        manufacturerCache = []
+      })
+  }
+  
+  await manufacturerCachePromise
+  return manufacturerCache
+}
+
+// Memoized table row component to prevent unnecessary re-renders
+const SwitchEditRow = memo(({ 
+  switchItem, 
+  index, 
+  onUpdate,
+  onManufacturerSubmitted,
+  submittedManufacturers,
+  showMagneticFields,
+  invalidRowRef
+}: {
+  switchItem: EditableSwitchData
+  index: number
+  onUpdate: (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => void
+  onManufacturerSubmitted: (name: string) => void
+  submittedManufacturers: Set<string>
+  showMagneticFields: boolean
+  invalidRowRef?: (el: HTMLTableRowElement | null) => void
+}) => {
+  // Local state for each input to prevent re-renders of other rows
+  const [localValues, setLocalValues] = useState(switchItem)
+  const [manufacturerSuggestions, setManufacturerSuggestions] = useState<{ id: string; name: string }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+  const manufacturerInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  // Update local state when switchItem changes
+  useEffect(() => {
+    setLocalValues(switchItem)
+  }, [switchItem])
+
+  // Load manufacturers on component mount
+  useEffect(() => {
+    fetchManufacturers()
+  }, [])
+
+  // Ref to store timeout IDs for debouncing
+  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map())
+
+  // Handle manufacturer input changes with autocomplete
+  const handleManufacturerChange = useCallback((value: string) => {
+    setLocalValues(prev => ({ ...prev, manufacturer: value }))
+    
+    // Filter suggestions based on input
+    if (value.length > 0) {
+      const filtered = manufacturerCache.filter(m => 
+        m.name.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 5) // Limit to 5 suggestions
+      setManufacturerSuggestions(filtered)
+      setShowSuggestions(filtered.length > 0)
+      setSelectedSuggestionIndex(-1)
+    } else {
+      setShowSuggestions(false)
+      setManufacturerSuggestions([])
+    }
+    
+    // Debounced update to parent
+    const existingTimeout = timeoutRefs.current.get('manufacturer')
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+    
+    const timeoutId = setTimeout(() => {
+      onUpdate(index, 'manufacturer', value)
+      timeoutRefs.current.delete('manufacturer')
+    }, 300)
+    
+    timeoutRefs.current.set('manufacturer', timeoutId)
+  }, [index, onUpdate])
+
+  // Handle suggestion selection
+  const selectSuggestion = useCallback((manufacturerName: string) => {
+    setLocalValues(prev => ({ ...prev, manufacturer: manufacturerName }))
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+    
+    // Immediate update for suggestion selection
+    onUpdate(index, 'manufacturer', manufacturerName)
+    
+    // Clear any pending timeout
+    const existingTimeout = timeoutRefs.current.get('manufacturer')
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+      timeoutRefs.current.delete('manufacturer')
+    }
+  }, [index, onUpdate])
+
+  // Handle keyboard navigation
+  const handleManufacturerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showSuggestions) return
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedSuggestionIndex(prev => 
+          prev < manufacturerSuggestions.length - 1 ? prev + 1 : prev
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedSuggestionIndex >= 0) {
+          selectSuggestion(manufacturerSuggestions[selectedSuggestionIndex].name)
+        }
+        break
+      case 'Escape':
+        setShowSuggestions(false)
+        setSelectedSuggestionIndex(-1)
+        break
+    }
+  }, [showSuggestions, manufacturerSuggestions, selectedSuggestionIndex, selectSuggestion])
+
+  const handleChange = useCallback((field: keyof EditableSwitchData, value: any) => {
+    setLocalValues(prev => ({ ...prev, [field]: value }))
+    
+    // Clear existing timeout for this field
+    const existingTimeout = timeoutRefs.current.get(field)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+    
+    // Set new timeout for debounced update
+    const timeoutId = setTimeout(() => {
+      onUpdate(index, field, value)
+      timeoutRefs.current.delete(field)
+    }, 300)
+    
+    timeoutRefs.current.set(field, timeoutId)
+  }, [index, onUpdate])
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node) &&
+          manufacturerInputRef.current && !manufacturerInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    const timeouts = timeoutRefs.current
+    return () => {
+      timeouts.forEach(timeoutId => clearTimeout(timeoutId))
+      timeouts.clear()
+    }
+  }, [])
+
+  return (
+    <tr 
+      ref={invalidRowRef}
+      className={switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) ? 'bg-red-50 dark:bg-red-900/20' : ''}
+    >
+      <td className="px-3 py-4">
+        <input
+          type="text"
+          value={localValues.name}
+          onChange={(e) => handleChange('name', e.target.value)}
+          className="block w-full min-w-[250px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.chineseName || ''}
+          onChange={(e) => handleChange('chineseName', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.type || ''}
+          onChange={(e) => handleChange('type', e.target.value || undefined)}
+          className="block w-full min-w-[160px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        >
+          <option value="">No type</option>
+          <option value="LINEAR">LINEAR</option>
+          <option value="TACTILE">TACTILE</option>
+          <option value="CLICKY">CLICKY</option>
+          <option value="SILENT_LINEAR">SILENT_LINEAR</option>
+          <option value="SILENT_TACTILE">SILENT_TACTILE</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.technology || ''}
+          onChange={(e) => handleChange('technology', e.target.value || undefined)}
+          className="block w-full min-w-[180px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        >
+          <option value="">No technology</option>
+          <option value="MECHANICAL">MECHANICAL</option>
+          <option value="OPTICAL">OPTICAL</option>
+          <option value="MAGNETIC">MAGNETIC</option>
+          <option value="INDUCTIVE">INDUCTIVE</option>
+          <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
+        </select>
+      </td>
+      {showMagneticFields && (
+        <>
+          <td className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="number"
+              value={localValues.initialForce || ''}
+              onChange={(e) => handleChange('initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              min="0"
+              max="1000"
+              step="0.1"
+            />
+          </td>
+          <td className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="number"
+              value={localValues.initialMagneticFlux || ''}
+              onChange={(e) => handleChange('initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              min="0"
+              max="10000"
+              step="0.1"
+            />
+          </td>
+          <td className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="number"
+              value={localValues.bottomOutMagneticFlux || ''}
+              onChange={(e) => handleChange('bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+              min="0"
+              max="10000"
+              step="0.1"
+            />
+          </td>
+          <td className="px-3 py-4 whitespace-nowrap">
+            <select
+              value={localValues.magnetOrientation || ''}
+              onChange={(e) => handleChange('magnetOrientation', e.target.value || undefined)}
+              className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+            >
+              <option value="">No orientation</option>
+              <option value="Horizontal">Horizontal</option>
+              <option value="Vertical">Vertical</option>
+            </select>
+          </td>
+          <td className="px-3 py-4 whitespace-nowrap">
+            <select
+              value={localValues.magnetPosition || ''}
+              onChange={(e) => handleChange('magnetPosition', e.target.value || undefined)}
+              className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+            >
+              <option value="">No position</option>
+              <option value="Center">Center</option>
+              <option value="Off-Center">Off-Center</option>
+            </select>
+          </td>
+          <td className="px-3 py-4 whitespace-nowrap">
+            <select
+              value={localValues.pcbThickness || ''}
+              onChange={(e) => handleChange('pcbThickness', e.target.value || undefined)}
+              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+            >
+              <option value="">No thickness</option>
+              <option value="1.2mm">1.2mm</option>
+              <option value="1.6mm">1.6mm</option>
+            </select>
+          </td>
+          <td className="px-3 py-4 whitespace-nowrap">
+            <select
+              value={localValues.magnetPolarity || ''}
+              onChange={(e) => handleChange('magnetPolarity', e.target.value || undefined)}
+              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+            >
+              <option value="">No polarity</option>
+              <option value="North">North</option>
+              <option value="South">South</option>
+            </select>
+          </td>
+        </>
+      )}
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.compatibility || ''}
+          onChange={(e) => handleChange('compatibility', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          placeholder="e.g. MX-style"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <div className="min-w-[200px] relative">
+          <input
+            ref={manufacturerInputRef}
+            type="text"
+            value={localValues.manufacturer || ''}
+            onChange={(e) => handleManufacturerChange(e.target.value)}
+            onKeyDown={handleManufacturerKeyDown}
+            className="block w-full text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+            placeholder="Type manufacturer..."
+          />
+          
+          {/* Autocomplete suggestions dropdown */}
+          {showSuggestions && manufacturerSuggestions.length > 0 && (
+            <div 
+              ref={suggestionsRef}
+              className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg max-h-40 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"
+            >
+              {manufacturerSuggestions.map((manufacturer, suggestionIndex) => (
+                <div
+                  key={manufacturer.id}
+                  onClick={() => selectSuggestion(manufacturer.name)}
+                  className={`cursor-pointer select-none relative py-2 pl-3 pr-9 ${
+                    suggestionIndex === selectedSuggestionIndex
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {manufacturer.name}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) && (
+            <div className="mt-1">
+              <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
+              {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
+                </p>
+              )}
+            </div>
+          )}
+          {switchItem.manufacturer && submittedManufacturers.has(switchItem.manufacturer) && (
+            <div className="mt-1">
+              <p className="text-xs text-green-600 dark:text-green-400">✓ Submitted for verification</p>
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.springWeight || ''}
+          onChange={(e) => handleChange('springWeight', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.springLength || ''}
+          onChange={(e) => handleChange('springLength', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.actuationForce || ''}
+          onChange={(e) => handleChange('actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          min="0"
+          max="1000"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.bottomOutForce || ''}
+          onChange={(e) => handleChange('bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          min="0"
+          max="1000"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.preTravel || ''}
+          onChange={(e) => handleChange('preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          min="0"
+          max="10"
+          step="0.1"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.bottomOut || ''}
+          onChange={(e) => handleChange('bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          min="0"
+          max="10"
+          step="0.1"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.topHousing || ''}
+          onChange={(e) => handleChange('topHousing', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.bottomHousing || ''}
+          onChange={(e) => handleChange('bottomHousing', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.stem || ''}
+          onChange={(e) => handleChange('stem', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4">
+        <textarea
+          value={localValues.notes || ''}
+          onChange={(e) => handleChange('notes', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          rows={2}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="url"
+          value={localValues.imageUrl || ''}
+          onChange={(e) => handleChange('imageUrl', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="date"
+          value={localValues.dateObtained || ''}
+          onChange={(e) => handleChange('dateObtained', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+        />
+      </td>
+    </tr>
+  )
+})
+
+SwitchEditRow.displayName = 'SwitchEditRow'
 
 export default function BulkEditPage() {
   const [currentStep, setCurrentStep] = useState<BulkEditStep>('loading')
@@ -125,7 +604,7 @@ export default function BulkEditPage() {
     fetchSwitches()
   }, [submittedManufacturers])
 
-  const updateSwitch = async (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => {
+  const updateSwitch = useCallback(async (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => {
     // If manufacturer field is being updated, validate it
     if (field === 'manufacturer' && typeof value === 'string') {
       const validationResults = await validateManufacturers([value])
@@ -146,7 +625,12 @@ export default function BulkEditPage() {
         i === index ? { ...sw, [field]: value } : sw
       ))
     }
-  }
+  }, [])
+
+  const handleManufacturerSubmitted = useCallback((name: string) => {
+    console.log('New manufacturer submitted:', name)
+    setSubmittedManufacturers(prev => new Set(prev).add(name))
+  }, [])
 
   // Check if any switches have MAGNETIC technology to show/hide magnetic fields
   const showMagneticFields = switches.some(sw => sw.technology === 'MAGNETIC')
@@ -229,8 +713,8 @@ export default function BulkEditPage() {
             )}
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <div className="max-h-[70vh] overflow-x-auto overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" style={{ height: 'calc(100vh - 280px)' }}>
+            <div className="flex-1 overflow-x-auto overflow-y-auto">
               <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
                   <tr>
@@ -317,285 +801,22 @@ export default function BulkEditPage() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {switches.map((switchItem, index) => (
-                    <tr 
+                    <SwitchEditRow
                       key={switchItem.id}
-                      ref={(el) => {
+                      switchItem={switchItem}
+                      index={index}
+                      onUpdate={updateSwitch}
+                      onManufacturerSubmitted={handleManufacturerSubmitted}
+                      submittedManufacturers={submittedManufacturers}
+                      showMagneticFields={showMagneticFields}
+                      invalidRowRef={(el) => {
                         if (el && switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer)) {
                           invalidRowRefs.current.set(index, el)
                         } else {
                           invalidRowRefs.current.delete(index)
                         }
                       }}
-                      className={switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) ? 'bg-red-50 dark:bg-red-900/20' : ''}
-                    >
-                      <td className="px-3 py-4">
-                        <input
-                          type="text"
-                          value={switchItem.name}
-                          onChange={(e) => updateSwitch(index, 'name', e.target.value)}
-                          className="block w-full min-w-[250px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={switchItem.chineseName || ''}
-                          onChange={(e) => updateSwitch(index, 'chineseName', e.target.value)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <select
-                          value={switchItem.type || ''}
-                          onChange={(e) => updateSwitch(index, 'type', e.target.value || undefined)}
-                          className="block w-full min-w-[160px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        >
-                          <option value="">No type</option>
-                          <option value="LINEAR">LINEAR</option>
-                          <option value="TACTILE">TACTILE</option>
-                          <option value="CLICKY">CLICKY</option>
-                          <option value="SILENT_LINEAR">SILENT_LINEAR</option>
-                          <option value="SILENT_TACTILE">SILENT_TACTILE</option>
-                        </select>
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <select
-                          value={switchItem.technology || ''}
-                          onChange={(e) => updateSwitch(index, 'technology', e.target.value || undefined)}
-                          className="block w-full min-w-[180px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        >
-                          <option value="">No technology</option>
-                          <option value="MECHANICAL">MECHANICAL</option>
-                          <option value="OPTICAL">OPTICAL</option>
-                          <option value="MAGNETIC">MAGNETIC</option>
-                          <option value="INDUCTIVE">INDUCTIVE</option>
-                          <option value="ELECTRO_CAPACITIVE">ELECTRO_CAPACITIVE</option>
-                        </select>
-                      </td>
-                      {showMagneticFields && (
-                        <>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <input
-                              type="number"
-                              value={switchItem.initialForce || ''}
-                              onChange={(e) => updateSwitch(index, 'initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                              min="0"
-                              max="1000"
-                              step="0.1"
-                            />
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <input
-                              type="number"
-                              value={switchItem.initialMagneticFlux || ''}
-                              onChange={(e) => updateSwitch(index, 'initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
-                              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                              min="0"
-                              max="10000"
-                              step="0.1"
-                            />
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <input
-                              type="number"
-                              value={switchItem.bottomOutMagneticFlux || ''}
-                              onChange={(e) => updateSwitch(index, 'bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
-                              className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                              min="0"
-                              max="10000"
-                              step="0.1"
-                            />
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <select
-                              value={switchItem.magnetOrientation || ''}
-                              onChange={(e) => updateSwitch(index, 'magnetOrientation', e.target.value || undefined)}
-                              className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                            >
-                              <option value="">No orientation</option>
-                              <option value="Horizontal">Horizontal</option>
-                              <option value="Vertical">Vertical</option>
-                            </select>
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <select
-                              value={switchItem.magnetPosition || ''}
-                              onChange={(e) => updateSwitch(index, 'magnetPosition', e.target.value || undefined)}
-                              className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                            >
-                              <option value="">No position</option>
-                              <option value="Center">Center</option>
-                              <option value="Off-Center">Off-Center</option>
-                            </select>
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <select
-                              value={switchItem.pcbThickness || ''}
-                              onChange={(e) => updateSwitch(index, 'pcbThickness', e.target.value || undefined)}
-                              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                            >
-                              <option value="">No thickness</option>
-                              <option value="1.2mm">1.2mm</option>
-                              <option value="1.6mm">1.6mm</option>
-                            </select>
-                          </td>
-                          <td className="px-3 py-4 whitespace-nowrap">
-                            <select
-                              value={switchItem.magnetPolarity || ''}
-                              onChange={(e) => updateSwitch(index, 'magnetPolarity', e.target.value || undefined)}
-                              className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                            >
-                              <option value="">No polarity</option>
-                              <option value="North">North</option>
-                              <option value="South">South</option>
-                            </select>
-                          </td>
-                        </>
-                      )}
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={switchItem.compatibility || ''}
-                          onChange={(e) => updateSwitch(index, 'compatibility', e.target.value)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                          placeholder="e.g. MX-style"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <div className="min-w-[200px]">
-                          <ManufacturerAutocomplete
-                            value={switchItem.manufacturer || ''}
-                            onChange={(value) => updateSwitch(index, 'manufacturer', value)}
-                            onNewManufacturerSubmitted={(name) => {
-                              setSubmittedManufacturers(prev => new Set(prev).add(name))
-                            }}
-                            placeholder="Type manufacturer..."
-                          />
-                          {switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) && (
-                            <div className="mt-1">
-                              <p className="text-xs text-red-600 dark:text-red-400">Invalid manufacturer</p>
-                              {switchItem.manufacturerSuggestions && switchItem.manufacturerSuggestions.length > 0 && (
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                  Did you mean: {switchItem.manufacturerSuggestions.join(', ')}?
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          {switchItem.manufacturer && submittedManufacturers.has(switchItem.manufacturer) && (
-                            <div className="mt-1">
-                              <p className="text-xs text-green-600 dark:text-green-400">✓ Submitted for verification</p>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={switchItem.springWeight || ''}
-                          onChange={(e) => updateSwitch(index, 'springWeight', e.target.value)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={switchItem.springLength || ''}
-                          onChange={(e) => updateSwitch(index, 'springLength', e.target.value)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          value={switchItem.actuationForce || ''}
-                          onChange={(e) => updateSwitch(index, 'actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                          min="0"
-                          max="1000"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          value={switchItem.bottomOutForce || ''}
-                          onChange={(e) => updateSwitch(index, 'bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                          min="0"
-                          max="1000"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          value={switchItem.preTravel || ''}
-                          onChange={(e) => updateSwitch(index, 'preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                          min="0"
-                          max="10"
-                          step="0.1"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="number"
-                          value={switchItem.bottomOut || ''}
-                          onChange={(e) => updateSwitch(index, 'bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                          min="0"
-                          max="10"
-                          step="0.1"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={switchItem.topHousing || ''}
-                          onChange={(e) => updateSwitch(index, 'topHousing', e.target.value)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={switchItem.bottomHousing || ''}
-                          onChange={(e) => updateSwitch(index, 'bottomHousing', e.target.value)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="text"
-                          value={switchItem.stem || ''}
-                          onChange={(e) => updateSwitch(index, 'stem', e.target.value)}
-                          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4">
-                        <textarea
-                          value={switchItem.notes || ''}
-                          onChange={(e) => updateSwitch(index, 'notes', e.target.value)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                          rows={2}
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="url"
-                          value={switchItem.imageUrl || ''}
-                          onChange={(e) => updateSwitch(index, 'imageUrl', e.target.value)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                      <td className="px-3 py-4 whitespace-nowrap">
-                        <input
-                          type="date"
-                          value={switchItem.dateObtained || ''}
-                          onChange={(e) => updateSwitch(index, 'dateObtained', e.target.value)}
-                          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-                        />
-                      </td>
-                    </tr>
+                    />
                   ))}
                 </tbody>
               </table>
