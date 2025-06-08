@@ -156,7 +156,8 @@ export async function sendNewManufacturerNotification(
   manufacturerName: string, 
   submittedBy: string,
   userEmail?: string,
-  originalName?: string
+  originalName?: string,
+  isNewManufacturer: boolean = true
 ) {
   const client = getMailgunClient()
   
@@ -178,26 +179,39 @@ export async function sendNewManufacturerNotification(
   const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
   const adminUrl = `${baseUrl}/admin/manufacturers`
 
+  const subject = isNewManufacturer 
+    ? 'New Switch Manufacturer Pending Verification'
+    : 'Unverified Manufacturer Usage Detected'
+
+  const title = isNewManufacturer 
+    ? 'New Manufacturer Submission'
+    : 'Unverified Manufacturer Usage'
+
+  const description = isNewManufacturer
+    ? 'A new switch manufacturer has been submitted and requires verification:'
+    : 'A user has submitted a switch using an unverified manufacturer that requires your attention:'
+
   const messageData = {
     from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
     to: adminUsers.map(admin => admin.email).join(', '),
-    subject: 'New Switch Manufacturer Pending Verification',
+    subject,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #333;">New Manufacturer Submission</h1>
-        <p>A new switch manufacturer has been submitted and requires verification:</p>
+        <h1 style="color: #333;">${title}</h1>
+        <p>${description}</p>
         
         <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
           <p><strong>Manufacturer Name:</strong> ${manufacturerName}</p>
           ${originalName && originalName !== manufacturerName ? `<p><strong>Original Submission:</strong> ${originalName} <em>(auto-capitalized)</em></p>` : ''}
           <p><strong>Submitted by:</strong> ${submittedBy}${userEmail ? ` (${userEmail})` : ''}</p>
           <p><strong>Submission Time:</strong> ${new Date().toLocaleString()}</p>
+          ${!isNewManufacturer ? `<p><strong>Status:</strong> <span style="color: #f59e0b;">Unverified</span></p>` : ''}
         </div>
         
-        <p>Please review this submission in the admin panel:</p>
+        <p>Please review this ${isNewManufacturer ? 'submission' : 'manufacturer'} in the admin panel:</p>
         <a href="${adminUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px;">Review Manufacturers</a>
         
-        <p>You can verify, edit, or reject this manufacturer submission from the admin panel.</p>
+        <p>You can verify, edit, or reject this manufacturer ${isNewManufacturer ? 'submission' : 'entry'} from the admin panel.</p>
         
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
         <p style="font-size: 12px; color: #666;">

@@ -23,29 +23,81 @@ export async function normalizeManufacturerName(
     const manufacturers = await prisma.manufacturer.findMany({
       select: {
         name: true,
-        aliases: true
+        aliases: true,
+        verified: true
       }
     })
     
     console.log(`[Manufacturer Normalization] Checking against ${manufacturers.length} existing manufacturers`)
 
     // Check for exact match (case-insensitive) with manufacturer name or aliases
+    let matchedManufacturer = null
     for (const manufacturer of manufacturers) {
       // Check canonical name
       if (manufacturer.name.toLowerCase() === trimmedName.toLowerCase()) {
-        console.log(`[Manufacturer Normalization] Found exact match: "${manufacturer.name}"`)
-        return manufacturer.name
+        console.log(`[Manufacturer Normalization] Found exact match: "${manufacturer.name}" (verified: ${manufacturer.verified})`)
+        matchedManufacturer = manufacturer
+        break
       }
       
       // Check aliases
       if (manufacturer.aliases) {
         for (const alias of manufacturer.aliases) {
           if (alias.toLowerCase() === trimmedName.toLowerCase()) {
-            console.log(`[Manufacturer Normalization] Found alias match: "${alias}" -> "${manufacturer.name}"`)
-            return manufacturer.name
+            console.log(`[Manufacturer Normalization] Found alias match: "${alias}" -> "${manufacturer.name}" (verified: ${manufacturer.verified})`)
+            matchedManufacturer = manufacturer
+            break
           }
         }
       }
+      if (matchedManufacturer) break
+    }
+
+    // If we found a match
+    if (matchedManufacturer) {
+      // If it's unverified, notify admins about the usage
+      if (!matchedManufacturer.verified) {
+        console.log(`[Manufacturer Normalization] Found unverified manufacturer, sending notification`)
+        
+        // Get user info for notification
+        let submittedBy = 'Unknown User'
+        let userEmail: string | undefined
+
+        if (userInfo) {
+          submittedBy = userInfo.username
+          userEmail = userInfo.email
+        } else if (userId) {
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { username: true, email: true }
+          })
+          if (user) {
+            submittedBy = user.username
+            userEmail = user.email
+          }
+        }
+
+        // Send notification to admins about unverified manufacturer usage
+        sendNewManufacturerNotification(
+          matchedManufacturer.name, 
+          submittedBy, 
+          userEmail,
+          undefined, // No original name since it matched
+          false // This is not a new manufacturer, it's unverified usage
+        )
+          .then((result) => {
+            if (result.success) {
+              console.log(`Admin notification sent for unverified manufacturer usage: ${matchedManufacturer.name}`)
+            } else {
+              console.warn(`Failed to send admin notification for unverified manufacturer: ${matchedManufacturer.name}`, result.error)
+            }
+          })
+          .catch((error) => {
+            console.error(`Error sending admin notification for unverified manufacturer: ${matchedManufacturer.name}`, error)
+          })
+      }
+      
+      return matchedManufacturer.name
     }
     
     console.log(`[Manufacturer Normalization] No match found, creating new manufacturer`)
