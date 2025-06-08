@@ -97,7 +97,11 @@ export default async function SharePage({ params }: SharePageProps) {
                         )}
                         {switchItem.technology && (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            SWITCH_TECHNOLOGY_COLORS[switchItem.technology as keyof typeof SWITCH_TECHNOLOGY_COLORS] || 
+                            switchItem.technology === 'MECHANICAL' ? 'bg-green-100 text-green-900 dark:bg-green-800 dark:text-green-200' :
+                            switchItem.technology === 'OPTICAL' ? 'bg-yellow-100 text-yellow-900 dark:bg-yellow-800 dark:text-yellow-200' :
+                            switchItem.technology === 'MAGNETIC' ? 'bg-pink-100 text-pink-900 dark:bg-pink-800 dark:text-pink-200' :
+                            switchItem.technology === 'INDUCTIVE' ? 'bg-cyan-100 text-cyan-900 dark:bg-cyan-800 dark:text-cyan-200' :
+                            switchItem.technology === 'ELECTRO_CAPACITIVE' ? 'bg-indigo-100 text-indigo-900 dark:bg-indigo-800 dark:text-indigo-200' :
                             'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                           }`}>
                             {switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
