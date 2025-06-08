@@ -586,6 +586,7 @@ export default function BulkEditPage() {
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(defaultColumns.map(col => col.id)))
   const [searchTerm, setSearchTerm] = useState<string>('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('')
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
@@ -792,14 +793,20 @@ export default function BulkEditPage() {
 
   const visibleColumnIds = getVisibleColumns()
 
-  // Filter switches based on search term
-  const filteredSwitches = useMemo(() => {
-    if (!searchTerm.trim()) return switches
+  // Debounce search term to improve performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300) // 300ms debounce
     
-    const searchLower = searchTerm.toLowerCase().trim()
-    return switches.filter(switchItem => {
-      // Search across multiple fields
-      const searchableFields = [
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Pre-compute searchable text for each switch to optimize filtering
+  const switchesWithSearchText = useMemo(() => {
+    return switches.map(switchItem => ({
+      ...switchItem,
+      searchText: [
         switchItem.name,
         switchItem.chineseName,
         switchItem.manufacturer,
@@ -812,13 +819,19 @@ export default function BulkEditPage() {
         switchItem.stem,
         switchItem.springWeight,
         switchItem.springLength
-      ]
-      
-      return searchableFields.some(field => 
-        field && field.toString().toLowerCase().includes(searchLower)
-      )
-    })
-  }, [switches, searchTerm])
+      ].filter(Boolean).join(' ').toLowerCase()
+    }))
+  }, [switches])
+
+  // Filter switches based on debounced search term
+  const filteredSwitches = useMemo(() => {
+    if (!debouncedSearchTerm.trim()) return switches
+    
+    const searchLower = debouncedSearchTerm.toLowerCase().trim()
+    return switchesWithSearchText
+      .filter(switchItem => switchItem.searchText.includes(searchLower))
+      .map(({ searchText, ...switchItem }) => switchItem) // Remove searchText from result
+  }, [switchesWithSearchText, debouncedSearchTerm, switches])
 
   const saveSwitches = async () => {
     // Check for invalid manufacturers (excluding submitted ones) - use all switches, not just filtered
@@ -887,7 +900,7 @@ export default function BulkEditPage() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Edit Switches</h1>
                 <p className="text-gray-600 dark:text-gray-300">
                   Edit your {switches.length} switches in bulk
-                  {searchTerm && (
+                  {debouncedSearchTerm && (
                     <span className="block text-sm mt-1">
                       Showing {filteredSwitches.length} of {switches.length} switches
                     </span>
@@ -906,7 +919,7 @@ export default function BulkEditPage() {
                     placeholder="Search switches by name, manufacturer, type..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors duration-150"
                   />
                   {searchTerm && (
                     <button
