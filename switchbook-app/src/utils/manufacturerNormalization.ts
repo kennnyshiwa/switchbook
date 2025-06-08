@@ -17,6 +17,7 @@ export async function normalizeManufacturerName(
 
   try {
     const trimmedName = manufacturerName.trim()
+    console.log(`[Manufacturer Normalization] Processing: "${trimmedName}"`)
     
     // Get all manufacturers with their names and aliases
     const manufacturers = await prisma.manufacturer.findMany({
@@ -25,11 +26,14 @@ export async function normalizeManufacturerName(
         aliases: true
       }
     })
+    
+    console.log(`[Manufacturer Normalization] Checking against ${manufacturers.length} existing manufacturers`)
 
     // Check for exact match (case-insensitive) with manufacturer name or aliases
     for (const manufacturer of manufacturers) {
       // Check canonical name
       if (manufacturer.name.toLowerCase() === trimmedName.toLowerCase()) {
+        console.log(`[Manufacturer Normalization] Found exact match: "${manufacturer.name}"`)
         return manufacturer.name
       }
       
@@ -37,11 +41,14 @@ export async function normalizeManufacturerName(
       if (manufacturer.aliases) {
         for (const alias of manufacturer.aliases) {
           if (alias.toLowerCase() === trimmedName.toLowerCase()) {
+            console.log(`[Manufacturer Normalization] Found alias match: "${alias}" -> "${manufacturer.name}"`)
             return manufacturer.name
           }
         }
       }
     }
+    
+    console.log(`[Manufacturer Normalization] No match found, creating new manufacturer`)
 
     // If no match found, create a new manufacturer entry (unverified)
     // Normalize the name: capitalize first letter of each word
