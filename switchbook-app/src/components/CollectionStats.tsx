@@ -13,6 +13,7 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
   const { theme } = useTheme()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showTypeNumbers, setShowTypeNumbers] = useState(false)
+  const [showTechnologyNumbers, setShowTechnologyNumbers] = useState(false)
   const [showManufacturerNumbers, setShowManufacturerNumbers] = useState(false)
 
   // Load states from localStorage on mount
@@ -25,6 +26,11 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
     const savedTypeView = localStorage.getItem('typeChartView')
     if (savedTypeView === 'numbers') {
       setShowTypeNumbers(true)
+    }
+    
+    const savedTechnologyView = localStorage.getItem('technologyChartView')
+    if (savedTechnologyView === 'numbers') {
+      setShowTechnologyNumbers(true)
     }
     
     const savedManufacturerView = localStorage.getItem('manufacturerChartView')
@@ -47,6 +53,13 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
     localStorage.setItem('typeChartView', newState ? 'numbers' : 'chart')
   }
   
+  // Toggle technology chart view
+  const toggleTechnologyView = () => {
+    const newState = !showTechnologyNumbers
+    setShowTechnologyNumbers(newState)
+    localStorage.setItem('technologyChartView', newState ? 'numbers' : 'chart')
+  }
+  
   // Toggle manufacturer chart view
   const toggleManufacturerView = () => {
     const newState = !showManufacturerNumbers
@@ -61,6 +74,20 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
   }, {} as Record<string, number>)
 
   const typeData = Object.entries(typeStats).map(([name, value]) => ({
+    name,
+    value,
+  }))
+
+  // Calculate statistics by technology
+  const technologyStats = switches.reduce((acc, switchItem) => {
+    const technology = switchItem.technology ? 
+      switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : 
+      'No Technology'
+    acc[technology] = (acc[technology] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  const technologyData = Object.entries(technologyStats).map(([name, value]) => ({
     name,
     value,
   }))
@@ -160,7 +187,7 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
       </div>
       
       {!isCollapsed && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-300">
+        <div className="grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 gap-6 transition-all duration-300">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">Switches by Type</h3>
@@ -226,6 +253,81 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
                   dataKey="value"
                 >
                   {typeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Switches by Technology</h3>
+          <button
+            onClick={toggleTechnologyView}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title={showTechnologyNumbers ? "Show chart" : "Show numbers"}
+          >
+            {showTechnologyNumbers ? (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+                Chart
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                Numbers
+              </>
+            )}
+          </button>
+        </div>
+        <div className="h-64">
+          {showTechnologyNumbers ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="space-y-3">
+                {technologyData
+                  .sort((a, b) => b.value - a.value)
+                  .map((item, index) => (
+                    <div key={item.name} className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded flex-shrink-0" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[120px] text-left">
+                        {item.name}:
+                      </span>
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white min-w-[40px] text-right">
+                        {item.value}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        ({((item.value / switches.length) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={technologyData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={renderCustomLabel}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {technologyData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
