@@ -176,7 +176,8 @@ export async function sendNewManufacturerNotification(
     return { success: true, warning: 'No admin users to notify' }
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  // Always use production URL for admin links in emails (admins should always use production)
+  const baseUrl = 'https://switchbook.app'
   const adminUrl = `${baseUrl}/admin/manufacturers`
 
   const subject = isNewManufacturer 
