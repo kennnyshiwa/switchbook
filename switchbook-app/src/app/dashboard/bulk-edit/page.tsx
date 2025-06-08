@@ -692,7 +692,7 @@ export default function BulkEditPage() {
   if (currentStep === 'editing') {
     return (
       <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-        <div className="max-w-6xl mx-auto p-6 flex flex-col flex-1 w-full">
+        <div className="w-full mx-auto p-6 flex flex-col flex-1">
           <div className="mb-6">
             <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center mb-4">
               ← Back to Dashboard
