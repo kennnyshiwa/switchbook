@@ -607,8 +607,8 @@ export default function BulkUploadPage() {
 
   if (currentStep === 'preview') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-6xl mx-auto p-6">
+      <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <div className="max-w-6xl mx-auto p-6 flex flex-col flex-1 w-full">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Preview & Edit Switches</h1>
           <p className="text-gray-600 dark:text-gray-300">
@@ -626,8 +626,8 @@ export default function BulkUploadPage() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="max-h-96 overflow-x-auto overflow-y-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
+          <div className="flex-1 overflow-x-auto overflow-y-auto">
             <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
                 <tr>
