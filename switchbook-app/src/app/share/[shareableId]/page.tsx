@@ -1,32 +1,323 @@
-import { prisma } from "@/lib/prisma"
-import { notFound } from "next/navigation"
-import Image from "next/image"
-import CollectionStats from "@/components/CollectionStats"
-import ForceCurvesButton from "@/components/ForceCurvesButton"
-import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from "@/constants/switchTypes"
-import { formatWithUnit } from "@/utils/formatters"
-import { linkify } from "@/utils/linkify"
+'use client'
 
-interface SharePageProps {
-  params: Promise<{ shareableId: string }>
-}
+import { useState, useEffect, useMemo } from 'react'
+import { useParams } from 'next/navigation'
+import { Switch } from '@prisma/client'
+import Image from 'next/image'
+import CollectionStats from '@/components/CollectionStats'
+import SwitchCard from '@/components/SwitchCard'
+import SwitchTable from '@/components/SwitchTable'
+import CollectionControls, { SortOption, ViewMode, FilterOptions, ActiveFilters } from '@/components/CollectionControls'
+import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switchTypes'
 
-export default async function SharePage({ params }: SharePageProps) {
-  const { shareableId } = await params
+export default function SharePage() {
+  const params = useParams()
+  const shareableId = params.shareableId as string
   
-  const user = await prisma.user.findUnique({
-    where: { shareableId },
-    include: {
-      switches: {
-        orderBy: { createdAt: "desc" }
+  const [user, setUser] = useState<{ username: string; switches: Switch[] } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortOption, setSortOption] = useState<SortOption>('recent')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({})
+
+  // Load view mode from localStorage on mount
+  useEffect(() => {
+    const savedView = localStorage.getItem('switchViewMode')
+    if (savedView === 'table' || savedView === 'grid') {
+      setViewMode(savedView)
+    }
+  }, [])
+
+  // Save view mode to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('switchViewMode', viewMode)
+  }, [viewMode])
+
+  // Fetch user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch(`/api/share/${shareableId}`)
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError('Collection not found')
+          } else {
+            setError('Failed to load collection')
+          }
+          return
+        }
+        const data = await response.json()
+        setUser(data)
+      } catch (err) {
+        setError('Failed to load collection')
+      } finally {
+        setLoading(false)
       }
     }
-  })
 
-  if (!user) {
-    notFound()
+    fetchUserData()
+  }, [shareableId])
+
+  // Generate filter options from current switches
+  const filterOptions = useMemo((): FilterOptions => {
+    if (!user) return {
+      manufacturers: [],
+      types: [],
+      technologies: [],
+      topHousings: [],
+      bottomHousings: [],
+      stems: [],
+      springWeights: [],
+      springLengths: [],
+      magnetOrientations: [],
+      magnetPositions: [],
+      magnetPolarities: [],
+      pcbThicknesses: [],
+      compatibilities: [],
+      actuationForces: [],
+      bottomOutForces: [],
+      preTravels: [],
+      bottomOuts: [],
+      initialForces: [],
+      initialMagneticFluxes: [],
+      bottomOutMagneticFluxes: []
+    }
+
+    const switches = user.switches
+    const manufacturers = [...new Set(switches.map(s => s.manufacturer).filter(Boolean) as string[])].sort()
+    const types = [...new Set(switches.map(s => s.type).filter(Boolean) as string[])].sort()
+    const technologies = [...new Set(switches.map(s => s.technology).filter(Boolean) as string[])].sort()
+    const topHousings = [...new Set(switches.map(s => s.topHousing).filter(Boolean) as string[])].sort()
+    const bottomHousings = [...new Set(switches.map(s => s.bottomHousing).filter(Boolean) as string[])].sort()
+    const stems = [...new Set(switches.map(s => s.stem).filter(Boolean) as string[])].sort()
+    const springWeights = [...new Set(switches.map(s => s.springWeight).filter(Boolean) as string[])].sort()
+    const springLengths = [...new Set(switches.map(s => s.springLength).filter(Boolean) as string[])].sort()
+    const magnetOrientations = [...new Set(switches.map(s => s.magnetOrientation).filter(Boolean) as string[])].sort()
+    const magnetPositions = [...new Set(switches.map(s => s.magnetPosition).filter(Boolean) as string[])].sort()
+    const magnetPolarities = [...new Set(switches.map(s => s.magnetPolarity).filter(Boolean) as string[])].sort()
+    const pcbThicknesses = [...new Set(switches.map(s => s.pcbThickness).filter(Boolean) as string[])].sort()
+    const compatibilities = [...new Set(switches.map(s => s.compatibility).filter(Boolean) as string[])].sort()
+    
+    // Get unique numeric values for ranges
+    const actuationForces = [...new Set(switches.map(s => s.actuationForce).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const bottomOutForces = [...new Set(switches.map(s => s.bottomOutForce).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const preTravels = [...new Set(switches.map(s => s.preTravel).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const bottomOuts = [...new Set(switches.map(s => s.bottomOut).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const initialForces = [...new Set(switches.map(s => s.initialForce).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const initialMagneticFluxes = [...new Set(switches.map(s => s.initialMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const bottomOutMagneticFluxes = [...new Set(switches.map(s => s.bottomOutMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
+
+    return {
+      manufacturers,
+      types,
+      technologies,
+      topHousings,
+      bottomHousings,
+      stems,
+      springWeights,
+      springLengths,
+      magnetOrientations,
+      magnetPositions,
+      magnetPolarities,
+      pcbThicknesses,
+      compatibilities,
+      actuationForces,
+      bottomOutForces,
+      preTravels,
+      bottomOuts,
+      initialForces,
+      initialMagneticFluxes,
+      bottomOutMagneticFluxes
+    }
+  }, [user])
+
+  // Filter and sort switches
+  const filteredSwitches = useMemo(() => {
+    if (!user) return []
+    
+    let filtered = [...user.switches]
+
+    // Apply search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(search) ||
+        (s.chineseName?.toLowerCase().includes(search) ?? false) ||
+        (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
+        (s.type?.toLowerCase().includes(search) ?? false) ||
+        (s.technology?.toLowerCase().includes(search) ?? false) ||
+        (s.notes?.toLowerCase().includes(search) ?? false) ||
+        (s.springWeight?.toLowerCase().includes(search) ?? false) ||
+        (s.springLength?.toLowerCase().includes(search) ?? false) ||
+        (s.topHousing?.toLowerCase().includes(search) ?? false) ||
+        (s.bottomHousing?.toLowerCase().includes(search) ?? false) ||
+        (s.stem?.toLowerCase().includes(search) ?? false) ||
+        (s.magnetOrientation?.toLowerCase().includes(search) ?? false) ||
+        (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
+        (s.magnetPolarity?.toLowerCase().includes(search) ?? false) ||
+        (s.pcbThickness?.toLowerCase().includes(search) ?? false) ||
+        (s.compatibility?.toLowerCase().includes(search) ?? false)
+      )
+    }
+
+    // Apply active filters
+    if (activeFilters.manufacturer) {
+      filtered = filtered.filter(s => s.manufacturer === activeFilters.manufacturer)
+    }
+    if (activeFilters.type) {
+      filtered = filtered.filter(s => s.type === activeFilters.type)
+    }
+    if (activeFilters.technology) {
+      filtered = filtered.filter(s => s.technology === activeFilters.technology)
+    }
+    if (activeFilters.topHousing) {
+      filtered = filtered.filter(s => s.topHousing === activeFilters.topHousing)
+    }
+    if (activeFilters.bottomHousing) {
+      filtered = filtered.filter(s => s.bottomHousing === activeFilters.bottomHousing)
+    }
+    if (activeFilters.stem) {
+      filtered = filtered.filter(s => s.stem === activeFilters.stem)
+    }
+    if (activeFilters.springWeight) {
+      filtered = filtered.filter(s => s.springWeight === activeFilters.springWeight)
+    }
+    if (activeFilters.springLength) {
+      filtered = filtered.filter(s => s.springLength === activeFilters.springLength)
+    }
+    if (activeFilters.magnetOrientation) {
+      filtered = filtered.filter(s => s.magnetOrientation === activeFilters.magnetOrientation)
+    }
+    if (activeFilters.magnetPosition) {
+      filtered = filtered.filter(s => s.magnetPosition === activeFilters.magnetPosition)
+    }
+    if (activeFilters.magnetPolarity) {
+      filtered = filtered.filter(s => s.magnetPolarity === activeFilters.magnetPolarity)
+    }
+    if (activeFilters.pcbThickness) {
+      filtered = filtered.filter(s => s.pcbThickness === activeFilters.pcbThickness)
+    }
+    if (activeFilters.compatibility) {
+      filtered = filtered.filter(s => s.compatibility === activeFilters.compatibility)
+    }
+
+    // Apply numeric range filters
+    if (activeFilters.actuationForceMin !== undefined) {
+      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce >= activeFilters.actuationForceMin!)
+    }
+    if (activeFilters.actuationForceMax !== undefined) {
+      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce <= activeFilters.actuationForceMax!)
+    }
+    if (activeFilters.bottomOutForceMin !== undefined) {
+      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce >= activeFilters.bottomOutForceMin!)
+    }
+    if (activeFilters.bottomOutForceMax !== undefined) {
+      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce <= activeFilters.bottomOutForceMax!)
+    }
+    if (activeFilters.preTravelMin !== undefined) {
+      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel >= activeFilters.preTravelMin!)
+    }
+    if (activeFilters.preTravelMax !== undefined) {
+      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel <= activeFilters.preTravelMax!)
+    }
+    if (activeFilters.bottomOutMin !== undefined) {
+      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut >= activeFilters.bottomOutMin!)
+    }
+    if (activeFilters.bottomOutMax !== undefined) {
+      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut <= activeFilters.bottomOutMax!)
+    }
+    if (activeFilters.initialForceMin !== undefined) {
+      filtered = filtered.filter(s => s.initialForce !== null && s.initialForce >= activeFilters.initialForceMin!)
+    }
+    if (activeFilters.initialForceMax !== undefined) {
+      filtered = filtered.filter(s => s.initialForce !== null && s.initialForce <= activeFilters.initialForceMax!)
+    }
+    if (activeFilters.initialMagneticFluxMin !== undefined) {
+      filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux >= activeFilters.initialMagneticFluxMin!)
+    }
+    if (activeFilters.initialMagneticFluxMax !== undefined) {
+      filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux <= activeFilters.initialMagneticFluxMax!)
+    }
+    if (activeFilters.bottomOutMagneticFluxMin !== undefined) {
+      filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux >= activeFilters.bottomOutMagneticFluxMin!)
+    }
+    if (activeFilters.bottomOutMagneticFluxMax !== undefined) {
+      filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux <= activeFilters.bottomOutMagneticFluxMax!)
+    }
+
+    // Apply sorting
+    const sorted = [...filtered]
+    switch (sortOption) {
+      case 'recent':
+        sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        break
+      case 'oldest':
+        sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        break
+      case 'name-asc':
+        sorted.sort((a, b) => a.name.localeCompare(b.name))
+        break
+      case 'name-desc':
+        sorted.sort((a, b) => b.name.localeCompare(a.name))
+        break
+      case 'manufacturer-asc':
+        sorted.sort((a, b) => (a.manufacturer || 'Unknown').localeCompare(b.manufacturer || 'Unknown'))
+        break
+      case 'manufacturer-desc':
+        sorted.sort((a, b) => (b.manufacturer || 'Unknown').localeCompare(a.manufacturer || 'Unknown'))
+        break
+      case 'type':
+        sorted.sort((a, b) => (a.type || 'No Type').localeCompare(b.type || 'No Type'))
+        break
+      case 'spring-asc':
+        sorted.sort((a, b) => {
+          const aWeight = parseFloat(a.springWeight?.match(/\d+/)?.[0] || '0')
+          const bWeight = parseFloat(b.springWeight?.match(/\d+/)?.[0] || '0')
+          return aWeight - bWeight
+        })
+        break
+      case 'spring-desc':
+        sorted.sort((a, b) => {
+          const aWeight = parseFloat(a.springWeight?.match(/\d+/)?.[0] || '0')
+          const bWeight = parseFloat(b.springWeight?.match(/\d+/)?.[0] || '0')
+          return bWeight - aWeight
+        })
+        break
+      case 'travel-asc':
+        sorted.sort((a, b) => (a.bottomOut || 0) - (b.bottomOut || 0))
+        break
+      case 'travel-desc':
+        sorted.sort((a, b) => (b.bottomOut || 0) - (a.bottomOut || 0))
+        break
+    }
+
+    return sorted
+  }, [user, searchTerm, sortOption, activeFilters])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
+  if (error || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            {error || 'Collection not found'}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            This collection may have been removed or the link is invalid.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -47,213 +338,45 @@ export default async function SharePage({ params }: SharePageProps) {
             <p className="text-gray-500 dark:text-gray-400">No switches in this collection yet.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {user.switches.map((switchItem) => (
-              <div key={switchItem.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-                <div className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  {switchItem.imageUrl ? (
-                    <Image
-                      src={switchItem.imageUrl}
-                      alt={switchItem.name}
-                      fill
-                      className="object-contain"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-                      <svg className="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-sm font-medium">No Image</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
-                      {!switchItem.name && switchItem.chineseName ? (
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.chineseName}</h3>
-                      ) : (
-                        <>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.name}</h3>
-                          {switchItem.chineseName && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{switchItem.chineseName}</p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
+          <>
+            <CollectionControls
+              onSearchChange={setSearchTerm}
+              onSortChange={setSortOption}
+              onViewChange={setViewMode}
+              onFiltersChange={setActiveFilters}
+              currentView={viewMode}
+              filterOptions={filterOptions}
+            />
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        {switchItem.type ? (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SWITCH_TYPE_COLORS[switchItem.type as keyof typeof SWITCH_TYPE_COLORS]}`}>
-                            {switchItem.type.replace('_', ' ')}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                            No Type
-                          </span>
-                        )}
-                        {switchItem.technology && (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            switchItem.technology === 'MECHANICAL' ? 'bg-green-100 text-green-900 dark:bg-green-800 dark:text-green-200' :
-                            switchItem.technology === 'OPTICAL' ? 'bg-yellow-100 text-yellow-900 dark:bg-yellow-800 dark:text-yellow-200' :
-                            switchItem.technology === 'MAGNETIC' ? 'bg-pink-100 text-pink-900 dark:bg-pink-800 dark:text-pink-200' :
-                            switchItem.technology === 'INDUCTIVE' ? 'bg-cyan-100 text-cyan-900 dark:bg-cyan-800 dark:text-cyan-200' :
-                            switchItem.technology === 'ELECTRO_CAPACITIVE' ? 'bg-indigo-100 text-indigo-900 dark:bg-indigo-800 dark:text-indigo-200' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                          }`}>
-                            {switchItem.technology.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                          </span>
-                        )}
-                      </div>
-                      {switchItem.dateObtained && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {(() => {
-                            const date = new Date(switchItem.dateObtained)
-                            // Add timezone offset to get the correct local date
-                            const utcDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000)
-                            return utcDate.toLocaleDateString()
-                          })()}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer || 'Unknown'}
-                    </p>
-
-
-                    {switchItem.compatibility && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <span className="font-medium">Compatibility:</span> {switchItem.compatibility}
-                      </p>
-                    )}
-
-                    {(switchItem.initialForce || switchItem.actuationForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut || switchItem.springWeight || switchItem.springLength) && (
-                      <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Specs</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          {switchItem.initialForce && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Initial Force:</span> {switchItem.initialForce}g
-                            </p>
-                          )}
-                          {switchItem.actuationForce && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Actuation:</span> {switchItem.actuationForce}g
-                            </p>
-                          )}
-                          {switchItem.bottomOutForce && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Bottom Out:</span> {switchItem.bottomOutForce}g
-                            </p>
-                          )}
-                          {switchItem.preTravel && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Pre Travel:</span> {switchItem.preTravel}mm
-                            </p>
-                          )}
-                          {switchItem.bottomOut && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Bottom Out/Total Travel:</span> {switchItem.bottomOut}mm
-                            </p>
-                          )}
-                          {switchItem.springWeight && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Spring Weight:</span> {formatWithUnit(switchItem.springWeight, 'g')}
-                            </p>
-                          )}
-                          {switchItem.springLength && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Spring Length:</span> {formatWithUnit(switchItem.springLength, 'mm')}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {switchItem.technology === 'MAGNETIC' && (switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
-                      <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Magnet Details</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          {switchItem.initialMagneticFlux && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Initial Flux:</span> {switchItem.initialMagneticFlux}Gs
-                            </p>
-                          )}
-                          {switchItem.bottomOutMagneticFlux && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Bottom Out Flux:</span> {switchItem.bottomOutMagneticFlux}Gs
-                            </p>
-                          )}
-                          {switchItem.magnetOrientation && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Pole Orientation:</span> {switchItem.magnetOrientation}
-                            </p>
-                          )}
-                          {switchItem.magnetPosition && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Magnet Position:</span> {switchItem.magnetPosition}
-                            </p>
-                          )}
-                          {switchItem.pcbThickness && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">PCB Thickness:</span> {switchItem.pcbThickness}
-                            </p>
-                          )}
-                          {switchItem.magnetPolarity && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Magnet Polarity:</span> {switchItem.magnetPolarity}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-
-                    {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
-                      <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Materials</p>
-                        {switchItem.topHousing && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            <span className="font-medium">Top:</span> {switchItem.topHousing}
-                          </p>
-                        )}
-                        {switchItem.bottomHousing && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            <span className="font-medium">Bottom:</span> {switchItem.bottomHousing}
-                          </p>
-                        )}
-                        {switchItem.stem && (
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            <span className="font-medium">Stem:</span> {switchItem.stem}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {switchItem.notes && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{linkify(switchItem.notes)}</p>
-                    )}
-
-                    {/* Force Curves Button */}
-                    <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <ForceCurvesButton 
-                        switchName={switchItem.name}
-                        manufacturer={switchItem.manufacturer}
-                        variant="button"
-                        className="w-full justify-center"
-                        isAuthenticated={false}
-                      />
-                    </div>
-                  </div>
-                </div>
+            {filteredSwitches.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400">No switches match your search criteria.</p>
               </div>
-            ))}
-          </div>
+            ) : (
+              <>
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredSwitches.map((switchItem) => (
+                      <SwitchCard
+                        key={switchItem.id}
+                        switch={switchItem}
+                        onEdit={() => {}}
+                        onDelete={() => {}}
+                        showForceCurves={false}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <SwitchTable
+                    switches={filteredSwitches}
+                    onEdit={() => {}}
+                    onDelete={() => {}}
+                    showForceCurves={false}
+                  />
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
     </div>
