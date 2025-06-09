@@ -219,7 +219,7 @@ export default function CollectionControls({
               id="sort"
               value={sortOption}
               onChange={handleSortChange}
-              className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              className="block w-full pl-3 pr-10 py-2 text-sm font-medium border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md h-10"
             >
               <option value="recent">Most Recent</option>
               <option value="oldest">Oldest First</option>
