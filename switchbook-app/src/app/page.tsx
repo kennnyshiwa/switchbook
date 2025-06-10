@@ -141,7 +141,7 @@ export default async function HomePage() {
 
             <div className="mt-6">
               <a
-                href="https://discord.gg/PqN4rjuy"
+                href="https://discord.gg/Ypqn93shzv"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex justify-center items-center px-6 py-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
