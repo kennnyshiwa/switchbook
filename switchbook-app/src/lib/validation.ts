@@ -48,6 +48,9 @@ export const switchSchema = z.object({
   topHousing: z.string().max(100).optional().or(z.literal("")),
   bottomHousing: z.string().max(100).optional().or(z.literal("")),
   stem: z.string().max(100).optional().or(z.literal("")),
+  frankenTop: z.string().max(100).optional().or(z.literal("")),
+  frankenBottom: z.string().max(100).optional().or(z.literal("")),
+  frankenStem: z.string().max(100).optional().or(z.literal("")),
   dateObtained: z.string().optional().or(z.literal("")),
 })
 

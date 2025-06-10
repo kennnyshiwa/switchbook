@@ -223,24 +223,51 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
 
 
 
-          {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
+          {((switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) || 
+            (switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem)) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Materials</p>
-              {switchItem.topHousing && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-medium">Top:</span> {switchItem.topHousing}
-                </p>
-              )}
-              {switchItem.bottomHousing && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-medium">Bottom:</span> {switchItem.bottomHousing}
-                </p>
-              )}
-              {switchItem.stem && (
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  <span className="font-medium">Stem:</span> {switchItem.stem}
-                </p>
-              )}
+              <div className={`grid ${(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) ? 'grid-cols-2 gap-4' : 'grid-cols-1'}`}>
+                {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Materials</p>
+                    {switchItem.topHousing && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-medium">Top:</span> {switchItem.topHousing}
+                      </p>
+                    )}
+                    {switchItem.bottomHousing && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-medium">Bottom:</span> {switchItem.bottomHousing}
+                      </p>
+                    )}
+                    {switchItem.stem && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-medium">Stem:</span> {switchItem.stem}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Franken Parts</p>
+                    {switchItem.frankenTop && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-medium">Top:</span> {switchItem.frankenTop}
+                      </p>
+                    )}
+                    {switchItem.frankenBottom && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-medium">Bottom:</span> {switchItem.frankenBottom}
+                      </p>
+                    )}
+                    {switchItem.frankenStem && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        <span className="font-medium">Stem:</span> {switchItem.frankenStem}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

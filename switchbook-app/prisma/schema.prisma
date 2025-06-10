@@ -53,6 +53,9 @@ model Switch {
   topHousing      String?
   bottomHousing   String?
   stem            String?
+  frankenTop      String?
+  frankenBottom   String?
+  frankenStem     String?
   dateObtained    DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt

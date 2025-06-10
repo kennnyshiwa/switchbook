@@ -25,6 +25,9 @@ interface SwitchData {
   topHousing?: string | null;
   bottomHousing?: string | null;
   stem?: string | null;
+  frankenTop?: string | null;
+  frankenBottom?: string | null;
+  frankenStem?: string | null;
   dateObtained?: string | null;
 }
 
@@ -54,6 +57,9 @@ export function transformSwitchData(data: SwitchData) {
     topHousing: data.topHousing || null,
     bottomHousing: data.bottomHousing || null,
     stem: data.stem || null,
+    frankenTop: data.frankenTop || null,
+    frankenBottom: data.frankenBottom || null,
+    frankenStem: data.frankenStem || null,
     dateObtained: data.dateObtained ? new Date(data.dateObtained) : null,
   };
 }

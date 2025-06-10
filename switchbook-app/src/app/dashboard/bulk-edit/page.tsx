@@ -31,6 +31,9 @@ interface EditableSwitchData {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  frankenTop?: string
+  frankenBottom?: string
+  frankenStem?: string
   dateObtained?: string
   manufacturerValid?: boolean
   manufacturerSuggestions?: string[]
@@ -446,6 +449,9 @@ const SwitchEditRow = memo(({
       case 'topHousing':
       case 'bottomHousing':
       case 'stem':
+      case 'frankenTop':
+      case 'frankenBottom':
+      case 'frankenStem':
         return (
           <td key={columnId} className="px-3 py-4 whitespace-nowrap">
             <input
@@ -580,6 +586,9 @@ const defaultColumns: ColumnConfig[] = [
   { id: 'topHousing', label: 'Top Housing', field: 'topHousing', minWidth: 'min-w-[80px]' },
   { id: 'bottomHousing', label: 'Bottom Housing', field: 'bottomHousing', minWidth: 'min-w-[80px]' },
   { id: 'stem', label: 'Stem', field: 'stem', minWidth: 'min-w-[80px]' },
+  { id: 'frankenTop', label: 'Franken Top', field: 'frankenTop', minWidth: 'min-w-[80px]' },
+  { id: 'frankenBottom', label: 'Franken Bottom', field: 'frankenBottom', minWidth: 'min-w-[80px]' },
+  { id: 'frankenStem', label: 'Franken Stem', field: 'frankenStem', minWidth: 'min-w-[80px]' },
   { id: 'notes', label: 'Notes', field: 'notes', minWidth: 'min-w-[120px]' },
   { id: 'imageUrl', label: 'Image URL', field: 'imageUrl', minWidth: 'min-w-[120px]' },
   { id: 'dateObtained', label: 'Date Obtained', field: 'dateObtained', minWidth: 'min-w-[120px]' },
@@ -636,6 +645,9 @@ export default function BulkEditPage() {
             topHousing: sw.topHousing || '',
             bottomHousing: sw.bottomHousing || '',
             stem: sw.stem || '',
+            frankenTop: sw.frankenTop || '',
+            frankenBottom: sw.frankenBottom || '',
+            frankenStem: sw.frankenStem || '',
             dateObtained: sw.dateObtained ? new Date(sw.dateObtained).toISOString().split('T')[0] : ''
           }))
           
@@ -691,7 +703,7 @@ export default function BulkEditPage() {
       'magnetPolarity', 'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
       'pcbThickness', 'compatibility', 'manufacturer', 'springWeight', 'springLength',
       'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'notes', 'imageUrl',
-      'topHousing', 'bottomHousing', 'stem', 'dateObtained'
+      'topHousing', 'bottomHousing', 'stem', 'frankenTop', 'frankenBottom', 'frankenStem', 'dateObtained'
     ]
     
     return fieldsToCompare.some(field => {
@@ -1355,6 +1367,9 @@ export default function BulkEditPage() {
                           topHousing: sw.topHousing || '',
                           bottomHousing: sw.bottomHousing || '',
                           stem: sw.stem || '',
+                          frankenTop: sw.frankenTop || '',
+                          frankenBottom: sw.frankenBottom || '',
+                          frankenStem: sw.frankenStem || '',
                           dateObtained: sw.dateObtained ? new Date(sw.dateObtained).toISOString().split('T')[0] : ''
                         }))
                         

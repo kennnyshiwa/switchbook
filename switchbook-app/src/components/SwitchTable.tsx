@@ -96,6 +96,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 Materials
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Franken Parts
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Notes
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -202,6 +205,20 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                       <div><span className="font-medium">Stem:</span> {switchItem.stem}</div>
                     )}
                     {!switchItem.topHousing && !switchItem.bottomHousing && !switchItem.stem && '-'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                  <div className="space-y-1">
+                    {switchItem.frankenTop && (
+                      <div><span className="font-medium">Top:</span> {switchItem.frankenTop}</div>
+                    )}
+                    {switchItem.frankenBottom && (
+                      <div><span className="font-medium">Bottom:</span> {switchItem.frankenBottom}</div>
+                    )}
+                    {switchItem.frankenStem && (
+                      <div><span className="font-medium">Stem:</span> {switchItem.frankenStem}</div>
+                    )}
+                    {!switchItem.frankenTop && !switchItem.frankenBottom && !switchItem.frankenStem && '-'}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -19,6 +19,7 @@ interface EditSwitchModalProps {
 export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchUpdated }: EditSwitchModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showFrankenswitch, setShowFrankenswitch] = useState(false)
 
   const {
     register,
@@ -53,9 +54,19 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       topHousing: switchItem.topHousing || '',
       bottomHousing: switchItem.bottomHousing || '',
       stem: switchItem.stem || '',
+      frankenTop: switchItem.frankenTop || '',
+      frankenBottom: switchItem.frankenBottom || '',
+      frankenStem: switchItem.frankenStem || '',
       dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
     }
   })
+
+  // Check if Frankenswitch should be enabled on load
+  useEffect(() => {
+    if (switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) {
+      setShowFrankenswitch(true)
+    }
+  }, [switchItem])
 
   const onSubmit = async (data: SwitchFormData) => {
     setIsLoading(true)
@@ -86,8 +97,19 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
   return (
     <div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-80 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Edit Switch</h3>
+          <div className="flex items-center space-x-2">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFrankenswitch}
+                onChange={(e) => setShowFrankenswitch(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Frankenswitch</span>
+            </label>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
@@ -97,7 +119,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
             </div>
           )}
 
-          <SwitchForm register={register} errors={errors} setValue={setValue} watch={watch} />
+          <SwitchForm register={register} errors={errors} setValue={setValue} watch={watch} showFrankenswitch={showFrankenswitch} />
 
           <div className="flex justify-end space-x-3 pt-4">
             <button

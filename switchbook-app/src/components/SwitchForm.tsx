@@ -13,9 +13,10 @@ interface SwitchFormProps {
   defaultValues?: Partial<SwitchFormData>
   setValue: UseFormSetValue<SwitchFormData>
   watch: UseFormWatch<SwitchFormData>
+  showFrankenswitch?: boolean
 }
 
-export default function SwitchForm({ register, errors, setValue, watch }: SwitchFormProps) {
+export default function SwitchForm({ register, errors, setValue, watch, showFrankenswitch = false }: SwitchFormProps) {
   const manufacturerValue = watch('manufacturer')
   const technologyValue = watch('technology')
   const showMagneticFields = technologyValue === 'MAGNETIC'
@@ -350,6 +351,51 @@ export default function SwitchForm({ register, errors, setValue, watch }: Switch
           )}
         </div>
       </div>
+
+      {showFrankenswitch && (
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Franken Parts</h4>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Franken Top</label>
+            <input
+              {...register('frankenTop')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Cherry MX Top"
+            />
+            {errors.frankenTop && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.frankenTop.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Franken Bottom</label>
+            <input
+              {...register('frankenBottom')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Gateron Bottom"
+            />
+            {errors.frankenBottom && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.frankenBottom.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Franken Stem</label>
+            <input
+              {...register('frankenStem')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., NK Cream Stem"
+            />
+            {errors.frankenStem && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.frankenStem.message}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date Obtained</label>

@@ -30,6 +30,9 @@ interface ParsedSwitch {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  frankenTop?: string
+  frankenBottom?: string
+  frankenStem?: string
   dateObtained?: string
 }
 
@@ -203,6 +206,12 @@ const SwitchTableRow = memo(({
     }, 300)
     
     timeoutRefs.current.set(field, timeoutId)
+    
+    // If a Franken field is modified and has content, add a visual indicator
+    if ((field === 'frankenTop' || field === 'frankenBottom' || field === 'frankenStem') && value && value.trim() !== '') {
+      // Add some visual feedback that this is now a Frankenswitch
+      console.log(`Frankenswitch detected: ${field} = ${value}`)
+    }
   }, [index, onUpdate])
 
   // Close suggestions when clicking outside
@@ -539,6 +548,33 @@ const SwitchTableRow = memo(({
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.frankenTop || ''}
+          onChange={(e) => handleChange('frankenTop', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.frankenBottom || ''}
+          onChange={(e) => handleChange('frankenBottom', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.frankenStem || ''}
+          onChange={(e) => handleChange('frankenStem', e.target.value)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
       <td className="px-3 py-4">
         <textarea
           value={localValues.notes || ''}
@@ -618,6 +654,9 @@ export default function BulkUploadPage() {
     { key: 'topHousing', label: 'Top Housing', required: false },
     { key: 'bottomHousing', label: 'Bottom Housing', required: false },
     { key: 'stem', label: 'Stem', required: false },
+    { key: 'frankenTop', label: 'Franken Top', required: false },
+    { key: 'frankenBottom', label: 'Franken Bottom', required: false },
+    { key: 'frankenStem', label: 'Franken Stem', required: false },
     { key: 'notes', label: 'Notes', required: false },
     { key: 'imageUrl', label: 'Image URL', required: false },
     { key: 'dateObtained', label: 'Date Obtained', required: false },
@@ -1240,6 +1279,15 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Stem
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Franken Top
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Franken Bottom
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Franken Stem
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Notes
