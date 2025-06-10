@@ -631,6 +631,26 @@ export default function BulkUploadPage() {
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
+  // Handle wheel events to ensure vertical scrolling works
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement
+      const scrollContainer = target.closest('.overflow-x-auto')
+      
+      if (scrollContainer && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        // If scrolling vertically more than horizontally, let the page scroll
+        e.preventDefault()
+        window.scrollBy(0, e.deltaY)
+      }
+    }
+
+    const tableContainer = document.querySelector('.overflow-x-auto')
+    if (tableContainer) {
+      tableContainer.addEventListener('wheel', handleWheel, { passive: false })
+      return () => tableContainer.removeEventListener('wheel', handleWheel)
+    }
+  }, [currentStep])
+
   const switchFields = [
     { key: 'name', label: 'Switch Name', required: true },
     { key: 'chineseName', label: 'Chinese Name', required: false },
@@ -1215,13 +1235,34 @@ export default function BulkUploadPage() {
 
   if (currentStep === 'preview') {
     return (
-      <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-        <div className="max-w-6xl mx-auto p-6 flex flex-col flex-1 w-full">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Preview & Edit Switches</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Review your {parsedSwitches.length} switches before importing
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Preview & Edit Switches</h1>
+              <p className="text-gray-600 dark:text-gray-300">
+                Review your {parsedSwitches.length} switches before importing
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to go back? Any edits you\'ve made will be lost.')) {
+                  setCurrentStep('upload')
+                  setCsvData([])
+                  setHeaders([])
+                  setColumnMapping({})
+                  setParsedSwitches([])
+                }
+              }}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Re-upload CSV
+            </button>
+          </div>
           {parsedSwitches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) && (
             <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
               <p className="text-sm text-red-800 dark:text-red-200 font-medium">
@@ -1234,10 +1275,10 @@ export default function BulkUploadPage() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
-          <div className="flex-1 overflow-x-auto overflow-y-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="overflow-x-auto" style={{ overscrollBehavior: 'none' }}>
             <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
@@ -1331,7 +1372,7 @@ export default function BulkUploadPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700 relative">
                 {parsedSwitches.map((switchItem, index) => (
                   <SwitchTableRow
                     key={index}
