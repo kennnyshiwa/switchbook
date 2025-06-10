@@ -64,22 +64,22 @@ const fetchManufacturers = async () => {
 // Memoized table row component to prevent unnecessary re-renders
 const SwitchEditRow = memo(({ 
   switchItem, 
-  index, 
   onUpdate,
   onManufacturerSubmitted,
   submittedManufacturers,
   showMagneticFields,
   columnOrder,
-  invalidRowRef
+  invalidRowRef,
+  isModified
 }: {
   switchItem: EditableSwitchData
-  index: number
-  onUpdate: (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => void
+  onUpdate: (switchId: string, field: keyof EditableSwitchData, value: string | number | undefined) => void
   onManufacturerSubmitted: (name: string) => void
   submittedManufacturers: Set<string>
   showMagneticFields: boolean
   columnOrder: string[]
   invalidRowRef?: (el: HTMLTableRowElement | null) => void
+  isModified?: boolean
 }) => {
   // Local state for each input to prevent re-renders of other rows
   const [localValues, setLocalValues] = useState(switchItem)
@@ -89,9 +89,13 @@ const SwitchEditRow = memo(({
   const manufacturerInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
-  // Update local state when switchItem changes
+  // Update local state only when the actual switch ID changes (not just prop reference)
+  const switchIdRef = useRef(switchItem.id)
   useEffect(() => {
-    setLocalValues(switchItem)
+    if (switchIdRef.current !== switchItem.id) {
+      switchIdRef.current = switchItem.id
+      setLocalValues(switchItem)
+    }
   }, [switchItem])
 
   // Load manufacturers on component mount
@@ -126,12 +130,12 @@ const SwitchEditRow = memo(({
     }
     
     const timeoutId = setTimeout(() => {
-      onUpdate(index, 'manufacturer', value)
+      onUpdate(switchItem.id, 'manufacturer', value)
       timeoutRefs.current.delete('manufacturer')
     }, 300)
     
     timeoutRefs.current.set('manufacturer', timeoutId)
-  }, [index, onUpdate])
+  }, [switchItem.id, onUpdate])
 
   // Handle suggestion selection
   const selectSuggestion = useCallback((manufacturerName: string) => {
@@ -140,7 +144,7 @@ const SwitchEditRow = memo(({
     setSelectedSuggestionIndex(-1)
     
     // Immediate update for suggestion selection
-    onUpdate(index, 'manufacturer', manufacturerName)
+    onUpdate(switchItem.id, 'manufacturer', manufacturerName)
     
     // Clear any pending timeout
     const existingTimeout = timeoutRefs.current.get('manufacturer')
@@ -148,7 +152,7 @@ const SwitchEditRow = memo(({
       clearTimeout(existingTimeout)
       timeoutRefs.current.delete('manufacturer')
     }
-  }, [index, onUpdate])
+  }, [switchItem.id, onUpdate])
 
   // Handle keyboard navigation
   const handleManufacturerKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -189,12 +193,12 @@ const SwitchEditRow = memo(({
     
     // Set new timeout for debounced update
     const timeoutId = setTimeout(() => {
-      onUpdate(index, field, value)
+      onUpdate(switchItem.id, field, value)
       timeoutRefs.current.delete(field)
     }, 300)
     
     timeoutRefs.current.set(field, timeoutId)
-  }, [index, onUpdate])
+  }, [switchItem.id, onUpdate])
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -528,7 +532,13 @@ const SwitchEditRow = memo(({
   return (
     <tr 
       ref={invalidRowRef}
-      className={switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) ? 'bg-red-50 dark:bg-red-900/20' : ''}
+      className={
+        switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer) 
+          ? 'bg-red-50 dark:bg-red-900/20' 
+          : isModified 
+            ? 'bg-blue-50 dark:bg-blue-900/20' 
+            : ''
+      }
     >
       {columnOrder.map(columnId => renderCell(columnId)).filter(Boolean)}
     </tr>
@@ -578,6 +588,8 @@ const defaultColumns: ColumnConfig[] = [
 export default function BulkEditPage() {
   const [currentStep, setCurrentStep] = useState<BulkEditStep>('loading')
   const [switches, setSwitches] = useState<EditableSwitchData[]>([])
+  const [originalSwitches, setOriginalSwitches] = useState<EditableSwitchData[]>([])
+  const [modifiedSwitchIds, setModifiedSwitchIds] = useState<Set<string>>(new Set())
   const [saveProgress, setSaveProgress] = useState(0)
   const [saveResults, setSaveResults] = useState<{ success: number; errors: string[] }>({ success: 0, errors: [] })
   const [isValidating, setIsValidating] = useState(false)
@@ -647,6 +659,7 @@ export default function BulkEditPage() {
           })
           
           setSwitches(switchesWithValidation)
+          setOriginalSwitches(switchesWithValidation) // Store original data for comparison
           setCurrentStep('editing')
           
           // Scroll to first invalid manufacturer after a short delay
@@ -667,28 +680,84 @@ export default function BulkEditPage() {
     fetchSwitches()
   }, [submittedManufacturers])
 
-  const updateSwitch = useCallback(async (index: number, field: keyof EditableSwitchData, value: string | number | undefined) => {
+  // Helper function to check if a switch has been modified
+  const checkIfSwitchModified = useCallback((switchData: EditableSwitchData) => {
+    const original = originalSwitches.find(sw => sw.id === switchData.id)
+    if (!original) return false
+    
+    // Compare all relevant fields (excluding validation fields)
+    const fieldsToCompare: (keyof EditableSwitchData)[] = [
+      'name', 'chineseName', 'type', 'technology', 'magnetOrientation', 'magnetPosition', 
+      'magnetPolarity', 'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
+      'pcbThickness', 'compatibility', 'manufacturer', 'springWeight', 'springLength',
+      'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'notes', 'imageUrl',
+      'topHousing', 'bottomHousing', 'stem', 'dateObtained'
+    ]
+    
+    return fieldsToCompare.some(field => {
+      const currentValue = switchData[field]
+      const originalValue = original[field]
+      
+      // Handle empty strings and null/undefined as equivalent
+      const normalizedCurrent = currentValue === '' ? undefined : currentValue
+      const normalizedOriginal = originalValue === '' ? undefined : originalValue
+      
+      return normalizedCurrent !== normalizedOriginal
+    })
+  }, [originalSwitches])
+
+  const updateSwitch = useCallback(async (switchId: string, field: keyof EditableSwitchData, value: string | number | undefined) => {
     // If manufacturer field is being updated, validate it
     if (field === 'manufacturer' && typeof value === 'string') {
       const validationResults = await validateManufacturers([value])
       const validationResult = validationResults.get(value)
       
-      setSwitches(prev => prev.map((sw, i) => {
-        if (i !== index) return sw
+      setSwitches(prev => prev.map(sw => {
+        if (sw.id !== switchId) return sw
         
-        return {
+        const updatedSwitch = {
           ...sw,
           [field]: value,
           manufacturerValid: validationResult?.isValid ?? true,
           manufacturerSuggestions: validationResult?.suggestions || []
         }
+        
+        // Check if this switch is now modified
+        const isModified = checkIfSwitchModified(updatedSwitch)
+        setModifiedSwitchIds(prev => {
+          const newSet = new Set(prev)
+          if (isModified) {
+            newSet.add(switchId)
+          } else {
+            newSet.delete(switchId)
+          }
+          return newSet
+        })
+        
+        return updatedSwitch
       }))
     } else {
-      setSwitches(prev => prev.map((sw, i) => 
-        i === index ? { ...sw, [field]: value } : sw
-      ))
+      setSwitches(prev => prev.map(sw => {
+        if (sw.id !== switchId) return sw
+        
+        const updatedSwitch = { ...sw, [field]: value }
+        
+        // Check if this switch is now modified
+        const isModified = checkIfSwitchModified(updatedSwitch)
+        setModifiedSwitchIds(prev => {
+          const newSet = new Set(prev)
+          if (isModified) {
+            newSet.add(switchId)
+          } else {
+            newSet.delete(switchId)
+          }
+          return newSet
+        })
+        
+        return updatedSwitch
+      }))
     }
-  }, [])
+  }, [checkIfSwitchModified])
 
   const handleManufacturerSubmitted = useCallback((name: string) => {
     console.log('New manufacturer submitted:', name)
@@ -808,7 +877,7 @@ export default function BulkEditPage() {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
       setIsSearching(false)
-    }, 150) // Reduced to 150ms for better responsiveness
+    }, 100) // Further reduced to 100ms for better responsiveness
     
     return () => {
       clearTimeout(timer)
@@ -816,11 +885,17 @@ export default function BulkEditPage() {
     }
   }, [searchTerm, debouncedSearchTerm])
 
-  // Pre-compute searchable text for each switch to optimize filtering
-  const switchesWithSearchText = useMemo(() => {
-    return switches.map(switchItem => ({
-      ...switchItem,
-      searchText: [
+  // Create stable dependency for search cache that only changes when switch data actually changes
+  const switchCacheKey = useMemo(() => 
+    switches.map(s => `${s.id}:${s.name}:${s.manufacturer}:${s.type}`).join('|'), 
+    [switches]
+  )
+
+  // Cache for searchable text - only recomputed when switch content changes (not when tracking modifications)
+  const searchTextCache = useMemo(() => {
+    const cache = new Map<string, string>()
+    switches.forEach(switchItem => {
+      cache.set(switchItem.id, [
         switchItem.name,
         switchItem.chineseName,
         switchItem.manufacturer,
@@ -833,28 +908,68 @@ export default function BulkEditPage() {
         switchItem.stem,
         switchItem.springWeight,
         switchItem.springLength
-      ].filter(Boolean).join(' ').toLowerCase()
-    }))
+      ].filter(Boolean).join(' ').toLowerCase())
+    })
+    return cache
   }, [switches])
 
   // Filter switches based on debounced search term with result limiting
-  const filteredSwitches = useMemo(() => {
-    if (!debouncedSearchTerm.trim()) return switches
+  const { filteredSwitches, searchStats } = useMemo(() => {
+    const trimmedSearch = debouncedSearchTerm.trim()
     
-    const searchLower = debouncedSearchTerm.toLowerCase().trim()
-    const filtered = switchesWithSearchText
-      .filter(switchItem => switchItem.searchText.includes(searchLower))
-      .map(({ searchText, ...switchItem }) => switchItem) // Remove searchText from result
+    if (!trimmedSearch) {
+      return { 
+        filteredSwitches: switches, 
+        searchStats: null 
+      }
+    }
+    
+    // Skip search for very short terms to avoid performance issues
+    if (trimmedSearch.length < 2) {
+      return {
+        filteredSwitches: switches.slice(0, 100), // Limit to first 100 for very short terms
+        searchStats: {
+          totalMatches: switches.length,
+          showing: Math.min(100, switches.length),
+          isLimited: switches.length > 100
+        }
+      }
+    }
+    
+    const searchLower = trimmedSearch.toLowerCase()
+    
+    // Use simple string search for better performance
+    const allMatches = switches.filter(switchItem => {
+      const searchText = searchTextCache.get(switchItem.id)
+      return searchText && searchText.includes(searchLower)
+    })
     
     // Limit results to improve performance with large datasets
-    return filtered.length > 100 ? filtered.slice(0, 100) : filtered
-  }, [switchesWithSearchText, debouncedSearchTerm, switches])
+    const limited = allMatches.length > 100 ? allMatches.slice(0, 100) : allMatches
+    
+    return {
+      filteredSwitches: limited,
+      searchStats: {
+        totalMatches: allMatches.length,
+        showing: limited.length,
+        isLimited: allMatches.length > 100
+      }
+    }
+  }, [switches, searchTextCache, debouncedSearchTerm])
 
   const saveSwitches = async () => {
-    // Check for invalid manufacturers (excluding submitted ones) - use all switches, not just filtered
-    const invalidManufacturers = switches.filter(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
+    // Get only switches that have been modified
+    const modifiedSwitches = switches.filter(sw => modifiedSwitchIds.has(sw.id))
+    
+    if (modifiedSwitches.length === 0) {
+      alert('No changes detected. Nothing to save.')
+      return
+    }
+    
+    // Check for invalid manufacturers (excluding submitted ones) - only for modified switches
+    const invalidManufacturers = modifiedSwitches.filter(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
     if (invalidManufacturers.length > 0) {
-      alert(`Cannot save: ${invalidManufacturers.length} switches have invalid manufacturers. Please fix them or submit for verification.`)
+      alert(`Cannot save: ${invalidManufacturers.length} modified switches have invalid manufacturers. Please fix them or submit for verification.`)
       return
     }
     
@@ -863,8 +978,8 @@ export default function BulkEditPage() {
     
     const results = { success: 0, errors: [] as string[] }
     
-    for (let i = 0; i < switches.length; i++) {
-      const switchItem = switches[i]
+    for (let i = 0; i < modifiedSwitches.length; i++) {
+      const switchItem = modifiedSwitches[i]
       
       try {
         const { id, manufacturerValid, manufacturerSuggestions, ...switchData } = switchItem
@@ -884,7 +999,13 @@ export default function BulkEditPage() {
         results.errors.push(`${switchItem.name}: Network error`)
       }
       
-      setSaveProgress(Math.round(((i + 1) / switches.length) * 100))
+      setSaveProgress(Math.round(((i + 1) / modifiedSwitches.length) * 100))
+    }
+    
+    // Update original switches after successful save
+    if (results.success > 0) {
+      setOriginalSwitches(switches)
+      setModifiedSwitchIds(new Set())
     }
     
     setSaveResults(results)
@@ -917,17 +1038,16 @@ export default function BulkEditPage() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bulk Edit Switches</h1>
                 <p className="text-gray-600 dark:text-gray-300">
                   Edit your {switches.length} switches in bulk
-                  {debouncedSearchTerm && (
+                  {modifiedSwitchIds.size > 0 && (
+                    <span className="block text-sm mt-1 text-blue-600 dark:text-blue-400 font-medium">
+                      {modifiedSwitchIds.size} switch{modifiedSwitchIds.size === 1 ? '' : 'es'} modified
+                    </span>
+                  )}
+                  {debouncedSearchTerm && searchStats && (
                     <span className="block text-sm mt-1">
-                      {(() => {
-                        const totalFiltered = switchesWithSearchText.filter(item => 
-                          item.searchText.includes(debouncedSearchTerm.toLowerCase().trim())
-                        ).length
-                        const isLimited = totalFiltered > 100
-                        return isLimited 
-                          ? `Showing first 100 of ${totalFiltered} matches (${switches.length} total)`
-                          : `Showing ${filteredSwitches.length} of ${switches.length} switches`
-                      })()
+                      {searchStats.isLimited 
+                        ? `Showing first 100 of ${searchStats.totalMatches} matches (${switches.length} total)`
+                        : `Showing ${searchStats.showing} of ${switches.length} switches`
                       }
                     </span>
                   )}
@@ -1094,12 +1214,12 @@ export default function BulkEditPage() {
                     <SwitchEditRow
                       key={switchItem.id}
                       switchItem={switchItem}
-                      index={index}
                       onUpdate={updateSwitch}
                       onManufacturerSubmitted={handleManufacturerSubmitted}
                       submittedManufacturers={submittedManufacturers}
                       showMagneticFields={showMagneticFields}
                       columnOrder={visibleColumnIds}
+                      isModified={modifiedSwitchIds.has(switchItem.id)}
                       invalidRowRef={(el) => {
                         if (el && switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer)) {
                           invalidRowRefs.current.set(index, el)
@@ -1122,17 +1242,19 @@ export default function BulkEditPage() {
               </Link>
               <button
                 onClick={saveSwitches}
-                disabled={switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))}
+                disabled={switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) || modifiedSwitchIds.size === 0}
                 className={`px-6 py-2 rounded-md ${
-                  switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer))
+                  switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) || modifiedSwitchIds.size === 0
                     ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                     : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
               >
                 {switches.some(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)) ? (
                   `Fix ${switches.filter(sw => sw.manufacturer && !sw.manufacturerValid && !submittedManufacturers.has(sw.manufacturer)).length} Invalid Manufacturers`
+                ) : modifiedSwitchIds.size === 0 ? (
+                  'No Changes to Save'
                 ) : (
-                  `Save All Changes (${switches.length} switches)`
+                  `Save Changes (${modifiedSwitchIds.size} switch${modifiedSwitchIds.size === 1 ? '' : 'es'})`
                 )}
               </button>
             </div>
@@ -1256,6 +1378,8 @@ export default function BulkEditPage() {
                         })
                         
                         setSwitches(switchesWithValidation)
+                        setOriginalSwitches(switchesWithValidation) // Reset original data
+                        setModifiedSwitchIds(new Set()) // Clear modified switches
                         setCurrentStep('editing')
                       }
                     } catch (error) {

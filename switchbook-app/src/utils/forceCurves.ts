@@ -69,11 +69,30 @@ export interface ForceCurveMatch {
 }
 
 /**
+ * Get user feedback for incorrect matches to filter them out
+ */
+async function getIncorrectMatches(switchName: string, manufacturer?: string): Promise<Set<string>> {
+  try {
+    // This would typically be a server-side call, but for now we'll make a simple implementation
+    // In a full implementation, you'd want to fetch this data from the database
+    const incorrectMatches = new Set<string>()
+    
+    // For now, return empty set - this could be enhanced to call an API endpoint
+    // that returns previously reported incorrect matches for this switch
+    return incorrectMatches
+  } catch (error) {
+    console.error('Error fetching incorrect matches:', error)
+    return new Set<string>()
+  }
+}
+
+/**
  * Find all matching force curve data for a given switch
  */
 export async function findAllForceCurveMatches(switchName: string, manufacturer?: string): Promise<ForceCurveMatch[]> {
   try {
     const folders = await fetchSwitchFolders()
+    const incorrectMatches = await getIncorrectMatches(switchName, manufacturer)
     const matches: ForceCurveMatch[] = []
     
     const switchLower = switchName.toLowerCase()
@@ -81,7 +100,7 @@ export async function findAllForceCurveMatches(switchName: string, manufacturer?
 
     // 1. Exact matches
     folders.forEach(folder => {
-      if (folder.toLowerCase() === switchLower) {
+      if (folder.toLowerCase() === switchLower && !incorrectMatches.has(folder)) {
         matches.push({
           folderName: folder,
           url: `https://github.com/${FORCE_CURVES_REPO}/tree/main/${encodeURIComponent(folder)}`,
@@ -94,7 +113,7 @@ export async function findAllForceCurveMatches(switchName: string, manufacturer?
     if (manufacturer) {
       folders.forEach(folder => {
         const folderLower = folder.toLowerCase()
-        if (folderLower === `${manufacturerLower} ${switchLower}`) {
+        if (folderLower === `${manufacturerLower} ${switchLower}` && !incorrectMatches.has(folder)) {
           // Avoid duplicates from exact match
           if (!matches.some(m => m.folderName === folder)) {
             matches.push({
@@ -107,12 +126,12 @@ export async function findAllForceCurveMatches(switchName: string, manufacturer?
       })
     }
 
-    // 3. Fuzzy matches (contains search term)
+    // 3. Fuzzy matches (simple contains check - original working algorithm)
     folders.forEach(folder => {
       const folderLower = folder.toLowerCase()
       
-      // Skip if already matched exactly
-      if (matches.some(m => m.folderName === folder)) return
+      // Skip if already matched exactly or reported as incorrect
+      if (matches.some(m => m.folderName === folder) || incorrectMatches.has(folder)) return
       
       // Check if switch name contains folder name or vice versa
       if (folderLower.includes(switchLower) || switchLower.includes(folderLower)) {
@@ -129,8 +148,8 @@ export async function findAllForceCurveMatches(switchName: string, manufacturer?
       folders.forEach(folder => {
         const folderLower = folder.toLowerCase()
         
-        // Skip if already matched
-        if (matches.some(m => m.folderName === folder)) return
+        // Skip if already matched or reported as incorrect
+        if (matches.some(m => m.folderName === folder) || incorrectMatches.has(folder)) return
         
         // Check if folder starts with manufacturer and contains switch name
         if (folderLower.startsWith(manufacturerLower!) && 

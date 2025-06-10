@@ -53,6 +53,78 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     setSwitches(switches.filter(s => s.id !== switchId))
   }
 
+  // Cache for force curve results to avoid repeated API calls
+  const [forceCurveCache, setForceCurveCache] = useState<Map<string, boolean>>(new Map())
+  const [isBatchCheckingForceCurves, setIsBatchCheckingForceCurves] = useState(false)
+
+  // Load existing cache entries and batch check force curves for all switches on mount
+  useEffect(() => {
+    const checkAllForceCurves = async () => {
+      if (switches.length === 0 || isBatchCheckingForceCurves) return
+      
+      setIsBatchCheckingForceCurves(true)
+      
+      try {
+        // First, load existing cache entries from database
+        const existingCache = await fetch('/api/force-curve-cache').then(res => res.json())
+        const cacheMap = new Map<string, boolean>()
+        
+        if (existingCache && Array.isArray(existingCache)) {
+          existingCache.forEach((entry: any) => {
+            const key = `${entry.switchName}|${entry.manufacturer || ''}`
+            cacheMap.set(key, entry.hasForceCurve)
+          })
+          console.log(`Loaded ${cacheMap.size} entries from force curve cache`)
+        }
+        
+        // Update local cache with database entries
+        setForceCurveCache(prev => new Map([...prev, ...cacheMap]))
+        
+        // Now check which switches still need to be checked
+        const switchesToCheck = switches
+          .filter(sw => {
+            // Skip if user has saved preferences for this switch
+            const hasSavedPreferences = forceCurvePreferences.some(pref => 
+              pref.switchName === sw.name && 
+              pref.manufacturer === sw.manufacturer
+            )
+            const key = `${sw.name}|${sw.manufacturer || ''}`
+            const inCache = cacheMap.has(key)
+            
+            return !hasSavedPreferences && !inCache
+          })
+          .map(sw => ({ name: sw.name, manufacturer: sw.manufacturer || undefined }))
+        
+        if (switchesToCheck.length > 0) {
+          console.log(`Batch checking ${switchesToCheck.length} switches for force curves`)
+          
+          // Use API endpoint for batch checking
+          const response = await fetch('/api/force-curve-batch-check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ switches: switchesToCheck })
+          })
+          
+          if (response.ok) {
+            const resultsObject = await response.json()
+            const results = new Map(Object.entries(resultsObject).map(([key, value]) => [key, value as boolean]))
+            setForceCurveCache(prev => new Map([...prev, ...results]))
+          } else {
+            console.error('Failed to batch check force curves:', response.statusText)
+          }
+        } else {
+          console.log('All switches already cached, no API calls needed')
+        }
+      } catch (error) {
+        console.error('Error batch checking force curves:', error)
+      } finally {
+        setIsBatchCheckingForceCurves(false)
+      }
+    }
+    
+    checkAllForceCurves()
+  }, [switches, forceCurvePreferences])
+
   // Helper function to check if a switch has force curves
   const switchHasForceCurves = useCallback(async (switchItem: Switch): Promise<boolean> => {
     // First check if user has saved preferences for this switch
@@ -65,15 +137,26 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       return true
     }
     
-    // If no saved preferences, check if force curves are available in the repository
+    // Check cache first
+    const key = `${switchItem.name}|${switchItem.manufacturer || ''}`
+    if (forceCurveCache.has(key)) {
+      return forceCurveCache.get(key)!
+    }
+    
+    // If not in cache, check individually (this should be rare after batch check)
     try {
-      const { hasForceCurveData } = await import('@/utils/forceCurves')
-      return await hasForceCurveData(switchItem.name, switchItem.manufacturer || undefined)
+      const { hasForceCurveDataCached } = await import('@/utils/forceCurveCache')
+      const result = await hasForceCurveDataCached(switchItem.name, switchItem.manufacturer || undefined)
+      
+      // Update cache with result
+      setForceCurveCache(prev => new Map(prev.set(key, result.hasForceCurve)))
+      
+      return result.hasForceCurve
     } catch (error) {
       console.error('Error checking force curve availability:', error)
       return false
     }
-  }, [forceCurvePreferences])
+  }, [forceCurvePreferences, forceCurveCache])
 
   // Generate filter options from current switches
   const filterOptions = useMemo((): FilterOptions => {

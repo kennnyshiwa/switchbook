@@ -24,6 +24,7 @@ model User {
   showForceCurves       Boolean               @default(true)
   manufacturers         Manufacturer[]
   accounts              Account[]
+  forceCurveFeedback    ForceCurveFeedback[]
 }
 
 model Switch {
@@ -100,6 +101,34 @@ model ForceCurvePreference {
   updatedAt        DateTime @updatedAt
   
   @@unique([userId, switchName, manufacturer])
+}
+
+model ForceCurveCache {
+  id                 String   @id @default(cuid())
+  switchName         String
+  manufacturer       String?
+  hasForceCurve      Boolean
+  lastCheckedAt      DateTime @default(now())
+  nextCheckAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  @@unique([switchName, manufacturer])
+}
+
+model ForceCurveFeedback {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  switchName         String
+  manufacturer       String?
+  incorrectMatch     String   // The folder name that was incorrectly matched
+  feedbackType       String   // 'incorrect_match', 'no_match_found', 'suggest_match'
+  suggestedMatch     String?  // User's suggested correct match (optional)
+  notes              String?  // Additional notes from user
+  createdAt          DateTime @default(now())
+  
+  @@index([switchName, manufacturer])
 }
 
 model Account {

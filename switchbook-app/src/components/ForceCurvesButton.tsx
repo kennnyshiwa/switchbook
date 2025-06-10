@@ -24,6 +24,8 @@ export default function ForceCurvesButton({
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
   const [showAllOptions, setShowAllOptions] = useState(false)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false)
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -32,8 +34,33 @@ export default function ForceCurvesButton({
 
     async function loadForceCurveData() {
       try {
-        // Load matches first
-        const foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+        // Check cache first, then fallback to API
+        let foundMatches: ForceCurveMatch[] = []
+        
+        try {
+          // Use API endpoint to check cache
+          const cacheResponse = await fetch(`/api/force-curve-check?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`)
+          
+          if (cacheResponse.ok) {
+            const cacheResult = await cacheResponse.json()
+            
+            if (cacheResult.fromCache && !cacheResult.hasForceCurve) {
+              // If cache says no force curves, don't call API
+              foundMatches = []
+            } else {
+              // Either cache says yes, or we need to check API
+              foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+            }
+          } else {
+            // Fallback to direct API call if cache check fails
+            console.debug('Cache check failed, falling back to direct API:', cacheResponse.statusText)
+            foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+          }
+        } catch (cacheError) {
+          // Fallback to direct API call if cache fails
+          console.debug('Cache check failed, falling back to direct API:', cacheError)
+          foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+        }
         
         if (isMounted) {
           setMatches(foundMatches)
@@ -182,10 +209,82 @@ export default function ForceCurvesButton({
     }
   }
 
+  const submitFeedback = async (feedbackType: string, incorrectMatch?: string, suggestedMatch?: string, notes?: string) => {
+    if (!isAuthenticated) {
+      alert('Please log in to submit feedback')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/force-curve-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          switchName,
+          manufacturer: manufacturer || null,
+          incorrectMatch: incorrectMatch || (savedPreference?.folder) || (matches[0]?.folderName) || 'unknown',
+          feedbackType,
+          suggestedMatch,
+          notes
+        })
+      })
+      
+      if (response.ok) {
+        setFeedbackSubmitted(true)
+        setShowFeedbackForm(false)
+        // Optionally reload force curve data to get updated matches
+        setTimeout(() => {
+          window.location.reload()
+        }, 2000)
+      } else {
+        alert('Failed to submit feedback. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error)
+      alert('Failed to submit feedback. Please try again.')
+    }
+  }
+
+  // Render feedback form
+  const renderFeedbackForm = () => (
+    <div className="p-3 border-t border-gray-200 dark:border-gray-600">
+      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+        Report Issue
+      </div>
+      <div className="space-y-2">
+        <button
+          onClick={() => submitFeedback('incorrect_match')}
+          className="w-full px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+        >
+          This match is wrong
+        </button>
+        <button
+          onClick={() => submitFeedback('no_match_found')}
+          className="w-full px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded"
+        >
+          No force curve should be shown
+        </button>
+        <button
+          onClick={() => setShowFeedbackForm(false)}
+          className="w-full px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+
   // Render dropdown content (shared between positioning methods)
   const renderDropdownContent = () => (
     <div className="max-h-64 overflow-y-auto">
-      {savedPreference && !showAllOptions && isAuthenticated ? (
+      {feedbackSubmitted ? (
+        <div className="px-3 py-4 text-center">
+          <div className="text-green-600 dark:text-green-400 text-sm font-medium">✓ Thank you for your feedback!</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Page will refresh shortly...</div>
+        </div>
+      ) : showFeedbackForm ? (
+        renderFeedbackForm()
+      ) : savedPreference && !showAllOptions && isAuthenticated ? (
         <div>
           <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-600">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Selected</div>
@@ -202,10 +301,18 @@ export default function ForceCurvesButton({
           </button>
           <button
             onClick={() => setShowAllOptions(true)}
-            className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-md block"
+            className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 block"
           >
             Choose different option ({matches.length} available)
           </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => setShowFeedbackForm(true)}
+              className="w-full px-3 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-b-md block"
+            >
+              Report incorrect match
+            </button>
+          )}
         </div>
       ) : (
         <div>
@@ -221,12 +328,20 @@ export default function ForceCurvesButton({
             <button
               key={index}
               onClick={() => savePreference(match.folderName, match.url)}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-md border-b border-gray-100 dark:border-gray-700 last:border-b-0 block"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 block"
             >
               <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
             </button>
           ))}
+          {matches.length > 0 && isAuthenticated && (
+            <button
+              onClick={() => setShowFeedbackForm(true)}
+              className="w-full px-3 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-b-md block border-t border-gray-200 dark:border-gray-600"
+            >
+              Report incorrect match
+            </button>
+          )}
         </div>
       )}
     </div>

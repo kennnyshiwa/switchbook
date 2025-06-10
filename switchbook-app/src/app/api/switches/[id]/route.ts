@@ -28,14 +28,35 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
 
     body = await request.json()
     
-    // Additional rate limiting for image URL validation
+    // Verify the switch belongs to the user first to get current data
+    const switchItem = await prisma.switch.findFirst({
+      where: {
+        id,
+        userId: session.user.id,
+      },
+    })
+
+    if (!switchItem) {
+      return NextResponse.json(
+        { error: "Switch not found" },
+        { status: 404 }
+      )
+    }
+
+    // Additional rate limiting for image URL validation - only if imageUrl is actually changing
     if (body && typeof body === 'object' && 'imageUrl' in body && body.imageUrl) {
-      const clientIP = getClientIdentifier(request)
-      if (!checkImageValidationRateLimit(clientIP)) {
-        return NextResponse.json(
-          { error: "Too many image validation requests. Please try again later." },
-          { status: 429 }
-        )
+      const newImageUrl = body.imageUrl as string
+      const currentImageUrl = switchItem.imageUrl
+      
+      // Only apply rate limiting if the image URL is actually changing
+      if (newImageUrl !== currentImageUrl) {
+        const clientIP = getClientIdentifier(request)
+        if (!checkImageValidationRateLimit(clientIP)) {
+          return NextResponse.json(
+            { error: "Too many image validation requests. Please try again later." },
+            { status: 429 }
+          )
+        }
       }
     }
     
@@ -49,21 +70,6 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
       transformedData.manufacturer = await normalizeManufacturerName(
         transformedData.manufacturer, 
         session.user.id
-      )
-    }
-
-    // Verify the switch belongs to the user
-    const switchItem = await prisma.switch.findFirst({
-      where: {
-        id,
-        userId: session.user.id,
-      },
-    })
-
-    if (!switchItem) {
-      return NextResponse.json(
-        { error: "Switch not found" },
-        { status: 404 }
       )
     }
 
