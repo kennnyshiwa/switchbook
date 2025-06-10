@@ -136,7 +136,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     }
     
     checkAllForceCurves()
-  }, [switches, forceCurvePreferences])
+  }, [switches, forceCurvePreferences, isBatchCheckingForceCurves])
 
   // Helper function to check if a switch has force curves
   const switchHasForceCurves = useCallback(async (switchItem: Switch): Promise<boolean> => {

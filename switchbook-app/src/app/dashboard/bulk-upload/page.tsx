@@ -644,10 +644,10 @@ export default function BulkUploadPage() {
       }
     }
 
-    const tableContainer = document.querySelector('.overflow-x-auto')
+    const tableContainer = document.querySelector('.overflow-x-auto') as HTMLElement
     if (tableContainer) {
       tableContainer.addEventListener('wheel', handleWheel, { passive: false })
-      return () => tableContainer.removeEventListener('wheel', handleWheel)
+      return () => tableContainer.removeEventListener('wheel', handleWheel as EventListener)
     }
   }, [currentStep])
 
