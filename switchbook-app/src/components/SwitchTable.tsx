@@ -13,9 +13,11 @@ interface SwitchTableProps {
   onDelete: (switchId: string) => void
   onEdit: (switchData: Switch) => void
   showForceCurves: boolean
+  forceCurveCache?: Map<string, boolean>
+  forceCurvePreferencesMap?: Map<string, { folder: string; url: string }>
 }
 
-function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTableProps) {
+function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCache, forceCurvePreferencesMap }: SwitchTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (switchItem: Switch) => {
@@ -213,6 +215,8 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves }: SwitchTabl
                         manufacturer={switchItem.manufacturer}
                         variant="icon"
                         isAuthenticated={true}
+                        forceCurvesCached={forceCurveCache?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`) ?? false}
+                        savedPreference={forceCurvePreferencesMap?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`)}
                       />
                     )}
                     <button

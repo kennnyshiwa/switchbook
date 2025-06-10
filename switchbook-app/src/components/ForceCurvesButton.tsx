@@ -9,6 +9,8 @@ interface ForceCurvesButtonProps {
   variant?: 'button' | 'badge' | 'icon'
   className?: string
   isAuthenticated?: boolean
+  forceCurvesCached?: boolean
+  savedPreference?: { folder: string; url: string }
 }
 
 export default function ForceCurvesButton({ 
@@ -16,7 +18,9 @@ export default function ForceCurvesButton({
   manufacturer, 
   variant = 'button',
   className = '',
-  isAuthenticated = false
+  isAuthenticated = false,
+  forceCurvesCached,
+  savedPreference: savedPreferenceProp
 }: ForceCurvesButtonProps) {
   const [matches, setMatches] = useState<ForceCurveMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -34,56 +38,62 @@ export default function ForceCurvesButton({
 
     async function loadForceCurveData() {
       try {
-        // Check cache first, then fallback to API
         let foundMatches: ForceCurveMatch[] = []
         
-        try {
-          // Use API endpoint to check cache
-          const cacheResponse = await fetch(`/api/force-curve-check?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`)
-          
-          if (cacheResponse.ok) {
-            const cacheResult = await cacheResponse.json()
-            
-            if (cacheResult.fromCache && !cacheResult.hasForceCurve) {
-              // If cache says no force curves, don't call API
-              foundMatches = []
-            } else {
-              // Either cache says yes, or we need to check API
-              foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
-            }
+        // If we already know from the parent component whether this switch has force curves
+        if (forceCurvesCached !== undefined) {
+          if (forceCurvesCached) {
+            // We know it has force curves - we'll load the actual matches when user interacts
+            foundMatches = [] // Start empty, will be populated on demand
           } else {
-            // Fallback to direct API call if cache check fails
-            console.debug('Cache check failed, falling back to direct API:', cacheResponse.statusText)
-            foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+            // We know it doesn't have force curves
+            foundMatches = []
           }
-        } catch (cacheError) {
-          // Fallback to direct API call if cache fails
-          console.debug('Cache check failed, falling back to direct API:', cacheError)
-          foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+        } else {
+          // Fallback to cache checking for backwards compatibility
+          try {
+            // Use API endpoint to check cache ONLY
+            const cacheResponse = await fetch(`/api/force-curve-check?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`)
+            
+            if (cacheResponse.ok) {
+              const cacheResult = await cacheResponse.json()
+              
+              if (cacheResult.fromCache) {
+                // Use cached result - if cache says it has force curves, we still need to get the actual matches
+                // But only call the API if the cache confirms there are force curves
+                if (cacheResult.hasForceCurve) {
+                  foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+                } else {
+                  foundMatches = []
+                }
+              } else if (cacheResult.needsCheck) {
+                // Cache is missing/expired, defer to batch checking system
+                // Don't make individual API calls here, just show no matches for now
+                foundMatches = []
+              } else {
+                // Fallback case
+                foundMatches = []
+              }
+            } else {
+              // If cache check fails, don't make individual API calls
+              console.debug('Cache check failed, deferring to batch system:', cacheResponse.statusText)
+              foundMatches = []
+            }
+          } catch (cacheError) {
+            // If cache check fails, don't make individual API calls
+            console.debug('Cache check failed, deferring to batch system:', cacheError)
+            foundMatches = []
+          }
         }
         
         if (isMounted) {
           setMatches(foundMatches)
           
-          // Only fetch preferences if user is authenticated
-          if (isAuthenticated) {
-            try {
-              const preferenceResponse = await fetch(`/api/force-curve-preferences?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`)
-              
-              if (preferenceResponse.ok) {
-                const preference = await preferenceResponse.json()
-                if (preference?.selectedFolder) {
-                  setSavedPreference({
-                    folder: preference.selectedFolder,
-                    url: preference.selectedUrl
-                  })
-                }
-              }
-            } catch (error) {
-              // Silently ignore preference fetch errors
-              console.debug('Could not fetch force curve preferences:', error)
-            }
+          // Set saved preference from props if provided
+          if (savedPreferenceProp) {
+            setSavedPreference(savedPreferenceProp)
           }
+          // Note: We no longer fetch preferences from API since they should be passed as props
           
           setIsLoading(false)
         }
@@ -99,7 +109,7 @@ export default function ForceCurvesButton({
     return () => {
       isMounted = false
     }
-  }, [switchName, manufacturer, isAuthenticated])
+  }, [switchName, manufacturer, isAuthenticated, forceCurvesCached, savedPreferenceProp])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,8 +127,13 @@ export default function ForceCurvesButton({
     return null // Don't show anything while loading
   }
 
-  // If no matches and no saved preference, don't show anything
-  if (matches.length === 0 && !savedPreference) {
+  // If no matches and no saved preference, and we know for sure there are no force curves, don't show anything
+  if (matches.length === 0 && !savedPreference && forceCurvesCached === false) {
+    return null
+  }
+  
+  // If we know there are force curves but haven't loaded matches yet, show the button
+  if (matches.length === 0 && !savedPreference && forceCurvesCached !== true) {
     return null
   }
 
@@ -156,13 +171,31 @@ export default function ForceCurvesButton({
     }
   }
 
-  const handleClick = (url?: string) => {
+  const loadMatchesOnDemand = async () => {
+    if (matches.length === 0 && forceCurvesCached === true) {
+      // Load actual matches now
+      try {
+        const foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+        setMatches(foundMatches)
+        return foundMatches
+      } catch (error) {
+        console.error('Error loading force curve matches:', error)
+        return []
+      }
+    }
+    return matches
+  }
+
+  const handleClick = async (url?: string) => {
     // If specific URL provided (from dropdown selection), open it
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer')
       setIsDropdownOpen(false)
       return
     }
+
+    // Load matches if needed
+    const currentMatches = await loadMatchesOnDemand()
 
     // If saved preference exists and not showing all options, show preference options (authenticated users only)
     if (savedPreference && !showAllOptions && isAuthenticated) {
@@ -181,8 +214,8 @@ export default function ForceCurvesButton({
     }
 
     // If only one match and no saved preference (or unauthenticated), open it directly
-    if (matches.length === 1 && (!savedPreference || !isAuthenticated)) {
-      window.open(matches[0].url, '_blank', 'noopener,noreferrer')
+    if (currentMatches.length === 1 && (!savedPreference || !isAuthenticated)) {
+      window.open(currentMatches[0].url, '_blank', 'noopener,noreferrer')
       return
     }
 

@@ -14,9 +14,11 @@ interface SwitchCardProps {
   onDelete: (switchId: string) => void
   onEdit: (switchData: Switch) => void
   showForceCurves: boolean
+  forceCurvesCached?: boolean
+  savedPreference?: { folder: string; url: string }
 }
 
-function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: SwitchCardProps) {
+function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, forceCurvesCached, savedPreference }: SwitchCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -255,6 +257,8 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves }: S
                 variant="button"
                 className="w-full justify-center"
                 isAuthenticated={true}
+                forceCurvesCached={forceCurvesCached}
+                savedPreference={savedPreference}
               />
             </div>
           )}

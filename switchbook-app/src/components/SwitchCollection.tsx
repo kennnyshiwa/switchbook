@@ -56,6 +56,19 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   // Cache for force curve results to avoid repeated API calls
   const [forceCurveCache, setForceCurveCache] = useState<Map<string, boolean>>(new Map())
   const [isBatchCheckingForceCurves, setIsBatchCheckingForceCurves] = useState(false)
+  
+  // Create a map of force curve preferences for quick lookup
+  const forceCurvePreferencesMap = useMemo(() => {
+    const map = new Map<string, { folder: string; url: string }>()
+    forceCurvePreferences.forEach(pref => {
+      const key = `${pref.switchName}|${pref.manufacturer || ''}`
+      map.set(key, {
+        folder: pref.selectedFolder,
+        url: pref.selectedUrl
+      })
+    })
+    return map
+  }, [forceCurvePreferences])
 
   // Load existing cache entries and batch check force curves for all switches on mount
   useEffect(() => {
@@ -143,15 +156,21 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       return forceCurveCache.get(key)!
     }
     
-    // If not in cache, check individually (this should be rare after batch check)
+    // If not in cache, use API endpoint to check (this should be rare after batch check)
     try {
-      const { hasForceCurveDataCached } = await import('@/utils/forceCurveCache')
-      const result = await hasForceCurveDataCached(switchItem.name, switchItem.manufacturer || undefined)
+      const response = await fetch(`/api/force-curve-check?switchName=${encodeURIComponent(switchItem.name)}&manufacturer=${encodeURIComponent(switchItem.manufacturer || '')}`)
       
-      // Update cache with result
-      setForceCurveCache(prev => new Map(prev.set(key, result.hasForceCurve)))
-      
-      return result.hasForceCurve
+      if (response.ok) {
+        const result = await response.json()
+        
+        // Update cache with result
+        setForceCurveCache(prev => new Map(prev.set(key, result.hasForceCurve)))
+        
+        return result.hasForceCurve
+      } else {
+        console.error('Failed to check force curve availability:', response.statusText)
+        return false
+      }
     } catch (error) {
       console.error('Error checking force curve availability:', error)
       return false
@@ -491,15 +510,22 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSwitches.map((switchItem) => (
-            <SwitchCard
-              key={switchItem.id}
-              switch={switchItem}
-              onDelete={handleSwitchDeleted}
-              onEdit={setEditingSwitch}
-              showForceCurves={showForceCurves}
-            />
-          ))}
+          {filteredSwitches.map((switchItem) => {
+            const key = `${switchItem.name}|${switchItem.manufacturer || ''}`
+            const hasForceCurvesCached = forceCurveCache.get(key) ?? false
+            const savedPreference = forceCurvePreferencesMap.get(key)
+            return (
+              <SwitchCard
+                key={switchItem.id}
+                switch={switchItem}
+                onDelete={handleSwitchDeleted}
+                onEdit={setEditingSwitch}
+                showForceCurves={showForceCurves}
+                forceCurvesCached={hasForceCurvesCached}
+                savedPreference={savedPreference}
+              />
+            )
+          })}
         </div>
       ) : (
         <SwitchTable
@@ -507,6 +533,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           onDelete={handleSwitchDeleted}
           onEdit={setEditingSwitch}
           showForceCurves={showForceCurves}
+          forceCurveCache={forceCurveCache}
+          forceCurvePreferencesMap={forceCurvePreferencesMap}
         />
       )}
 
