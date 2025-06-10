@@ -681,7 +681,34 @@ export default function BulkUploadPage() {
   const downloadTemplate = () => {
     const templateHeaders = switchFields.map(field => field.label)
     const sampleData = [
-      'Cherry MX Red', '樱桃红轴', 'LINEAR', 'MECHANICAL', '', '', '', '', '', '', '', '', 'MX-style', 'Cherry', '45g', '11.5mm', '45', '60', '2.0', '4.0', 'Nylon', 'Nylon', 'POM', 'Great for gaming', '', '2024-01-15'
+      'Cherry MX Red', // Switch Name
+      '樱桃红轴', // Chinese Name
+      'LINEAR', // Type
+      'MECHANICAL', // Technology
+      '', // Magnetic Pole Orientation
+      '', // Magnet Position
+      '', // Magnet Polarity
+      '', // Initial Force (g)
+      '', // Initial Magnetic Flux (Gs)
+      '', // Bottom Out Magnetic Flux (Gs)
+      '', // PCB Thickness
+      'MX-style', // Compatibility
+      'Cherry', // Manufacturer
+      '45g', // Spring Weight
+      '11.5mm', // Spring Length
+      '45', // Actuation Force (g)
+      '60', // Bottom Out Force (g)
+      '2.0', // Pre-travel (mm)
+      '4.0', // Bottom Out (mm)
+      'Nylon', // Top Housing
+      'Nylon', // Bottom Housing
+      'POM', // Stem
+      '', // Franken Top
+      '', // Franken Bottom
+      '', // Franken Stem
+      'Great for gaming', // Notes
+      '', // Image URL
+      '2024-01-15' // Date Obtained
     ]
     
     const csvContent = [templateHeaders, sampleData].map(row => 
@@ -1082,6 +1109,7 @@ export default function BulkUploadPage() {
                 <li>• Magnet Polarity (if provided) must be: North or South (case-insensitive)</li>
                 <li>• Compatibility is a free text field (e.g., &quot;MX-style&quot;, &quot;Cherry MX&quot;, &quot;3-pin&quot;, &quot;5-pin&quot;)</li>
                 <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
+                <li>• Franken Top, Franken Bottom, Franken Stem are free text fields for custom switch modifications</li>
                 <li>• Forces should be numeric values in grams</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
               </ul>
