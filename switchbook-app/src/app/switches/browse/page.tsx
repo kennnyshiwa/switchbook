@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
 import debounce from 'lodash/debounce'
 
@@ -53,8 +54,8 @@ export default function BrowseMasterSwitchesPage() {
   const [page, setPage] = useState(1)
 
   // Debounce search input
-  const debouncedSetSearch = useCallback(
-    debounce((value: string) => {
+  const debouncedSetSearch = useMemo(
+    () => debounce((value: string) => {
       setDebouncedSearch(value)
       setPage(1)
     }, 300),
@@ -255,11 +256,15 @@ export default function BrowseMasterSwitchesPage() {
                     className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow"
                   >
                     {switchItem.imageUrl && (
-                      <img
-                        src={switchItem.imageUrl}
-                        alt={switchItem.name}
-                        className="w-full h-48 object-cover rounded-md mb-4"
-                      />
+                      <div className="relative w-full h-48 mb-4">
+                        <Image
+                          src={switchItem.imageUrl}
+                          alt={switchItem.name}
+                          fill
+                          className="object-cover rounded-md"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                      </div>
                     )}
                     
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">

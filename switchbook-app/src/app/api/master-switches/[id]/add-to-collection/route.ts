@@ -1,23 +1,24 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { MasterSwitchStatus } from '@prisma/client'
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+    
     // Get the master switch
     const masterSwitch = await prisma.masterSwitch.findFirst({
       where: {
-        id: params.id,
+        id: id,
         status: MasterSwitchStatus.APPROVED
       }
     })
@@ -33,7 +34,7 @@ export async function POST(
     const existingSwitch = await prisma.switch.findFirst({
       where: {
         userId: session.user.id,
-        masterSwitchId: params.id
+        masterSwitchId: id
       }
     })
 

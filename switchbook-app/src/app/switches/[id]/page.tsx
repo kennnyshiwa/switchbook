@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
 
 interface MasterSwitchDetail {
@@ -51,7 +52,7 @@ interface MasterSwitchDetail {
   approvedAt?: string
 }
 
-export default function MasterSwitchDetailPage({ params }: { params: { id: string } }) {
+export default function MasterSwitchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [switchData, setSwitchData] = useState<MasterSwitchDetail | null>(null)
@@ -67,7 +68,8 @@ export default function MasterSwitchDetailPage({ params }: { params: { id: strin
 
     const fetchSwitch = async () => {
       try {
-        const response = await fetch(`/api/master-switches/${params.id}`)
+        const { id } = await params
+        const response = await fetch(`/api/master-switches/${id}`)
         if (response.ok) {
           const data = await response.json()
           setSwitchData(data)
@@ -83,7 +85,7 @@ export default function MasterSwitchDetailPage({ params }: { params: { id: strin
     }
 
     fetchSwitch()
-  }, [params.id, session, status, router])
+  }, [params, session, status, router])
 
   const addToCollection = async () => {
     if (!switchData) return
@@ -190,12 +192,15 @@ export default function MasterSwitchDetailPage({ params }: { params: { id: strin
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {switchData.imageUrl && (
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <img
-                src={switchData.imageUrl}
-                alt={switchData.name}
-                className="max-w-full h-auto rounded-lg mx-auto"
-                style={{ maxHeight: '400px' }}
-              />
+              <div className="relative mx-auto" style={{ maxWidth: '600px', height: '400px' }}>
+                <Image
+                  src={switchData.imageUrl}
+                  alt={switchData.name}
+                  fill
+                  className="object-contain rounded-lg"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
+                />
+              </div>
             </div>
           )}
 
