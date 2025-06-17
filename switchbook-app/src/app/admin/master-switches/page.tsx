@@ -29,17 +29,6 @@ export default function AdminMasterSwitchesPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      router.push('/dashboard');
-      return;
-    }
-
-    fetchSubmissions();
-  }, [session, status, router, filter, fetchSubmissions]);
-
   const fetchSubmissions = useCallback(async () => {
     try {
       const response = await fetch(`/api/admin/master-switches?status=${filter}`);
@@ -53,6 +42,17 @@ export default function AdminMasterSwitchesPage() {
       setLoading(false);
     }
   }, [filter]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!session || session.user.role !== 'ADMIN') {
+      router.push('/dashboard');
+      return;
+    }
+
+    fetchSubmissions();
+  }, [session, status, router, filter, fetchSubmissions]);
 
   const handleApprove = async (id: string) => {
     if (!confirm('Are you sure you want to approve this submission?')) return;
