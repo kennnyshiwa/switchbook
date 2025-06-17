@@ -17,10 +17,10 @@ const masterSwitchSubmissionSchema = z.object({
   compatibility: z.string().optional(),
   
   // Physical specifications
-  actuationForce: z.number().min(0).max(200).optional(),
-  bottomOutForce: z.number().min(0).max(200).optional(),
-  preTravel: z.number().min(0).max(10).optional(),
-  totalTravel: z.number().min(0).max(10).optional(),
+  actuationForce: z.number().min(0).max(200).optional().or(z.nan()),
+  bottomOutForce: z.number().min(0).max(200).optional().or(z.nan()),
+  preTravel: z.number().min(0).max(10).optional().or(z.nan()),
+  totalTravel: z.number().min(0).max(10).optional().or(z.nan()),
   
   // Spring specifications
   springType: z.string().optional(),
@@ -35,16 +35,22 @@ const masterSwitchSubmissionSchema = z.object({
   stemColor: z.string().optional(),
   
   // Magnetic specifications (only for magnetic switches)
-  magneticActuationPoint: z.number().min(0).max(10).optional(),
-  magneticBottomOut: z.number().min(0).max(10).optional(),
-  magneticInitialPosition: z.number().min(0).max(10).optional(),
+  magneticActuationPoint: z.number().min(0).max(10).optional().or(z.nan()),
+  magneticBottomOut: z.number().min(0).max(10).optional().or(z.nan()),
+  magneticInitialPosition: z.number().min(0).max(10).optional().or(z.nan()),
   
   // Additional info
   preLubed: z.boolean().optional(),
-  releaseYear: z.number().min(1970).max(new Date().getFullYear() + 1).optional(),
+  releaseYear: z.number().min(1970).max(new Date().getFullYear() + 1).optional().or(z.nan()),
   lifespan: z.string().optional(),
-  productUrl: z.string().url().optional().or(z.literal('')),
-  imageUrl: z.string().url().optional().or(z.literal('')),
+  productUrl: z.string().optional().refine(
+    (val) => !val || val === '' || /^https?:\/\/.+/.test(val),
+    { message: 'Please enter a valid URL or leave empty' }
+  ),
+  imageUrl: z.string().optional().refine(
+    (val) => !val || val === '' || /^https?:\/\/.+/.test(val),
+    { message: 'Please enter a valid URL or leave empty' }
+  ),
   notes: z.string().optional(),
   
   // Submission reason
@@ -71,6 +77,24 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
     resolver: zodResolver(masterSwitchSubmissionSchema),
   });
 
+  // Clean data before submission
+  const handleFormSubmit = (data: MasterSwitchSubmissionData) => {
+    // Convert NaN values to undefined for optional number fields
+    const cleanedData = {
+      ...data,
+      actuationForce: isNaN(data.actuationForce as number) ? undefined : data.actuationForce,
+      bottomOutForce: isNaN(data.bottomOutForce as number) ? undefined : data.bottomOutForce,
+      preTravel: isNaN(data.preTravel as number) ? undefined : data.preTravel,
+      totalTravel: isNaN(data.totalTravel as number) ? undefined : data.totalTravel,
+      magneticActuationPoint: isNaN(data.magneticActuationPoint as number) ? undefined : data.magneticActuationPoint,
+      magneticBottomOut: isNaN(data.magneticBottomOut as number) ? undefined : data.magneticBottomOut,
+      magneticInitialPosition: isNaN(data.magneticInitialPosition as number) ? undefined : data.magneticInitialPosition,
+      releaseYear: isNaN(data.releaseYear as number) ? undefined : data.releaseYear,
+    };
+    
+    onSubmit(cleanedData);
+  };
+
   const manufacturerValue = watch('manufacturer');
   const technologyValue = watch('technology');
 
@@ -82,7 +106,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       {/* Basic Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
@@ -455,6 +479,9 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
               placeholder="https://..."
             />
+            {errors.productUrl && (
+              <p className="mt-1 text-sm text-red-600">{errors.productUrl.message}</p>
+            )}
           </div>
 
           <div>
@@ -467,6 +494,9 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
               placeholder="https://..."
             />
+            {errors.imageUrl && (
+              <p className="mt-1 text-sm text-red-600">{errors.imageUrl.message}</p>
+            )}
           </div>
 
           <div>
