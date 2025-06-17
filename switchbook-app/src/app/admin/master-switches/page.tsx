@@ -50,6 +50,8 @@ export default function AdminMasterSwitchesPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'submissions' | 'edits'>('submissions');
+  const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
+  const [expandedEdit, setExpandedEdit] = useState<string | null>(null);
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -330,25 +332,20 @@ export default function AdminMasterSwitchesPage() {
 
                   {/* View Details */}
                   <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => setExpandedSubmission(expandedSubmission === submission.id ? null : submission.id)}
+                      className="text-blue-600 hover:underline text-sm dark:text-blue-400"
+                    >
+                      {expandedSubmission === submission.id ? 'Hide Details' : 'View Details'} →
+                    </button>
+                    
                     <Link
                       href={`/switches/${submission.id}`}
                       target="_blank"
-                      className="text-blue-600 hover:underline text-sm dark:text-blue-400"
+                      className="text-purple-600 hover:underline text-sm dark:text-purple-400"
                     >
-                      View Details →
+                      View Public Page ↗
                     </Link>
-                    
-                    {submission.originalSubmissionData && (
-                      <button
-                        onClick={() => {
-                          const data = submission.originalSubmissionData;
-                          alert(JSON.stringify(data, null, 2));
-                        }}
-                        className="text-gray-600 hover:underline text-sm dark:text-gray-400"
-                      >
-                        View Raw Submission
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -372,6 +369,91 @@ export default function AdminMasterSwitchesPage() {
                   </div>
                 )}
               </div>
+              
+              {/* Expanded Details */}
+              {expandedSubmission === submission.id && submission.originalSubmissionData && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Full Switch Details</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    {/* Basic Info */}
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-gray-700 dark:text-gray-300">Basic Information</h5>
+                      {submission.originalSubmissionData.name && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Name:</span> {submission.originalSubmissionData.name}</p>
+                      )}
+                      {submission.originalSubmissionData.chineseName && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Chinese Name:</span> {submission.originalSubmissionData.chineseName}</p>
+                      )}
+                      {submission.originalSubmissionData.manufacturer && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Manufacturer:</span> {submission.originalSubmissionData.manufacturer}</p>
+                      )}
+                      {submission.originalSubmissionData.type && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Type:</span> {submission.originalSubmissionData.type}</p>
+                      )}
+                      {submission.originalSubmissionData.technology && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Technology:</span> {submission.originalSubmissionData.technology}</p>
+                      )}
+                    </div>
+                    
+                    {/* Force Specs */}
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-gray-700 dark:text-gray-300">Force Specifications</h5>
+                      {submission.originalSubmissionData.actuationForce && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Actuation Force:</span> {submission.originalSubmissionData.actuationForce}g</p>
+                      )}
+                      {submission.originalSubmissionData.bottomOutForce && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Bottom Out Force:</span> {submission.originalSubmissionData.bottomOutForce}g</p>
+                      )}
+                      {submission.originalSubmissionData.initialForce && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Initial Force:</span> {submission.originalSubmissionData.initialForce}g</p>
+                      )}
+                      {submission.originalSubmissionData.preTravel && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Pre Travel:</span> {submission.originalSubmissionData.preTravel}mm</p>
+                      )}
+                      {submission.originalSubmissionData.bottomOut && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Total Travel:</span> {submission.originalSubmissionData.bottomOut}mm</p>
+                      )}
+                    </div>
+                    
+                    {/* Materials */}
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-gray-700 dark:text-gray-300">Materials</h5>
+                      {submission.originalSubmissionData.topHousing && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Top Housing:</span> {submission.originalSubmissionData.topHousing}</p>
+                      )}
+                      {submission.originalSubmissionData.bottomHousing && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Bottom Housing:</span> {submission.originalSubmissionData.bottomHousing}</p>
+                      )}
+                      {submission.originalSubmissionData.stem && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Stem:</span> {submission.originalSubmissionData.stem}</p>
+                      )}
+                      {submission.originalSubmissionData.springWeight && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Spring Weight:</span> {submission.originalSubmissionData.springWeight}</p>
+                      )}
+                      {submission.originalSubmissionData.springLength && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Spring Length:</span> {submission.originalSubmissionData.springLength}</p>
+                      )}
+                    </div>
+                    
+                    {/* Additional Info */}
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-gray-700 dark:text-gray-300">Additional Information</h5>
+                      {submission.originalSubmissionData.compatibility && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Compatibility:</span> {submission.originalSubmissionData.compatibility}</p>
+                      )}
+                      {submission.originalSubmissionData.imageUrl && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Image URL:</span> <a href={submission.originalSubmissionData.imageUrl} target="_blank" className="text-blue-600 hover:underline dark:text-blue-400">View Image</a></p>
+                      )}
+                      {submission.originalSubmissionData.notes && (
+                        <div className="text-gray-900 dark:text-white">
+                          <span className="font-medium">Notes:</span>
+                          <p className="mt-1 text-gray-600 dark:text-gray-400">{submission.originalSubmissionData.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))
           )}
@@ -429,19 +511,18 @@ export default function AdminMasterSwitchesPage() {
                     )}
 
                     <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setExpandedEdit(expandedEdit === edit.id ? null : edit.id)}
+                        className="text-blue-600 hover:underline text-sm dark:text-blue-400"
+                      >
+                        {expandedEdit === edit.id ? 'Hide Changes' : 'View Changes'} →
+                      </button>
                       <Link
                         href={`/switches/${edit.masterSwitch.id}`}
                         target="_blank"
-                        className="text-blue-600 hover:underline text-sm dark:text-blue-400"
-                      >
-                        View Switch →
-                      </Link>
-                      <Link
-                        href={`/switches/${edit.masterSwitch.id}/history`}
-                        target="_blank"
                         className="text-purple-600 hover:underline text-sm dark:text-purple-400"
                       >
-                        View History →
+                        View Switch ↗
                       </Link>
                     </div>
                   </div>
@@ -465,6 +546,40 @@ export default function AdminMasterSwitchesPage() {
                     </div>
                   )}
                 </div>
+                
+                {/* Expanded Edit Details */}
+                {expandedEdit === edit.id && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Proposed Changes</h4>
+                    <div className="space-y-3">
+                      {edit.changedFields.map(field => {
+                        const previousValue = edit.previousData[field];
+                        const newValue = edit.newData[field];
+                        
+                        return (
+                          <div key={field} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded">
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
+                              </p>
+                              <div className="text-sm">
+                                <span className="text-red-600 dark:text-red-400">Previous: </span>
+                                <span className="text-gray-900 dark:text-white">{previousValue || 'None'}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">&nbsp;</p>
+                              <div className="text-sm">
+                                <span className="text-green-600 dark:text-green-400">New: </span>
+                                <span className="text-gray-900 dark:text-white">{newValue || 'None'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}

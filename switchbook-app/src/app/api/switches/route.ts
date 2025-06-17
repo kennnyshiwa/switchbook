@@ -65,6 +65,38 @@ async function createSwitchHandler(request: NextRequest) {
       )
     }
 
+    // Extract masterSwitchId if provided (it's not part of the schema validation)
+    const masterSwitchId = body.masterSwitchId
+
+    // If masterSwitchId is provided, verify it exists and is approved
+    if (masterSwitchId) {
+      const masterSwitch = await prisma.masterSwitch.findUnique({
+        where: { id: masterSwitchId },
+        select: { status: true, version: true }
+      })
+
+      if (!masterSwitch || masterSwitch.status !== 'APPROVED') {
+        return NextResponse.json(
+          { error: "Invalid master switch" },
+          { status: 400 }
+        )
+      }
+
+      // Create switch linked to master database
+      const newSwitch = await prisma.switch.create({
+        data: {
+          ...transformedData,
+          userId,
+          masterSwitchId,
+          masterSwitchVersion: masterSwitch.version,
+          isModified: false
+        },
+      })
+
+      return NextResponse.json(newSwitch)
+    }
+
+    // Create regular switch without master link
     const newSwitch = await prisma.switch.create({
       data: {
         ...transformedData,
