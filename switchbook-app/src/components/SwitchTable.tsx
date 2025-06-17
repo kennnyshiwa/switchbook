@@ -111,10 +111,30 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
               <tr key={switchItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td className="px-6 py-4 whitespace-nowrap">
                   {!switchItem.name && switchItem.chineseName ? (
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{switchItem.chineseName}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                      {switchItem.chineseName}
+                      {switchItem.masterSwitchId && (
+                        <span 
+                          className="inline-flex items-center justify-center w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full"
+                          title="Linked to Master Database"
+                        >
+                          M
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{switchItem.name}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                        {switchItem.name}
+                        {switchItem.masterSwitchId && (
+                          <span 
+                            className="inline-flex items-center justify-center w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full"
+                            title="Linked to Master Database"
+                          >
+                            M
+                          </span>
+                        )}
+                      </div>
                       {switchItem.chineseName && (
                         <div className="text-sm text-gray-600 dark:text-gray-300">{switchItem.chineseName}</div>
                       )}
