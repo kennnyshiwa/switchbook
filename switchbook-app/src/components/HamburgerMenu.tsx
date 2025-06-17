@@ -130,6 +130,17 @@ export default function HamburgerMenu({ shareableId, isAdmin }: HamburgerMenuPro
               </Link>
 
               <Link
+                href="/switches/browse"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Browse Master Switches
+              </Link>
+
+              <Link
                 href="/dashboard/bulk-upload"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"

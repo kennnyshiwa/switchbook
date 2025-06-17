@@ -25,6 +25,10 @@ model User {
   manufacturers         Manufacturer[]
   accounts              Account[]
   forceCurveFeedback    ForceCurveFeedback[]
+  submittedMasterSwitches MasterSwitch[]       @relation("SubmittedBy")
+  approvedMasterSwitches  MasterSwitch[]       @relation("ApprovedBy")
+  masterSwitchEdits       MasterSwitchEdit[]   @relation("EditedBy")
+  approvedEdits           MasterSwitchEdit[]   @relation("ApprovedEditBy")
 }
 
 model Switch {
@@ -61,6 +65,13 @@ model Switch {
   updatedAt       DateTime         @updatedAt
   userId          String
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Master switch relationship
+  masterSwitchId  String?
+  masterSwitch    MasterSwitch?    @relation(fields: [masterSwitchId], references: [id], onDelete: SetNull)
+  isModified      Boolean          @default(false)
+  modifiedFields  Json?            // Array of field names that were modified
+  masterSwitchVersion Int?         // Version of the master switch this was based on
 }
 
 model Manufacturer {
@@ -174,4 +185,86 @@ enum SwitchTechnology {
   MAGNETIC
   INDUCTIVE
   ELECTRO_CAPACITIVE
+}
+
+// Master Switch Database Models
+model MasterSwitch {
+  id                    String               @id @default(cuid())
+  name                  String
+  chineseName           String?
+  type                  SwitchType?
+  technology            SwitchTechnology?
+  magnetOrientation     String?
+  magnetPosition        String?
+  magnetPolarity        String?
+  initialForce          Float?
+  initialMagneticFlux   Float?
+  bottomOutMagneticFlux Float?
+  pcbThickness          String?
+  compatibility         String?
+  springWeight          String?
+  springLength          String?
+  actuationForce        Float?
+  bottomOutForce        Float?
+  preTravel             Float?
+  bottomOut             Float?
+  manufacturer          String?
+  notes                 String?
+  imageUrl              String?
+  topHousing            String?
+  bottomHousing         String?
+  stem                  String?
+  frankenTop            String?
+  frankenBottom         String?
+  frankenStem           String?
+  
+  // Submission metadata
+  submittedById         String
+  submittedBy           User                 @relation("SubmittedBy", fields: [submittedById], references: [id])
+  approvedById          String?
+  approvedBy            User?                @relation("ApprovedBy", fields: [approvedById], references: [id])
+  approvedAt            DateTime?
+  status                MasterSwitchStatus   @default(PENDING)
+  rejectionReason       String?
+  version               Int                  @default(1)
+  viewCount             Int                  @default(0)
+  lastModifiedAt        DateTime             @default(now())
+  originalSubmissionData Json?               // Store original submission for audit
+  
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  
+  // Relations
+  userSwitches          Switch[]
+  edits                 MasterSwitchEdit[]
+  
+  @@index([name, manufacturer])
+  @@index([status])
+  @@index([submittedById])
+}
+
+model MasterSwitchEdit {
+  id                    String               @id @default(cuid())
+  masterSwitchId        String
+  masterSwitch          MasterSwitch         @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  editedById            String
+  editedBy              User                 @relation("EditedBy", fields: [editedById], references: [id])
+  previousData          Json                 // Store the entire previous state
+  newData               Json                 // Store the proposed new state
+  changedFields         Json                 // Array of field names that changed
+  editedAt              DateTime             @default(now())
+  approvedById          String?
+  approvedBy            User?                @relation("ApprovedEditBy", fields: [approvedById], references: [id])
+  status                MasterSwitchStatus   @default(PENDING)
+  rejectionReason       String?
+  
+  @@index([masterSwitchId])
+  @@index([editedById])
+  @@index([status])
+}
+
+enum MasterSwitchStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
