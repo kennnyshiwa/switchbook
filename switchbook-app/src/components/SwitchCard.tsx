@@ -58,11 +58,31 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
           <div className="flex-1 pr-2">
             {!switchItem.name && switchItem.chineseName ? (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.chineseName}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  {switchItem.chineseName}
+                  {switchItem.masterSwitchId && (
+                    <span 
+                      className="inline-flex items-center justify-center w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full"
+                      title="Linked to Master Database"
+                    >
+                      M
+                    </span>
+                  )}
+                </h3>
               </>
             ) : (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{switchItem.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  {switchItem.name}
+                  {switchItem.masterSwitchId && (
+                    <span 
+                      className="inline-flex items-center justify-center w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full"
+                      title="Linked to Master Database"
+                    >
+                      M
+                    </span>
+                  )}
+                </h3>
                 {switchItem.chineseName && (
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{switchItem.chineseName}</p>
                 )}
