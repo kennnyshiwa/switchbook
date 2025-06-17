@@ -200,10 +200,10 @@ export default function AdminMasterSwitchesPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Master Switch Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Master Switch Management</h1>
           <Link
             href="/admin"
-            className="text-blue-600 hover:text-blue-700"
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           >
             ← Back to Admin
           </Link>
@@ -218,8 +218,8 @@ export default function AdminMasterSwitchesPage() {
               onClick={() => setActiveTab('submissions')}
               className={`py-2 px-6 border-b-2 font-medium text-sm ${
                 activeTab === 'submissions'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
               }`}
             >
               New Submissions
@@ -233,8 +233,8 @@ export default function AdminMasterSwitchesPage() {
               onClick={() => setActiveTab('edits')}
               className={`py-2 px-6 border-b-2 font-medium text-sm ${
                 activeTab === 'edits'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
               }`}
             >
               Edit Suggestions
@@ -258,8 +258,8 @@ export default function AdminMasterSwitchesPage() {
                 onClick={() => setFilter(status)}
                 className={`py-2 px-6 border-b-2 font-medium text-sm ${
                   filter === status
-                    ? 'border-purple-500 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -279,7 +279,7 @@ export default function AdminMasterSwitchesPage() {
         <div className="space-y-4">
           {submissions.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-              <p className="text-gray-500">No {filter === 'all' ? '' : filter} submissions found.</p>
+              <p className="text-gray-500 dark:text-gray-400">No {filter === 'all' ? '' : filter} submissions found.</p>
             </div>
           ) : (
             submissions.map((submission) => (
@@ -290,15 +290,15 @@ export default function AdminMasterSwitchesPage() {
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-semibold">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                       {submission.name}
                     </h3>
                     <span className={`px-3 py-1 text-sm font-medium rounded-full ${
                       submission.status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200'
                         : submission.status === 'APPROVED'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
                     }`}>
                       {submission.status}
                     </span>
@@ -317,7 +317,7 @@ export default function AdminMasterSwitchesPage() {
                       <span className="font-medium">Submitted by:</span>{' '}
                       <Link
                         href={`/admin/users?search=${submission.submittedBy.email}`}
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline dark:text-blue-400"
                       >
                         {submission.submittedBy.username}
                       </Link>
@@ -333,7 +333,7 @@ export default function AdminMasterSwitchesPage() {
                     <Link
                       href={`/switches/${submission.id}`}
                       target="_blank"
-                      className="text-blue-600 hover:underline text-sm"
+                      className="text-blue-600 hover:underline text-sm dark:text-blue-400"
                     >
                       View Details →
                     </Link>
@@ -344,7 +344,7 @@ export default function AdminMasterSwitchesPage() {
                           const data = submission.originalSubmissionData;
                           alert(JSON.stringify(data, null, 2));
                         }}
-                        className="text-gray-600 hover:underline text-sm"
+                        className="text-gray-600 hover:underline text-sm dark:text-gray-400"
                       >
                         View Raw Submission
                       </button>
@@ -380,7 +380,7 @@ export default function AdminMasterSwitchesPage() {
         <div className="space-y-4">
           {editSuggestions.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-              <p className="text-gray-500">No {filter === 'all' ? '' : filter} edit suggestions found.</p>
+              <p className="text-gray-500 dark:text-gray-400">No {filter === 'all' ? '' : filter} edit suggestions found.</p>
             </div>
           ) : (
             editSuggestions.map((edit) => (
@@ -391,15 +391,15 @@ export default function AdminMasterSwitchesPage() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                         Edit Suggestion for {edit.masterSwitch.name}
                       </h3>
                       <span className={`px-3 py-1 text-sm font-medium rounded-full ${
                         edit.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200'
                           : edit.status === 'APPROVED'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
                       }`}>
                         {edit.status}
                       </span>
@@ -422,7 +422,7 @@ export default function AdminMasterSwitchesPage() {
 
                     {edit.newData.editReason && (
                       <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-3 mb-4">
-                        <p className="text-sm">
+                        <p className="text-sm text-gray-900 dark:text-white">
                           <span className="font-medium">Edit reason:</span> {edit.newData.editReason}
                         </p>
                       </div>
@@ -432,14 +432,14 @@ export default function AdminMasterSwitchesPage() {
                       <Link
                         href={`/switches/${edit.masterSwitch.id}`}
                         target="_blank"
-                        className="text-blue-600 hover:underline text-sm"
+                        className="text-blue-600 hover:underline text-sm dark:text-blue-400"
                       >
                         View Switch →
                       </Link>
                       <Link
                         href={`/switches/${edit.masterSwitch.id}/history`}
                         target="_blank"
-                        className="text-purple-600 hover:underline text-sm"
+                        className="text-purple-600 hover:underline text-sm dark:text-purple-400"
                       >
                         View History →
                       </Link>
