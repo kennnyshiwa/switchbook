@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { MasterSwitchStatus } from '@prisma/client'
+import { sendAdminEditSuggestionEmail } from '@/lib/email'
 
 // Schema for edit suggestion
 const editSuggestionSchema = z.object({
@@ -123,11 +124,35 @@ export async function POST(
           select: {
             name: true,
           }
+        },
+        editedBy: {
+          select: {
+            username: true
+          }
         }
       }
     })
 
-    // TODO: Send notification email to admins about new edit suggestion
+    // Send notification emails to all admins
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { email: true }
+    })
+
+    // Send emails to all admins asynchronously (don't wait for completion)
+    Promise.all(
+      admins.map(admin => 
+        sendAdminEditSuggestionEmail(
+          admin.email,
+          editSuggestion.editedBy.username,
+          editSuggestion.masterSwitch.name,
+          id,
+          editSuggestion.id
+        )
+      )
+    ).catch(error => {
+      console.error('Failed to send admin notification emails:', error)
+    })
 
     return NextResponse.json({
       id: editSuggestion.id,

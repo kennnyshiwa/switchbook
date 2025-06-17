@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { sendAdminNewSubmissionEmail } from '@/lib/email'
 
 // Schema for master switch submission
 const submissionSchema = z.object({
@@ -199,7 +200,31 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // TODO: Send notification email to admins about new submission
+    // Get the user who submitted for the email
+    const submitter = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { username: true }
+    })
+
+    // Send notification emails to all admins
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { email: true }
+    })
+
+    // Send emails to all admins asynchronously (don't wait for completion)
+    Promise.all(
+      admins.map(admin => 
+        sendAdminNewSubmissionEmail(
+          admin.email,
+          submitter?.username || 'Unknown User',
+          masterSwitch.name,
+          masterSwitch.id
+        )
+      )
+    ).catch(error => {
+      console.error('Failed to send admin notification emails:', error)
+    })
 
     return NextResponse.json({
       id: masterSwitch.id,
