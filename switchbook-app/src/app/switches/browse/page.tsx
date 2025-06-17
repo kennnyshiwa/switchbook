@@ -19,7 +19,21 @@ interface MasterSwitch {
   bottomOutForce?: number
   preTravel?: number
   bottomOut?: number
+  springWeight?: string
+  springLength?: string
+  notes?: string
   imageUrl?: string
+  topHousing?: string
+  bottomHousing?: string
+  stem?: string
+  magnetOrientation?: string
+  magnetPosition?: string
+  magnetPolarity?: string
+  initialForce?: number
+  initialMagneticFlux?: number
+  bottomOutMagneticFlux?: number
+  pcbThickness?: string
+  compatibility?: string
   inCollection: boolean
   userCount: number
   submittedBy: {
@@ -266,10 +280,10 @@ export default function BrowseMasterSwitchesPage() {
                 {switches.map((switchItem) => (
                   <div
                     key={switchItem.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow"
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow flex flex-col max-h-[600px]"
                   >
                     {switchItem.imageUrl && (
-                      <div className="relative w-full h-48 mb-4">
+                      <div className="relative w-full h-48 mb-4 flex-shrink-0">
                         <Image
                           src={switchItem.imageUrl}
                           alt={switchItem.name}
@@ -280,7 +294,7 @@ export default function BrowseMasterSwitchesPage() {
                       </div>
                     )}
                     
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex-shrink-0">
                       {switchItem.name}
                       {switchItem.chineseName && (
                         <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
@@ -289,22 +303,111 @@ export default function BrowseMasterSwitchesPage() {
                       )}
                     </h3>
 
-                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4 overflow-y-auto flex-grow">
+                      {/* Basic Info */}
                       {switchItem.manufacturer && (
-                        <p>Manufacturer: {switchItem.manufacturer}</p>
+                        <p><span className="font-medium">Manufacturer:</span> {switchItem.manufacturer}</p>
                       )}
                       {switchItem.type && (
-                        <p>Type: {switchItem.type.replace('_', ' ')}</p>
+                        <p><span className="font-medium">Type:</span> {switchItem.type.replace('_', ' ')}</p>
                       )}
-                      {switchItem.actuationForce && (
-                        <p>Actuation: {switchItem.actuationForce}g</p>
+                      {switchItem.technology && (
+                        <p><span className="font-medium">Technology:</span> {switchItem.technology.replace('_', ' ')}</p>
                       )}
-                      <p className="text-xs">
+                      
+                      {/* Force Specifications */}
+                      <div className="pt-1">
+                        {switchItem.actuationForce && (
+                          <p><span className="font-medium">Actuation:</span> {switchItem.actuationForce}g</p>
+                        )}
+                        {switchItem.bottomOutForce && (
+                          <p><span className="font-medium">Bottom Out:</span> {switchItem.bottomOutForce}g</p>
+                        )}
+                        {switchItem.initialForce && (
+                          <p><span className="font-medium">Initial Force:</span> {switchItem.initialForce}g</p>
+                        )}
+                      </div>
+                      
+                      {/* Travel Distances */}
+                      <div className="pt-1">
+                        {switchItem.preTravel && (
+                          <p><span className="font-medium">Pre Travel:</span> {switchItem.preTravel}mm</p>
+                        )}
+                        {switchItem.bottomOut && (
+                          <p><span className="font-medium">Total Travel:</span> {switchItem.bottomOut}mm</p>
+                        )}
+                      </div>
+                      
+                      {/* Spring Specifications */}
+                      {(switchItem.springWeight || switchItem.springLength) && (
+                        <div className="pt-1">
+                          {switchItem.springWeight && (
+                            <p><span className="font-medium">Spring:</span> {switchItem.springWeight}</p>
+                          )}
+                          {switchItem.springLength && (
+                            <p><span className="font-medium">Spring Length:</span> {switchItem.springLength}</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Materials */}
+                      {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
+                        <div className="pt-1">
+                          {switchItem.topHousing && (
+                            <p><span className="font-medium">Top Housing:</span> {switchItem.topHousing}</p>
+                          )}
+                          {switchItem.bottomHousing && (
+                            <p><span className="font-medium">Bottom Housing:</span> {switchItem.bottomHousing}</p>
+                          )}
+                          {switchItem.stem && (
+                            <p><span className="font-medium">Stem:</span> {switchItem.stem}</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Magnetic Properties (for magnetic switches) */}
+                      {switchItem.technology === 'MAGNETIC' && (
+                        <div className="pt-1">
+                          {switchItem.magnetOrientation && (
+                            <p><span className="font-medium">Magnet Orientation:</span> {switchItem.magnetOrientation}</p>
+                          )}
+                          {switchItem.magnetPosition && (
+                            <p><span className="font-medium">Magnet Position:</span> {switchItem.magnetPosition}</p>
+                          )}
+                          {switchItem.magnetPolarity && (
+                            <p><span className="font-medium">Magnet Polarity:</span> {switchItem.magnetPolarity}</p>
+                          )}
+                          {switchItem.initialMagneticFlux && (
+                            <p><span className="font-medium">Initial Flux:</span> {switchItem.initialMagneticFlux}</p>
+                          )}
+                          {switchItem.bottomOutMagneticFlux && (
+                            <p><span className="font-medium">Bottom Out Flux:</span> {switchItem.bottomOutMagneticFlux}</p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Additional Info */}
+                      {switchItem.pcbThickness && (
+                        <p><span className="font-medium">PCB Thickness:</span> {switchItem.pcbThickness}</p>
+                      )}
+                      {switchItem.compatibility && (
+                        <p><span className="font-medium">Compatibility:</span> {switchItem.compatibility}</p>
+                      )}
+                      
+                      {/* Notes */}
+                      {switchItem.notes && (
+                        <div className="pt-1">
+                          <p className="text-xs italic">{switchItem.notes}</p>
+                        </div>
+                      )}
+                      
+                      {/* User Count */}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 pt-1">
                         Used by {switchItem.userCount} {switchItem.userCount === 1 ? 'person' : 'people'}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-shrink-0 pt-2 border-t border-gray-200 dark:border-gray-700">
                       {switchItem.inCollection ? (
                         <span className="text-green-600 dark:text-green-400 text-sm">
                           ✓ In your collection

@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { MasterSwitchStatus } from '@prisma/client'
 import { z } from 'zod'
+import { sendMasterSwitchRejectionEmail } from '@/lib/email'
 
 const rejectSchema = z.object({
   reason: z.string().min(1, 'Rejection reason is required')
@@ -29,6 +30,7 @@ export async function POST(
         status: true,
         name: true,
         manufacturer: true,
+        submittedById: true,
         submittedBy: {
           select: {
             email: true,
@@ -63,7 +65,24 @@ export async function POST(
       }
     })
 
-    // TODO: Send email notification to submitter about rejection with reason
+    // Create notification for submitter
+    await prisma.notification.create({
+      data: {
+        userId: submission.submittedById,
+        type: 'SUBMISSION_REJECTED',
+        title: 'Master Switch Submission Rejected',
+        message: `Your submission for "${submission.name}" was not approved. Reason: ${reason}`,
+        link: `/dashboard/submissions`,
+        linkText: 'View Submissions'
+      }
+    })
+
+    // Send email notification to submitter about rejection with reason
+    await sendMasterSwitchRejectionEmail(
+      submission.submittedBy.email,
+      submission.name,
+      reason
+    )
 
     return NextResponse.json({
       message: 'Submission rejected',

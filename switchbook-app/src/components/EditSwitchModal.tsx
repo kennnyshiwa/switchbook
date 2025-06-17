@@ -20,6 +20,12 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showFrankenswitch, setShowFrankenswitch] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<{
+    isLinkedToMaster: boolean;
+    hasUpdates: boolean;
+    isModified: boolean;
+  } | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const {
     register,
@@ -68,6 +74,49 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     }
   }, [switchItem])
 
+  // Check sync status on mount
+  useEffect(() => {
+    const checkSyncStatus = async () => {
+      try {
+        const response = await fetch(`/api/switches/${switchItem.id}/sync-master`)
+        if (response.ok) {
+          const data = await response.json()
+          setSyncStatus(data)
+        }
+      } catch (error) {
+        console.error('Failed to check sync status:', error)
+      }
+    }
+    checkSyncStatus()
+  }, [switchItem.id])
+
+  const handleSyncWithMaster = async () => {
+    if (!confirm('This will reset all switch details to match the master database. Any custom changes will be lost. Continue?')) {
+      return
+    }
+
+    setIsSyncing(true)
+    setError(null)
+    
+    try {
+      const response = await fetch(`/api/switches/${switchItem.id}/sync-master`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to sync with master')
+      }
+
+      const data = await response.json()
+      onSwitchUpdated(data.switch)
+      setSyncStatus(prev => prev ? { ...prev, hasUpdates: false, isModified: false } : null)
+    } catch (error) {
+      setError('Failed to sync with master database. Please try again.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const onSubmit = async (data: SwitchFormData) => {
     setIsLoading(true)
     setError(null)
@@ -87,6 +136,13 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
 
       const updatedSwitch = await response.json()
       onSwitchUpdated(updatedSwitch)
+      
+      // Refresh sync status after update
+      const syncResponse = await fetch(`/api/switches/${switchItem.id}/sync-master`)
+      if (syncResponse.ok) {
+        const syncData = await syncResponse.json()
+        setSyncStatus(syncData)
+      }
     } catch (error) {
       setError('Failed to update switch. Please try again.')
     } finally {
@@ -116,6 +172,60 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
           {error && (
             <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
               <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
+          {/* Sync Status Banner */}
+          {syncStatus?.isLinkedToMaster && (
+            <div className={`rounded-md p-4 ${
+              syncStatus.hasUpdates 
+                ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800' 
+                : syncStatus.isModified
+                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+            }`}>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  {syncStatus.hasUpdates ? (
+                    <>
+                      <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        Master Database Updated
+                      </h4>
+                      <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+                        The master switch has been updated. You can sync to get the latest details.
+                      </p>
+                    </>
+                  ) : syncStatus.isModified ? (
+                    <>
+                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                        Customized Switch
+                      </h4>
+                      <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+                        This switch has been customized from the master database version.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Synced with Master
+                      </h4>
+                      <p className="mt-1 text-sm text-green-700 dark:text-green-300">
+                        This switch is up to date with the master database.
+                      </p>
+                    </>
+                  )}
+                </div>
+                {(syncStatus.hasUpdates || syncStatus.isModified) && (
+                  <button
+                    type="button"
+                    onClick={handleSyncWithMaster}
+                    disabled={isSyncing}
+                    className="ml-4 px-3 py-1.5 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {isSyncing ? 'Syncing...' : 'Reset to Master'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

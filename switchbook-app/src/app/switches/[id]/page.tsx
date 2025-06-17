@@ -92,7 +92,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
     }
 
     fetchSwitch()
-  }, [params, session, status, router])
+  }, [params, searchParams, session, status, router])
 
   const addToCollection = async () => {
     if (!switchData) return
@@ -138,7 +138,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Success Message */}
         {showSubmittedMessage && (
-          <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div className="mb-6 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <div className="flex items-start">
               <svg className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -222,12 +222,20 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
               )}
               
               {switchData.status === 'APPROVED' && (
-                <Link
-                  href={`/switches/${switchData.id}/suggest-edit`}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-                >
-                  Suggest Edit
-                </Link>
+                <>
+                  <Link
+                    href={`/switches/${switchData.id}/suggest-edit`}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                  >
+                    Suggest Edit
+                  </Link>
+                  <Link
+                    href={`/switches/${switchData.id}/history`}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
+                  >
+                    View History
+                  </Link>
+                </>
               )}
             </div>
           </div>

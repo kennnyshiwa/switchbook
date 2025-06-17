@@ -9,12 +9,12 @@ import { useState } from 'react';
 // Schema for edit suggestion
 const editSuggestionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
-  chineseName: z.string().optional(),
+  chineseName: z.string().optional().nullable(),
   manufacturer: z.string().min(1, 'Manufacturer is required'),
-  brand: z.string().optional(),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional(),
-  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional(),
-  compatibility: z.string().optional(),
+  brand: z.string().optional().nullable(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().nullable(),
+  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().nullable(),
+  compatibility: z.string().optional().nullable(),
   
   // Physical specifications
   actuationForce: z.number().min(0).max(200).optional().or(z.nan()),
@@ -23,37 +23,38 @@ const editSuggestionSchema = z.object({
   totalTravel: z.number().min(0).max(10).optional().or(z.nan()),
   
   // Spring specifications
-  springType: z.string().optional(),
-  springForce: z.string().optional(),
-  springMaterialType: z.string().optional(),
-  springLength: z.string().optional(),
+  springType: z.string().optional().nullable(),
+  springForce: z.string().optional().nullable(),
+  springMaterialType: z.string().optional().nullable(),
+  springLength: z.string().optional().nullable(),
   
   // Housing specifications
-  topHousingMaterial: z.string().optional(),
-  bottomHousingMaterial: z.string().optional(),
-  stemMaterial: z.string().optional(),
-  stemColor: z.string().optional(),
+  topHousingMaterial: z.string().optional().nullable(),
+  bottomHousingMaterial: z.string().optional().nullable(),
+  stemMaterial: z.string().optional().nullable(),
+  stemColor: z.string().optional().nullable(),
   
   // Additional info
   preLubed: z.boolean().optional(),
   releaseYear: z.number().min(1970).max(new Date().getFullYear() + 1).optional().or(z.nan()),
-  lifespan: z.string().optional(),
-  productUrl: z.string().optional().refine(
+  lifespan: z.string().optional().nullable(),
+  productUrl: z.string().optional().nullable().refine(
     (val) => !val || val === '' || /^https?:\/\/.+/.test(val),
     { message: 'Please enter a valid URL or leave empty' }
   ),
-  imageUrl: z.string().optional().refine(
+  imageUrl: z.string().optional().nullable().refine(
     (val) => !val || val === '' || /^https?:\/\/.+/.test(val),
     { message: 'Please enter a valid URL or leave empty' }
   ),
-  notes: z.string().optional(),
+  notes: z.string().optional().nullable(),
   
   // Edit reason
   editReason: z.string().min(10, 'Please explain what you changed and why'),
-  changedFields: z.array(z.string()).min(1, 'You must change at least one field'),
 });
 
-type EditSuggestionData = z.infer<typeof editSuggestionSchema>;
+type EditSuggestionData = z.infer<typeof editSuggestionSchema> & {
+  changedFields?: string[];
+};
 
 interface MasterSwitchEditFormProps {
   currentData: any;
@@ -75,12 +76,14 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     resolver: zodResolver(editSuggestionSchema),
     defaultValues: {
       ...currentData,
-      totalTravel: currentData.bottomOut,
-      springForce: currentData.springWeight,
-      topHousingMaterial: currentData.topHousing,
-      bottomHousingMaterial: currentData.bottomHousing,
-      stemMaterial: currentData.stem,
-      changedFields: [],
+      totalTravel: currentData.bottomOut || '',
+      springForce: currentData.springWeight || '',
+      topHousingMaterial: currentData.topHousing || '',
+      bottomHousingMaterial: currentData.bottomHousing || '',
+      stemMaterial: currentData.stem || '',
+      imageUrl: currentData.imageUrl || '',
+      productUrl: currentData.productUrl || '',
+      editReason: '',
     },
   });
 
@@ -88,7 +91,18 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
 
   // Track field changes
   const handleFieldChange = (fieldName: string, newValue: any) => {
-    const originalValue = currentData[fieldName];
+    // Map form field names to currentData field names
+    const fieldMapping: { [key: string]: string } = {
+      totalTravel: 'bottomOut',
+      springForce: 'springWeight',
+      topHousingMaterial: 'topHousing',
+      bottomHousingMaterial: 'bottomHousing',
+      stemMaterial: 'stem',
+    };
+    
+    const dataFieldName = fieldMapping[fieldName] || fieldName;
+    const originalValue = (currentData as any)[dataFieldName];
+    
     if (newValue !== originalValue) {
       setChangedFields(prev => new Set(prev).add(fieldName));
     } else {
@@ -102,6 +116,14 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
 
   // Clean data before submission
   const handleFormSubmit = (data: EditSuggestionData) => {
+    console.log('Form submitted with data:', data);
+    console.log('Changed fields:', Array.from(changedFields));
+    
+    if (changedFields.size === 0) {
+      alert('Please make at least one change before submitting');
+      return;
+    }
+    
     // Convert NaN values to undefined for optional number fields
     const cleanedData = {
       ...data,
@@ -113,13 +135,14 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
       changedFields: Array.from(changedFields),
     };
     
-    if (changedFields.size === 0) {
-      alert('Please make at least one change before submitting');
-      return;
-    }
-    
+    console.log('Submitting cleaned data:', cleanedData);
     onSubmit(cleanedData);
   };
+
+  // Log errors for debugging
+  if (Object.keys(errors).length > 0) {
+    console.log('Form validation errors:', errors);
+  }
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -273,7 +296,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               {...register('totalTravel', { valueAsNumber: true })}
               onChange={(e) => {
                 register('totalTravel', { valueAsNumber: true }).onChange(e);
-                handleFieldChange('bottomOut', e.target.valueAsNumber);
+                handleFieldChange('totalTravel', e.target.valueAsNumber);
               }}
               type="number"
               step="0.01"

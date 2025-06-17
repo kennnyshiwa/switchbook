@@ -48,6 +48,50 @@ const submissionSchema = z.object({
   submissionNotes: z.string().min(10),
 })
 
+// Helper function to calculate similarity between two strings
+function calculateSimilarity(str1: string, str2: string): number {
+  const s1 = str1.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const s2 = str2.toLowerCase().replace(/[^a-z0-9]/g, '')
+  
+  if (s1 === s2) return 1
+  
+  const longer = s1.length > s2.length ? s1 : s2
+  const shorter = s1.length > s2.length ? s2 : s1
+  
+  if (longer.length === 0) return 1
+  
+  const editDistance = (a: string, b: string): number => {
+    const matrix: number[][] = []
+    
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i]
+    }
+    
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j
+    }
+    
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          )
+        }
+      }
+    }
+    
+    return matrix[b.length][a.length]
+  }
+  
+  const distance = editDistance(longer, shorter)
+  return (longer.length - distance) / longer.length
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
@@ -60,8 +104,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const validated = submissionSchema.parse(body)
 
-    // Check for duplicates by name and manufacturer
-    const existing = await prisma.masterSwitch.findFirst({
+    // Check for exact duplicates by name and manufacturer
+    const exactMatch = await prisma.masterSwitch.findFirst({
       where: {
         name: {
           equals: validated.name,
@@ -70,17 +114,55 @@ export async function POST(req: NextRequest) {
         manufacturer: {
           equals: validated.manufacturer,
           mode: 'insensitive'
-        }
+        },
+        status: 'APPROVED'
       }
     })
 
-    if (existing) {
+    if (exactMatch) {
       return NextResponse.json(
         { 
-          error: 'A master switch with this name and manufacturer already exists',
-          existingId: existing.id 
+          error: 'A master switch with this exact name and manufacturer already exists',
+          existingId: exactMatch.id,
+          duplicateType: 'exact'
         }, 
         { status: 400 }
+      )
+    }
+    
+    // Check for similar switches (fuzzy matching)
+    const allSwitches = await prisma.masterSwitch.findMany({
+      where: {
+        status: 'APPROVED',
+        manufacturer: {
+          equals: validated.manufacturer,
+          mode: 'insensitive'
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        manufacturer: true
+      }
+    })
+    
+    const similarSwitches = allSwitches
+      .map(sw => ({
+        ...sw,
+        similarity: calculateSimilarity(sw.name, validated.name)
+      }))
+      .filter(sw => sw.similarity > 0.8) // 80% similarity threshold
+      .sort((a, b) => b.similarity - a.similarity)
+    
+    // If we found very similar switches, return them for user confirmation
+    if (similarSwitches.length > 0 && !body.confirmNotDuplicate) {
+      return NextResponse.json(
+        {
+          error: 'Similar switches found. Please confirm this is not a duplicate.',
+          similarSwitches: similarSwitches.slice(0, 5), // Return top 5 similar switches
+          requiresConfirmation: true
+        },
+        { status: 409 } // Conflict status
       )
     }
 

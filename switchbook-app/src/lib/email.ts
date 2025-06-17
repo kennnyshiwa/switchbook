@@ -156,6 +156,228 @@ export async function sendPasswordResetEmail(email: string, newPassword: string)
   }
 }
 
+export async function sendMasterSwitchApprovalEmail(
+  userEmail: string,
+  switchName: string,
+  switchId: string
+) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const switchUrl = `${baseUrl}/switches/${switchId}`
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
+    to: userEmail,
+    subject: 'Your Master Switch Has Been Approved! 🎉',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">Great News!</h1>
+        <p>Your master switch submission has been approved and is now live in our database.</p>
+        
+        <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #10b981;">
+          <p><strong>Switch Name:</strong> ${switchName}</p>
+          <p><strong>Status:</strong> <span style="color: #10b981;">Approved</span></p>
+        </div>
+        
+        <p>Your contribution helps the mechanical keyboard community discover and learn about different switches. Thank you!</p>
+        
+        <a href="${switchUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px; margin: 15px 0;">View Your Switch</a>
+        
+        <p>Other users can now:</p>
+        <ul>
+          <li>Add this switch to their collections</li>
+          <li>View detailed specifications</li>
+          <li>Suggest improvements or corrections</li>
+        </ul>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #666;">
+          Thank you for contributing to Switchbook!
+        </p>
+      </div>
+    `,
+  }
+
+  try {
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send approval email:', error)
+    return { success: false, error: 'Failed to send approval email' }
+  }
+}
+
+export async function sendMasterSwitchRejectionEmail(
+  userEmail: string,
+  switchName: string,
+  reason: string
+) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const submitUrl = `${baseUrl}/switches/submit`
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
+    to: userEmail,
+    subject: 'Update on Your Master Switch Submission',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">Submission Update</h1>
+        <p>Thank you for your master switch submission. After review, we need some changes before it can be approved.</p>
+        
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <p><strong>Switch Name:</strong> ${switchName}</p>
+          <p><strong>Status:</strong> <span style="color: #f59e0b;">Needs Revision</span></p>
+          <p><strong>Feedback:</strong> ${reason}</p>
+        </div>
+        
+        <p>Don't worry! You can address the feedback and resubmit. Here are some tips:</p>
+        <ul>
+          <li>Check if a similar switch already exists in our database</li>
+          <li>Ensure all specifications are accurate and from official sources</li>
+          <li>Include clear, descriptive information</li>
+        </ul>
+        
+        <a href="${submitUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px; margin: 15px 0;">Submit Another Switch</a>
+        
+        <p>If you have questions about the feedback, feel free to reach out to our community on Discord.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #666;">
+          Thank you for helping improve Switchbook!
+        </p>
+      </div>
+    `,
+  }
+
+  try {
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send rejection email:', error)
+    return { success: false, error: 'Failed to send rejection email' }
+  }
+}
+
+export async function sendEditSuggestionApprovalEmail(
+  userEmail: string,
+  switchName: string,
+  switchId: string
+) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const historyUrl = `${baseUrl}/switches/${switchId}/history`
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
+    to: userEmail,
+    subject: 'Your Edit Suggestion Has Been Approved! ✅',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">Edit Approved!</h1>
+        <p>Your edit suggestion has been reviewed and approved. The master switch has been updated with your changes.</p>
+        
+        <div style="background-color: #f0fdf4; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #10b981;">
+          <p><strong>Switch:</strong> ${switchName}</p>
+          <p><strong>Status:</strong> <span style="color: #10b981;">Changes Applied</span></p>
+        </div>
+        
+        <p>Thank you for helping keep our switch database accurate and up-to-date!</p>
+        
+        <a href="${historyUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px; margin: 15px 0;">View Edit History</a>
+        
+        <p>Your contribution helps ensure everyone has access to accurate switch information.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #666;">
+          Thank you for contributing to Switchbook!
+        </p>
+      </div>
+    `,
+  }
+
+  try {
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send edit approval email:', error)
+    return { success: false, error: 'Failed to send edit approval email' }
+  }
+}
+
+export async function sendEditSuggestionRejectionEmail(
+  userEmail: string,
+  switchName: string,
+  switchId: string,
+  reason: string
+) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const switchUrl = `${baseUrl}/switches/${switchId}`
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
+    to: userEmail,
+    subject: 'Update on Your Edit Suggestion',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">Edit Suggestion Update</h1>
+        <p>Thank you for your edit suggestion. After review, we've decided not to apply these changes at this time.</p>
+        
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <p><strong>Switch:</strong> ${switchName}</p>
+          <p><strong>Status:</strong> <span style="color: #f59e0b;">Not Applied</span></p>
+          <p><strong>Reason:</strong> ${reason}</p>
+        </div>
+        
+        <p>This doesn't mean your contribution wasn't valued. Edit decisions consider various factors including:</p>
+        <ul>
+          <li>Verification of information sources</li>
+          <li>Consistency with existing data standards</li>
+          <li>Community consensus on specifications</li>
+        </ul>
+        
+        <a href="${switchUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px; margin: 15px 0;">View Switch</a>
+        
+        <p>Feel free to suggest other improvements or join the discussion on our Discord server.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #666;">
+          Thank you for helping improve Switchbook!
+        </p>
+      </div>
+    `,
+  }
+
+  try {
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send edit rejection email:', error)
+    return { success: false, error: 'Failed to send edit rejection email' }
+  }
+}
+
 export async function sendNewManufacturerNotification(
   manufacturerName: string, 
   submittedBy: string,

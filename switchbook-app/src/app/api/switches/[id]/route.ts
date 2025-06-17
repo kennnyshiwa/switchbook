@@ -73,10 +73,51 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
       )
     }
 
+    // Check if this switch is linked to a master switch
+    const masterSwitch = switchItem.masterSwitchId ? await prisma.masterSwitch.findUnique({
+      where: { id: switchItem.masterSwitchId }
+    }) : null;
+    
+    let isModified = false;
+    let modifiedFields: string[] = [];
+    
+    if (masterSwitch) {
+      // Track which fields are modified from the master switch
+      const fieldsToCheck = [
+        'name', 'chineseName', 'type', 'technology', 'manufacturer',
+        'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut',
+        'springWeight', 'springLength', 'notes', 'imageUrl',
+        'topHousing', 'bottomHousing', 'stem',
+        'magnetOrientation', 'magnetPosition', 'magnetPolarity',
+        'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
+        'pcbThickness', 'compatibility'
+      ];
+      
+      for (const field of fieldsToCheck) {
+        const newValue = (transformedData as any)[field];
+        const masterValue = (masterSwitch as any)[field];
+        
+        // Compare values, treating null/undefined/empty string as equivalent
+        const normalize = (val: any) => val === null || val === undefined || val === '' ? null : val;
+        
+        if (normalize(newValue) !== normalize(masterValue)) {
+          modifiedFields.push(field);
+        }
+      }
+      
+      isModified = modifiedFields.length > 0;
+    }
+
     // Update the switch
     const updatedSwitch = await prisma.switch.update({
       where: { id },
-      data: transformedData,
+      data: {
+        ...transformedData,
+        ...(switchItem.masterSwitchId ? {
+          isModified,
+          modifiedFields: modifiedFields
+        } : {})
+      },
     })
 
     return NextResponse.json(updatedSwitch)
