@@ -40,6 +40,7 @@ interface MasterSwitchDetail {
   userSwitchId?: string
   userCount: number
   viewCount: number
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
   createdAt: string
   submittedBy: {
     id: string
@@ -52,12 +53,13 @@ interface MasterSwitchDetail {
   approvedAt?: string
 }
 
-export default function MasterSwitchDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function MasterSwitchDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ submitted?: string }> }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [switchData, setSwitchData] = useState<MasterSwitchDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [showSubmittedMessage, setShowSubmittedMessage] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -69,6 +71,11 @@ export default function MasterSwitchDetailPage({ params }: { params: Promise<{ i
     const fetchSwitch = async () => {
       try {
         const { id } = await params
+        const resolvedSearchParams = await searchParams
+        if (resolvedSearchParams?.submitted === 'true') {
+          setShowSubmittedMessage(true)
+        }
+        
         const response = await fetch(`/api/master-switches/${id}`)
         if (response.ok) {
           const data = await response.json()
@@ -129,6 +136,33 @@ export default function MasterSwitchDetailPage({ params }: { params: Promise<{ i
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Success Message */}
+        {showSubmittedMessage && (
+          <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
+                  Switch submitted successfully!
+                </h3>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  Your submission is pending review by our moderators. This typically takes 24-48 hours.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSubmittedMessage(false)}
+                className="ml-auto text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* Header */}
         <div className="mb-8">
           <Link
@@ -140,9 +174,21 @@ export default function MasterSwitchDetailPage({ params }: { params: Promise<{ i
           
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                {switchData.name}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {switchData.name}
+                </h1>
+                {switchData.status === 'PENDING' && (
+                  <span className="px-3 py-1 text-sm font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-full">
+                    Pending Review
+                  </span>
+                )}
+                {switchData.status === 'REJECTED' && (
+                  <span className="px-3 py-1 text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-full">
+                    Rejected
+                  </span>
+                )}
+              </div>
               {switchData.chineseName && (
                 <p className="text-xl text-gray-600 dark:text-gray-400 mt-1">
                   {switchData.chineseName}
