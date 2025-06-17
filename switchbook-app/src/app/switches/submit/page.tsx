@@ -101,12 +101,12 @@ export default function SubmitMasterSwitchPage() {
       <div className="max-w-4xl mx-auto">
         <Link
           href="/switches/browse"
-          className="inline-flex items-center text-purple-600 hover:text-purple-700 mb-6"
+          className="inline-flex items-center text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 mb-6"
         >
           ← Back to Browse
         </Link>
 
-        <h1 className="text-3xl font-bold mb-2">Submit New Master Switch</h1>
+        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Submit New Master Switch</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-4">
           Help expand our database by submitting a new switch. Your submission will be reviewed by our moderators before being published.
         </p>
@@ -136,11 +136,11 @@ export default function SubmitMasterSwitchPage() {
               {duplicateWarning.similarSwitches.map((sw) => (
                 <div key={sw.id} className="bg-white dark:bg-gray-800 rounded p-3 flex justify-between items-center">
                   <div>
-                    <span className="font-medium">{sw.name}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{sw.name}</span>
                     <span className="text-gray-600 dark:text-gray-400 ml-2">by {sw.manufacturer}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       {Math.round(sw.similarity * 100)}% similar
                     </span>
                     <Link
