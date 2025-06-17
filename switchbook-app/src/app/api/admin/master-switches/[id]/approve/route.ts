@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { MasterSwitchStatus } from '@prisma/client'
+import { sendMasterSwitchApprovalEmail } from '@/lib/email'
 
 export async function POST(
   req: NextRequest,
@@ -22,6 +23,7 @@ export async function POST(
         status: true,
         name: true,
         manufacturer: true,
+        submittedById: true,
         submittedBy: {
           select: {
             email: true,
@@ -56,7 +58,24 @@ export async function POST(
       }
     })
 
-    // TODO: Send email notification to submitter about approval
+    // Create notification for submitter
+    await prisma.notification.create({
+      data: {
+        userId: submission.submittedById,
+        type: 'SUBMISSION_APPROVED',
+        title: 'Master Switch Approved!',
+        message: `Your submission for "${submission.name}" has been approved and is now live in the master database.`,
+        link: `/switches/${id}`,
+        linkText: 'View Switch'
+      }
+    })
+
+    // Send email notification to submitter about approval
+    await sendMasterSwitchApprovalEmail(
+      submission.submittedBy.email,
+      submission.name,
+      id
+    )
 
     return NextResponse.json({
       message: 'Submission approved successfully',

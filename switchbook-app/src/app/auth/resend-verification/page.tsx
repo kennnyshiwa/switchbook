@@ -74,7 +74,7 @@ export default function ResendVerificationPage() {
 
           {message && (
             <div className={`rounded-md p-4 ${
-              message.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400'
+              message.type === 'success' ? 'bg-green-50 dark:bg-green-900/50 text-green-800 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/50 text-red-800 dark:text-red-400'
             }`}>
               <p className="text-sm">{message.text}</p>
             </div>

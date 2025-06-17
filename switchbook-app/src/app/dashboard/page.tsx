@@ -6,6 +6,8 @@ import Link from "next/link"
 import SwitchCollection from "@/components/SwitchCollection"
 import CollectionStats from "@/components/CollectionStats"
 import HamburgerMenu from "@/components/HamburgerMenu"
+import MasterSwitchUpdatesNotification from "@/components/MasterSwitchUpdatesNotification"
+import NotificationBanner from "@/components/NotificationBanner"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -67,6 +69,8 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        <MasterSwitchUpdatesNotification switches={user.switches} userId={user.id} />
+
         {user.switches.length > 0 && (
           <div className="mb-8">
             <CollectionStats switches={user.switches} />
@@ -80,6 +84,8 @@ export default async function DashboardPage() {
           forceCurvePreferences={user.forceCurvePreferences}
         />
       </div>
+      
+      <NotificationBanner userId={user.id} />
     </div>
   )
 }

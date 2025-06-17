@@ -6,10 +6,21 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { MasterSwitchSubmissionForm } from '@/components/MasterSwitchSubmissionForm';
 
+interface SimilarSwitch {
+  id: string;
+  name: string;
+  manufacturer: string;
+  similarity: number;
+}
+
 export default function SubmitMasterSwitchPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    similarSwitches: SimilarSwitch[];
+    pendingData: any;
+  } | null>(null);
 
   if (status === 'loading') {
     return (
@@ -38,29 +49,50 @@ export default function SubmitMasterSwitchPage() {
     );
   }
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: any, confirmNotDuplicate = false) => {
     setIsSubmitting(true);
     try {
+      const submissionData = confirmNotDuplicate 
+        ? { ...data, confirmNotDuplicate: true }
+        : data;
+        
       const response = await fetch('/api/master-switches/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(submissionData),
       });
 
+      const responseData = await response.json();
+      
+      if (response.status === 409) {
+        // Duplicate warning - show similar switches
+        setDuplicateWarning({
+          similarSwitches: responseData.similarSwitches,
+          pendingData: data
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to submit master switch');
+        throw new Error(responseData.error || 'Failed to submit master switch');
       }
 
-      const result = await response.json();
-      router.push(`/switches/${result.id}?submitted=true`);
+      router.push(`/switches/${responseData.id}?submitted=true`);
     } catch (error) {
       console.error('Submission error:', error);
       alert(error instanceof Error ? error.message : 'Failed to submit master switch');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+  
+  const handleConfirmSubmission = () => {
+    if (duplicateWarning) {
+      handleSubmit(duplicateWarning.pendingData, true);
+      setDuplicateWarning(null);
     }
   };
 
@@ -92,6 +124,54 @@ export default function SubmitMasterSwitchPage() {
           </ul>
         </div>
 
+        {duplicateWarning && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-8">
+            <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-4">
+              Similar Switches Found
+            </h3>
+            <p className="text-red-700 dark:text-red-300 mb-4">
+              We found switches with similar names. Please review them to ensure you&apos;re not submitting a duplicate:
+            </p>
+            <div className="space-y-2 mb-6">
+              {duplicateWarning.similarSwitches.map((sw) => (
+                <div key={sw.id} className="bg-white dark:bg-gray-800 rounded p-3 flex justify-between items-center">
+                  <div>
+                    <span className="font-medium">{sw.name}</span>
+                    <span className="text-gray-600 dark:text-gray-400 ml-2">by {sw.manufacturer}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">
+                      {Math.round(sw.similarity * 100)}% similar
+                    </span>
+                    <Link
+                      href={`/switches/${sw.id}`}
+                      target="_blank"
+                      className="text-blue-600 hover:text-blue-700 text-sm"
+                    >
+                      View →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleConfirmSubmission}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Submitting...' : 'Continue Anyway'}
+              </button>
+              <button
+                onClick={() => setDuplicateWarning(null)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Cancel & Edit
+              </button>
+            </div>
+          </div>
+        )}
+        
         <MasterSwitchSubmissionForm 
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}

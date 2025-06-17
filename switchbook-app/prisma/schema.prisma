@@ -29,6 +29,8 @@ model User {
   approvedMasterSwitches  MasterSwitch[]       @relation("ApprovedBy")
   masterSwitchEdits       MasterSwitchEdit[]   @relation("EditedBy")
   approvedEdits           MasterSwitchEdit[]   @relation("ApprovedEditBy")
+  notifications           Notification[]
+  dismissedNotifications  DismissedNotification[]
 }
 
 model Switch {
@@ -267,4 +269,39 @@ enum MasterSwitchStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model Notification {
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  message     String
+  link        String?
+  linkText    String?
+  read        Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  EDIT_APPROVED
+  EDIT_REJECTED
+}
+
+model DismissedNotification {
+  id                      String   @id @default(cuid())
+  userId                  String
+  type                    String
+  dismissedAt             DateTime @default(now())
+  lastMasterUpdateVersion Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
 }

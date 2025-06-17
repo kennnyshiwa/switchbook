@@ -21,13 +21,35 @@ interface MasterSwitchSubmission {
   originalSubmissionData?: any;
 }
 
+interface EditSuggestion {
+  id: string;
+  masterSwitchId: string;
+  masterSwitch: {
+    id: string;
+    name: string;
+    manufacturer: string;
+  };
+  editedBy: {
+    id: string;
+    username: string;
+    email: string;
+  };
+  changedFields: string[];
+  newData: any;
+  previousData: any;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  editedAt: string;
+}
+
 export default function AdminMasterSwitchesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [submissions, setSubmissions] = useState<MasterSwitchSubmission[]>([]);
+  const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'submissions' | 'edits'>('submissions');
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -38,8 +60,18 @@ export default function AdminMasterSwitchesPage() {
       }
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
-    } finally {
-      setLoading(false);
+    }
+  }, [filter]);
+
+  const fetchEditSuggestions = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/admin/master-switch-edits?status=${filter}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEditSuggestions(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch edit suggestions:', error);
     }
   }, [filter]);
 
@@ -51,8 +83,12 @@ export default function AdminMasterSwitchesPage() {
       return;
     }
 
-    fetchSubmissions();
-  }, [session, status, router, filter, fetchSubmissions]);
+    setLoading(true);
+    Promise.all([
+      fetchSubmissions(),
+      fetchEditSuggestions()
+    ]).finally(() => setLoading(false));
+  }, [session, status, router, filter, fetchSubmissions, fetchEditSuggestions]);
 
   const handleApprove = async (id: string) => {
     if (!confirm('Are you sure you want to approve this submission?')) return;
@@ -103,6 +139,55 @@ export default function AdminMasterSwitchesPage() {
     }
   };
 
+  const handleApproveEdit = async (id: string) => {
+    if (!confirm('Are you sure you want to approve this edit suggestion?')) return;
+    
+    setProcessingId(id);
+    try {
+      const response = await fetch(`/api/admin/master-switch-edits/${id}/approve`, {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        await fetchEditSuggestions();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to approve edit');
+      }
+    } catch (error) {
+      console.error('Failed to approve edit:', error);
+      alert('Failed to approve edit');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleRejectEdit = async (id: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+    
+    setProcessingId(id);
+    try {
+      const response = await fetch(`/api/admin/master-switch-edits/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      
+      if (response.ok) {
+        await fetchEditSuggestions();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to reject edit');
+      }
+    } catch (error) {
+      console.error('Failed to reject edit:', error);
+      alert('Failed to reject edit');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -115,13 +200,51 @@ export default function AdminMasterSwitchesPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Master Switch Submissions</h1>
+          <h1 className="text-3xl font-bold">Master Switch Management</h1>
           <Link
             href="/admin"
             className="text-blue-600 hover:text-blue-700"
           >
             ← Back to Admin
           </Link>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="-mb-px flex">
+            <button
+              onClick={() => setActiveTab('submissions')}
+              className={`py-2 px-6 border-b-2 font-medium text-sm ${
+                activeTab === 'submissions'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              New Submissions
+              {submissions.filter(s => s.status === 'PENDING').length > 0 && (
+                <span className="ml-2 bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs">
+                  {submissions.filter(s => s.status === 'PENDING').length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('edits')}
+              className={`py-2 px-6 border-b-2 font-medium text-sm ${
+                activeTab === 'edits'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Edit Suggestions
+              {editSuggestions.filter(e => e.status === 'PENDING').length > 0 && (
+                <span className="ml-2 bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs">
+                  {editSuggestions.filter(e => e.status === 'PENDING').length}
+                </span>
+              )}
+            </button>
+          </nav>
         </div>
       </div>
 
@@ -151,14 +274,15 @@ export default function AdminMasterSwitchesPage() {
         </div>
       </div>
 
-      {/* Submissions List */}
-      <div className="space-y-4">
-        {submissions.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500">No {filter === 'all' ? '' : filter} submissions found.</p>
-          </div>
-        ) : (
-          submissions.map((submission) => (
+      {/* Content based on active tab */}
+      {activeTab === 'submissions' ? (
+        <div className="space-y-4">
+          {submissions.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+              <p className="text-gray-500">No {filter === 'all' ? '' : filter} submissions found.</p>
+            </div>
+          ) : (
+            submissions.map((submission) => (
             <div
               key={submission.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
@@ -250,8 +374,102 @@ export default function AdminMasterSwitchesPage() {
               </div>
             </div>
           ))
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {editSuggestions.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+              <p className="text-gray-500">No {filter === 'all' ? '' : filter} edit suggestions found.</p>
+            </div>
+          ) : (
+            editSuggestions.map((edit) => (
+              <div
+                key={edit.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-semibold">
+                        Edit Suggestion for {edit.masterSwitch.name}
+                      </h3>
+                      <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        edit.status === 'PENDING'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : edit.status === 'APPROVED'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {edit.status}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      <div>
+                        <span className="font-medium">Switch:</span> {edit.masterSwitch.name} by {edit.masterSwitch.manufacturer}
+                      </div>
+                      <div>
+                        <span className="font-medium">Edited by:</span> {edit.editedBy.username} ({edit.editedBy.email})
+                      </div>
+                      <div>
+                        <span className="font-medium">Submitted:</span> {formatDistanceToNow(new Date(edit.editedAt), { addSuffix: true })}
+                      </div>
+                      <div>
+                        <span className="font-medium">Fields changed:</span> {edit.changedFields.join(', ')}
+                      </div>
+                    </div>
+
+                    {edit.newData.editReason && (
+                      <div className="bg-gray-50 dark:bg-gray-700/50 rounded p-3 mb-4">
+                        <p className="text-sm">
+                          <span className="font-medium">Edit reason:</span> {edit.newData.editReason}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-4">
+                      <Link
+                        href={`/switches/${edit.masterSwitch.id}`}
+                        target="_blank"
+                        className="text-blue-600 hover:underline text-sm"
+                      >
+                        View Switch →
+                      </Link>
+                      <Link
+                        href={`/switches/${edit.masterSwitch.id}/history`}
+                        target="_blank"
+                        className="text-purple-600 hover:underline text-sm"
+                      >
+                        View History →
+                      </Link>
+                    </div>
+                  </div>
+
+                  {edit.status === 'PENDING' && (
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleApproveEdit(edit.id)}
+                        disabled={processingId === edit.id}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {processingId === edit.id ? 'Processing...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => handleRejectEdit(edit.id)}
+                        disabled={processingId === edit.id}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
