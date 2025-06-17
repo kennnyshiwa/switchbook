@@ -105,7 +105,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       {/* Basic Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Basic Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -114,11 +114,11 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('name')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="e.g., Cherry MX Red"
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
             )}
           </div>
 
@@ -129,7 +129,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('chineseName')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="e.g., 樱桃红轴"
             />
           </div>
@@ -153,7 +153,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             </label>
             <select
               {...register('type')}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
             >
               <option value="">Select type</option>
               <option value="LINEAR">Linear</option>
@@ -170,7 +170,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             </label>
             <select
               {...register('technology')}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
             >
               <option value="">Select technology</option>
               <option value="MECHANICAL">Mechanical</option>
@@ -188,7 +188,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('compatibility')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="e.g., MX-style, Alps, Choc"
             />
           </div>
@@ -198,7 +198,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
 
       {/* Force Specifications */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Force Specifications</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Force Specifications</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -210,7 +210,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               step="0.1"
               min="0"
               max="1000"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="20"
             />
           </div>
@@ -225,7 +225,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               step="0.1"
               min="0"
               max="1000"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="45"
             />
           </div>
@@ -240,7 +240,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               step="0.1"
               min="0"
               max="1000"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="62"
             />
           </div>
@@ -255,7 +255,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               step="0.01"
               min="0"
               max="10"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="2.0"
             />
           </div>
@@ -270,7 +270,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               step="0.01"
               min="0"
               max="10"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="4.0"
             />
           </div>
@@ -282,7 +282,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('springWeight')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="62g"
             />
           </div>
@@ -294,7 +294,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('springLength')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="14mm"
             />
           </div>
@@ -304,7 +304,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
 
       {/* Materials */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Materials</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Materials</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -313,7 +313,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('topHousing')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="e.g., Polycarbonate, Nylon"
             />
           </div>
@@ -325,7 +325,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('bottomHousing')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="e.g., Nylon, POM"
             />
           </div>
@@ -337,7 +337,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('stem')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="e.g., POM, UHMWPE"
             />
           </div>
@@ -347,7 +347,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       {/* Magnetic Fields (conditional) */}
       {showMagneticFields && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Magnetic Specifications</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Magnetic Specifications</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -359,7 +359,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
                 step="0.1"
                 min="0"
                 max="10000"
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
                 placeholder="35"
               />
             </div>
@@ -374,7 +374,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
                 step="0.1"
                 min="0"
                 max="10000"
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
                 placeholder="3500"
               />
             </div>
@@ -385,7 +385,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               </label>
               <select
                 {...register('magnetOrientation')}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               >
                 <option value="">Select orientation</option>
                 <option value="Horizontal">Horizontal</option>
@@ -399,7 +399,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               </label>
               <select
                 {...register('magnetPosition')}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               >
                 <option value="">Select position</option>
                 <option value="Center">Center</option>
@@ -413,7 +413,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               </label>
               <select
                 {...register('pcbThickness')}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               >
                 <option value="">Select thickness</option>
                 <option value="1.2mm">1.2mm</option>
@@ -427,7 +427,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               </label>
               <select
                 {...register('magnetPolarity')}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               >
                 <option value="">Select polarity</option>
                 <option value="North">North</option>
@@ -440,7 +440,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
 
       {/* Additional Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Additional Information</h2>
         <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -449,11 +449,11 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('imageUrl')}
               type="url"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="https://example.com/switch.jpg"
             />
             {errors.imageUrl && (
-              <p className="mt-1 text-sm text-red-600">{errors.imageUrl.message}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
             )}
           </div>
 
@@ -464,7 +464,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <textarea
               {...register('notes')}
               rows={3}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="Any additional information about the switch..."
             />
           </div>
@@ -473,7 +473,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
 
       {/* Submission Reason */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Submission Details</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Submission Details</h2>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Why should this switch be added? <span className="text-red-500">*</span>
@@ -481,11 +481,11 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
           <textarea
             {...register('submissionNotes')}
             rows={4}
-            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
             placeholder="Please provide details about this switch, its significance, and any sources for the specifications you've provided..."
           />
           {errors.submissionNotes && (
-            <p className="mt-1 text-sm text-red-600">{errors.submissionNotes.message}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.submissionNotes.message}</p>
           )}
         </div>
       </div>
