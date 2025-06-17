@@ -156,6 +156,142 @@ export async function sendPasswordResetEmail(email: string, newPassword: string)
   }
 }
 
+// Admin notification email functions
+export async function sendAdminNewSubmissionEmail(
+  adminEmail: string,
+  submitterUsername: string,
+  switchName: string,
+  switchId: string
+) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const reviewUrl = `${baseUrl}/admin/master-switches`
+  const switchUrl = `${baseUrl}/switches/${switchId}`
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
+    to: adminEmail,
+    subject: `New Master Switch Submission: ${switchName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">New Master Switch Submission</h1>
+        <p>A new master switch has been submitted for review.</p>
+        
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <p><strong>Switch Name:</strong> ${switchName}</p>
+          <p><strong>Submitted by:</strong> ${submitterUsername}</p>
+          <p><strong>Status:</strong> <span style="color: #f59e0b;">Pending Review</span></p>
+        </div>
+        
+        <p>Please review this submission and decide whether to approve or reject it.</p>
+        
+        <a href="${reviewUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px; margin: 15px 5px;">Review Submissions</a>
+        <a href="${switchUrl}" style="display: inline-block; padding: 10px 20px; background-color: #6B7280; color: white; text-decoration: none; border-radius: 5px; margin: 15px 5px;">View Details</a>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #666;">
+          This is an automated notification from Switchbook. You're receiving this because you're an administrator.
+        </p>
+      </div>
+    `,
+    text: `
+New Master Switch Submission
+
+A new master switch has been submitted for review.
+
+Switch Name: ${switchName}
+Submitted by: ${submitterUsername}
+Status: Pending Review
+
+Please review this submission at: ${reviewUrl}
+View switch details at: ${switchUrl}
+
+This is an automated notification from Switchbook.
+    `
+  }
+
+  try {
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send admin notification email:', error)
+    return { success: false, error: 'Failed to send admin notification email' }
+  }
+}
+
+export async function sendAdminEditSuggestionEmail(
+  adminEmail: string,
+  editorUsername: string,
+  switchName: string,
+  switchId: string,
+  editId: string
+) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://switchbook.app'
+  const reviewUrl = `${baseUrl}/admin/master-switches`
+  const switchUrl = `${baseUrl}/switches/${switchId}`
+
+  const messageData = {
+    from: process.env.MAILGUN_FROM || process.env.EMAIL_FROM || 'noreply@switchbook.app',
+    to: adminEmail,
+    subject: `New Edit Suggestion: ${switchName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">New Edit Suggestion</h1>
+        <p>A new edit suggestion has been submitted for review.</p>
+        
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <p><strong>Switch Name:</strong> ${switchName}</p>
+          <p><strong>Suggested by:</strong> ${editorUsername}</p>
+          <p><strong>Status:</strong> <span style="color: #f59e0b;">Pending Review</span></p>
+        </div>
+        
+        <p>Please review this edit suggestion and decide whether to approve or reject it.</p>
+        
+        <a href="${reviewUrl}" style="display: inline-block; padding: 10px 20px; background-color: #3B82F6; color: white; text-decoration: none; border-radius: 5px; margin: 15px 5px;">Review Edit Suggestions</a>
+        <a href="${switchUrl}" style="display: inline-block; padding: 10px 20px; background-color: #6B7280; color: white; text-decoration: none; border-radius: 5px; margin: 15px 5px;">View Switch</a>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="font-size: 12px; color: #666;">
+          This is an automated notification from Switchbook. You're receiving this because you're an administrator.
+        </p>
+      </div>
+    `,
+    text: `
+New Edit Suggestion
+
+A new edit suggestion has been submitted for review.
+
+Switch Name: ${switchName}
+Suggested by: ${editorUsername}
+Status: Pending Review
+
+Please review this edit suggestion at: ${reviewUrl}
+View switch details at: ${switchUrl}
+
+This is an automated notification from Switchbook.
+    `
+  }
+
+  try {
+    await client.messages.create(process.env.MAILGUN_DOMAIN!, messageData)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to send admin notification email:', error)
+    return { success: false, error: 'Failed to send admin notification email' }
+  }
+}
+
 export async function sendMasterSwitchApprovalEmail(
   userEmail: string,
   switchName: string,
