@@ -18,7 +18,13 @@ export async function GET(
     const masterSwitch = await prisma.masterSwitch.findFirst({
       where: {
         id: id,
-        status: MasterSwitchStatus.APPROVED
+        OR: [
+          { status: MasterSwitchStatus.APPROVED },
+          { 
+            status: MasterSwitchStatus.PENDING,
+            submittedById: session.user.id 
+          }
+        ]
       },
       include: {
         submittedBy: {
