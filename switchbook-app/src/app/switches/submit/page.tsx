@@ -75,8 +75,11 @@ export default function SubmitMasterSwitchPage() {
         </Link>
 
         <h1 className="text-3xl font-bold mb-2">Submit New Master Switch</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-8">
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
           Help expand our database by submitting a new switch. Your submission will be reviewed by our moderators before being published.
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
+          Fields marked with <span className="text-red-500">*</span> are required. All other fields are optional - fill in as much information as you have available.
         </p>
 
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-8">
