@@ -12,7 +12,7 @@ export default async function AdminDashboard() {
   }
 
   // Get user data and statistics
-  const [user, totalUsers, totalSwitches, usersLast30Days, switchesLast30Days] = await Promise.all([
+  const [user, totalUsers, totalSwitches, usersLast30Days, switchesLast30Days, pendingSubmissions] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { shareableId: true }
@@ -31,6 +31,11 @@ export default async function AdminDashboard() {
         createdAt: {
           gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
         }
+      }
+    }),
+    prisma.masterSwitch.count({
+      where: {
+        status: 'PENDING'
       }
     })
   ])
@@ -169,6 +174,25 @@ export default async function AdminDashboard() {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">Detailed Statistics</h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 View detailed analytics and usage statistics
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/master-switches"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6 relative">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Master Switch Submissions
+                {pendingSubmissions > 0 && (
+                  <span className="ml-2 bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs">
+                    {pendingSubmissions} pending
+                  </span>
+                )}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Review and approve community switch submissions
               </p>
             </div>
           </Link>
