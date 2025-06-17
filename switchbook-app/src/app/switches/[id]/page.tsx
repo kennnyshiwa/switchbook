@@ -204,10 +204,10 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                   </span>
                   {switchData.userSwitchId && (
                     <Link
-                      href={`/dashboard/switches/${switchData.userSwitchId}/edit`}
+                      href="/dashboard"
                       className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                     >
-                      Edit Your Copy
+                      View in Collection
                     </Link>
                   )}
                 </>
@@ -219,6 +219,15 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                 >
                   {adding ? 'Adding...' : 'Add to Collection'}
                 </button>
+              )}
+              
+              {switchData.status === 'APPROVED' && (
+                <Link
+                  href={`/switches/${switchData.id}/suggest-edit`}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                >
+                  Suggest Edit
+                </Link>
               )}
             </div>
           </div>
