@@ -121,11 +121,11 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
         <div className="grid grid-cols-2 gap-4 mt-1">
           <div className="bg-red-50 dark:bg-red-900/20 rounded p-2">
             <span className="text-xs text-red-600 dark:text-red-400">Previous</span>
-            <div className="text-sm">{previousValue || 'None'}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{previousValue || 'None'}</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 rounded p-2">
             <span className="text-xs text-green-600 dark:text-green-400">New</span>
-            <div className="text-sm">{newValue || 'None'}</div>
+            <div className="text-sm text-gray-900 dark:text-white">{newValue || 'None'}</div>
           </div>
         </div>
       </div>
@@ -158,7 +158,7 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Timeline */}
           <div className="lg:col-span-1">
-            <h2 className="text-lg font-semibold mb-4">Edit Timeline</h2>
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Edit Timeline</h2>
             <div className="space-y-2">
               {switchData.edits.map((edit, index) => (
                 <button
@@ -172,7 +172,7 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">
+                      <div className="font-medium text-sm text-gray-900 dark:text-white">
                         Edit #{switchData.edits.length - index}
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -212,7 +212,7 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
                     : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
-                <div className="font-medium text-sm">Original Submission</div>
+                <div className="font-medium text-sm text-gray-900 dark:text-white">Original Submission</div>
                 <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                   Initial version
                 </div>
@@ -230,11 +230,11 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
 
                   return (
                     <>
-                      <h2 className="text-lg font-semibold mb-4">Edit Details</h2>
+                      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Edit Details</h2>
                       
                       {/* Metadata */}
                       <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-6">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-900 dark:text-white">
                           <div>
                             <span className="font-medium">Edited by:</span> {edit.editedBy.username}
                           </div>
@@ -253,21 +253,21 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
                         
                         {edit.rejectionReason && (
                           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                            <span className="font-medium text-sm">Rejection Reason:</span>
+                            <span className="font-medium text-sm text-gray-900 dark:text-white">Rejection Reason:</span>
                             <p className="text-sm text-red-600 dark:text-red-400 mt-1">{edit.rejectionReason}</p>
                           </div>
                         )}
                         
                         {edit.newData.editReason && (
                           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                            <span className="font-medium text-sm">Edit Reason:</span>
+                            <span className="font-medium text-sm text-gray-900 dark:text-white">Edit Reason:</span>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{edit.newData.editReason}</p>
                           </div>
                         )}
                       </div>
 
                       {/* Changes */}
-                      <h3 className="font-medium mb-3">Changes Made</h3>
+                      <h3 className="font-medium mb-3 text-gray-900 dark:text-white">Changes Made</h3>
                       <div className="space-y-3">
                         {edit.changedFields.map(field => 
                           renderFieldChange(field, edit.previousData[field], edit.newData[field])
@@ -278,11 +278,11 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
                 })()
               ) : (
                 <>
-                  <h2 className="text-lg font-semibold mb-4">Original Submission</h2>
+                  <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Original Submission</h2>
                   <p className="text-gray-600 dark:text-gray-400">
                     This is the original version of the switch as it was first submitted to the database.
                   </p>
-                  <div className="mt-4 text-sm text-gray-500">
+                  <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                     {approvedEdits.length > 0 
                       ? `This switch has been edited ${approvedEdits.length} time${approvedEdits.length > 1 ? 's' : ''} since its original submission.`
                       : 'No edits have been made to this switch yet.'
