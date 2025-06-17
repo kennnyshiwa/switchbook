@@ -343,7 +343,7 @@ const SwitchTableRow = memo(({
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           min="0"
           max="1000"
-          step="0.1"
+          step="0.01"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
@@ -355,7 +355,7 @@ const SwitchTableRow = memo(({
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           min="0"
           max="10000"
-          step="0.1"
+          step="0.01"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
@@ -367,7 +367,7 @@ const SwitchTableRow = memo(({
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           min="0"
           max="10000"
-          step="0.1"
+          step="0.01"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
@@ -506,7 +506,7 @@ const SwitchTableRow = memo(({
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
           min="0"
           max="10"
-          step="0.1"
+          step="0.01"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
@@ -518,7 +518,7 @@ const SwitchTableRow = memo(({
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
           min="0"
           max="10"
-          step="0.1"
+          step="0.01"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
