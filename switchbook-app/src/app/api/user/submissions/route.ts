@@ -9,6 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Fetch master switch submissions
     const submissions = await prisma.masterSwitch.findMany({
       where: {
         submittedById: session.user.id
@@ -33,7 +34,40 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json(submissions)
+    // Fetch edit suggestions
+    const editSuggestions = await prisma.masterSwitchEdit.findMany({
+      where: {
+        editedById: session.user.id
+      },
+      select: {
+        id: true,
+        masterSwitch: {
+          select: {
+            id: true,
+            name: true,
+            manufacturer: true
+          }
+        },
+        status: true,
+        rejectionReason: true,
+        editedAt: true,
+        approvedAt: true,
+        approvedBy: {
+          select: {
+            username: true
+          }
+        },
+        changedFields: true
+      },
+      orderBy: {
+        editedAt: 'desc'
+      }
+    })
+
+    return NextResponse.json({
+      submissions,
+      editSuggestions
+    })
   } catch (error) {
     console.error('Error fetching user submissions:', error)
     return NextResponse.json(
