@@ -307,7 +307,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Force Specifications
                 </h2>
-                <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {switchData.initialForce && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Initial Force</dt>
@@ -359,7 +359,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Materials
                 </h2>
-                <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {switchData.topHousing && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Top Housing</dt>
@@ -411,7 +411,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Magnetic Properties
                 </h2>
-                <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {switchData.magnetOrientation && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Magnet Orientation</dt>
@@ -458,7 +458,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Frankenswitch Parts
                 </h2>
-                <dl className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {switchData.frankenTop && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Top</dt>
