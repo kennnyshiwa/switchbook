@@ -10,45 +10,45 @@ import { validateImageUrl } from '@/lib/image-security';
 // Schema for edit suggestion - matching the submission form
 const editSuggestionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
-  chineseName: z.string().optional(),
+  chineseName: z.string().nullable().optional().or(z.literal('')),
   manufacturer: z.string().min(1, 'Manufacturer is required'),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional(),
-  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional(),
-  compatibility: z.string().optional(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).nullable().optional(),
+  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).nullable().optional(),
+  compatibility: z.string().nullable().optional().or(z.literal('')),
   
   // Force specifications
-  initialForce: z.number().min(0).max(1000).optional().or(z.nan()),
-  actuationForce: z.number().min(0).max(1000).optional().or(z.nan()),
-  bottomOutForce: z.number().min(0).max(1000).optional().or(z.nan()),
-  preTravel: z.number().min(0).max(10).optional().or(z.nan()),
-  bottomOut: z.number().min(0).max(10).optional().or(z.nan()),
+  initialForce: z.number().min(0).max(1000).nullable().optional().or(z.nan()),
+  actuationForce: z.number().min(0).max(1000).nullable().optional().or(z.nan()),
+  bottomOutForce: z.number().min(0).max(1000).nullable().optional().or(z.nan()),
+  preTravel: z.number().min(0).max(10).nullable().optional().or(z.nan()),
+  bottomOut: z.number().min(0).max(10).nullable().optional().or(z.nan()),
   
   // Spring specifications
-  springWeight: z.string().optional(),
-  springLength: z.string().optional(),
+  springWeight: z.string().nullable().optional().or(z.literal('')),
+  springLength: z.string().nullable().optional().or(z.literal('')),
   
   // Materials
-  topHousing: z.string().optional(),
-  bottomHousing: z.string().optional(),
-  stem: z.string().optional(),
+  topHousing: z.string().nullable().optional().or(z.literal('')),
+  bottomHousing: z.string().nullable().optional().or(z.literal('')),
+  stem: z.string().nullable().optional().or(z.literal('')),
   
   // Magnetic specifications
-  magnetOrientation: z.string().optional(),
-  magnetPosition: z.string().optional(),
-  magnetPolarity: z.string().optional(),
-  initialMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan()),
-  bottomOutMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan()),
-  pcbThickness: z.string().optional(),
+  magnetOrientation: z.string().nullable().optional().or(z.literal('')),
+  magnetPosition: z.string().nullable().optional().or(z.literal('')),
+  magnetPolarity: z.string().nullable().optional().or(z.literal('')),
+  initialMagneticFlux: z.number().min(0).max(10000).nullable().optional().or(z.nan()),
+  bottomOutMagneticFlux: z.number().min(0).max(10000).nullable().optional().or(z.nan()),
+  pcbThickness: z.string().nullable().optional().or(z.literal('')),
   
   // Additional info
-  imageUrl: z.string().optional().refine((url) => {
-    if (!url || url === "") return true
+  imageUrl: z.string().nullable().optional().or(z.literal('')).refine((url) => {
+    if (!url || url === "" || url === null) return true
     const validation = validateImageUrl(url)
     return validation.valid
   }, {
     message: "Invalid image URL or security violation"
   }),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional().or(z.literal('')),
   
   // Edit reason
   editReason: z.string().min(10, 'Please explain what you changed and why'),
@@ -80,7 +80,30 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   } = useForm<EditSuggestionData>({
     resolver: zodResolver(editSuggestionSchema),
     defaultValues: {
-      ...currentData,
+      name: currentData.name || '',
+      chineseName: currentData.chineseName || '',
+      manufacturer: currentData.manufacturer || '',
+      type: currentData.type || undefined,
+      technology: currentData.technology || undefined,
+      compatibility: currentData.compatibility || '',
+      initialForce: currentData.initialForce || undefined,
+      actuationForce: currentData.actuationForce || undefined,
+      bottomOutForce: currentData.bottomOutForce || undefined,
+      preTravel: currentData.preTravel || undefined,
+      bottomOut: currentData.bottomOut || undefined,
+      springWeight: currentData.springWeight || '',
+      springLength: currentData.springLength || '',
+      topHousing: currentData.topHousing || '',
+      bottomHousing: currentData.bottomHousing || '',
+      stem: currentData.stem || '',
+      magnetOrientation: currentData.magnetOrientation || '',
+      magnetPosition: currentData.magnetPosition || '',
+      magnetPolarity: currentData.magnetPolarity || '',
+      initialMagneticFlux: currentData.initialMagneticFlux || undefined,
+      bottomOutMagneticFlux: currentData.bottomOutMagneticFlux || undefined,
+      pcbThickness: currentData.pcbThickness || '',
+      imageUrl: currentData.imageUrl || '',
+      notes: currentData.notes || '',
       editReason: '',
     },
   });
@@ -99,7 +122,11 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   const handleFieldChange = (fieldName: string, newValue: any) => {
     const originalValue = (currentData as any)[fieldName];
     
-    if (newValue !== originalValue) {
+    // Normalize values for comparison (treat null, undefined, and empty string as equivalent)
+    const normalizedOriginal = originalValue === null || originalValue === undefined || originalValue === '' ? '' : originalValue;
+    const normalizedNew = newValue === null || newValue === undefined || newValue === '' ? '' : newValue;
+    
+    if (normalizedNew !== normalizedOriginal) {
       setChangedFields(prev => new Set(prev).add(fieldName));
     } else {
       setChangedFields(prev => {
@@ -120,18 +147,24 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
       return;
     }
     
-    // Convert NaN values to undefined for optional number fields
-    const cleanedData = {
-      ...data,
-      initialForce: isNaN(data.initialForce as number) ? undefined : data.initialForce,
-      actuationForce: isNaN(data.actuationForce as number) ? undefined : data.actuationForce,
-      bottomOutForce: isNaN(data.bottomOutForce as number) ? undefined : data.bottomOutForce,
-      preTravel: isNaN(data.preTravel as number) ? undefined : data.preTravel,
-      bottomOut: isNaN(data.bottomOut as number) ? undefined : data.bottomOut,
-      initialMagneticFlux: isNaN(data.initialMagneticFlux as number) ? undefined : data.initialMagneticFlux,
-      bottomOutMagneticFlux: isNaN(data.bottomOutMagneticFlux as number) ? undefined : data.bottomOutMagneticFlux,
-      changedFields: Array.from(changedFields),
-    };
+    // Clean the data - convert empty strings to null and handle NaN values
+    const cleanedData: any = {};
+    
+    // Process each field
+    Object.entries(data).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        // Convert empty strings to null for optional fields
+        cleanedData[key] = value === '' ? null : value;
+      } else if (typeof value === 'number' && isNaN(value)) {
+        // Convert NaN to null for number fields
+        cleanedData[key] = null;
+      } else {
+        cleanedData[key] = value;
+      }
+    });
+    
+    // Add changed fields
+    cleanedData.changedFields = Array.from(changedFields);
     
     console.log('Submitting cleaned data:', cleanedData);
     onSubmit(cleanedData);
@@ -215,7 +248,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               {...register('type')}
               onChange={(e) => {
                 register('type').onChange(e);
-                handleFieldChange('type', e.target.value);
+                handleFieldChange('type', e.target.value || null);
               }}
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
             >
