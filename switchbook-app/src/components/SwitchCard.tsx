@@ -295,6 +295,13 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{linkify(switchItem.notes)}</p>
           )}
 
+          {switchItem.personalNotes && (
+            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+              <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">Personal Notes</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300">{linkify(switchItem.personalNotes)}</p>
+            </div>
+          )}
+
           {/* Force Curves Button */}
           {showForceCurves && (
             <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">

@@ -38,6 +38,7 @@ export const switchSchema = z.object({
   preTravel: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   bottomOut: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   notes: z.string().max(500).optional(),
+  personalNotes: z.string().max(500).optional(),
   imageUrl: z.string().optional().or(z.literal("")).refine((url) => {
     if (!url || url === "") return true
     const validation = validateImageUrl(url)

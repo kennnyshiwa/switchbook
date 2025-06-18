@@ -101,6 +101,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Notes
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Personal Notes
+              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Actions
               </th>
@@ -243,6 +246,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
                   {switchItem.notes ? linkify(switchItem.notes) : '-'}
+                </td>
+                <td className="px-6 py-4 text-sm text-blue-700 dark:text-blue-300 max-w-xs">
+                  {switchItem.personalNotes ? linkify(switchItem.personalNotes) : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center space-x-2">

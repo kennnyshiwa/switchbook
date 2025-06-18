@@ -57,22 +57,15 @@ export default function BrowseMasterSwitchesPage() {
   const [loading, setLoading] = useState(true)
   const [addingSwitch, setAddingSwitch] = useState<string | null>(null)
   
-  // Filters
+  // Filters - UI state (immediate updates)
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [manufacturer, setManufacturer] = useState('')
-  const [type, setType] = useState('')
-  const [technology, setTechnology] = useState('')
   const [topHousing, setTopHousing] = useState('')
   const [bottomHousing, setBottomHousing] = useState('')
   const [stem, setStem] = useState('')
   const [springWeight, setSpringWeight] = useState('')
   const [springLength, setSpringLength] = useState('')
   const [compatibility, setCompatibility] = useState('')
-  const [magnetOrientation, setMagnetOrientation] = useState('')
-  const [magnetPosition, setMagnetPosition] = useState('')
-  const [magnetPolarity, setMagnetPolarity] = useState('')
-  const [pcbThickness, setPcbThickness] = useState('')
   const [actuationForceMin, setActuationForceMin] = useState('')
   const [actuationForceMax, setActuationForceMax] = useState('')
   const [bottomOutForceMin, setBottomOutForceMin] = useState('')
@@ -87,23 +80,104 @@ export default function BrowseMasterSwitchesPage() {
   const [initialMagneticFluxMax, setInitialMagneticFluxMax] = useState('')
   const [bottomOutMagneticFluxMin, setBottomOutMagneticFluxMin] = useState('')
   const [bottomOutMagneticFluxMax, setBottomOutMagneticFluxMax] = useState('')
+
+  // Filters - Debounced state (used for API calls)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [debouncedManufacturer, setDebouncedManufacturer] = useState('')
+  const [debouncedTopHousing, setDebouncedTopHousing] = useState('')
+  const [debouncedBottomHousing, setDebouncedBottomHousing] = useState('')
+  const [debouncedStem, setDebouncedStem] = useState('')
+  const [debouncedSpringWeight, setDebouncedSpringWeight] = useState('')
+  const [debouncedSpringLength, setDebouncedSpringLength] = useState('')
+  const [debouncedCompatibility, setDebouncedCompatibility] = useState('')
+  const [debouncedActuationForceMin, setDebouncedActuationForceMin] = useState('')
+  const [debouncedActuationForceMax, setDebouncedActuationForceMax] = useState('')
+  const [debouncedBottomOutForceMin, setDebouncedBottomOutForceMin] = useState('')
+  const [debouncedBottomOutForceMax, setDebouncedBottomOutForceMax] = useState('')
+  const [debouncedPreTravelMin, setDebouncedPreTravelMin] = useState('')
+  const [debouncedPreTravelMax, setDebouncedPreTravelMax] = useState('')
+  const [debouncedBottomOutMin, setDebouncedBottomOutMin] = useState('')
+  const [debouncedBottomOutMax, setDebouncedBottomOutMax] = useState('')
+  const [debouncedInitialForceMin, setDebouncedInitialForceMin] = useState('')
+  const [debouncedInitialForceMax, setDebouncedInitialForceMax] = useState('')
+  const [debouncedInitialMagneticFluxMin, setDebouncedInitialMagneticFluxMin] = useState('')
+  const [debouncedInitialMagneticFluxMax, setDebouncedInitialMagneticFluxMax] = useState('')
+  const [debouncedBottomOutMagneticFluxMin, setDebouncedBottomOutMagneticFluxMin] = useState('')
+  const [debouncedBottomOutMagneticFluxMax, setDebouncedBottomOutMagneticFluxMax] = useState('')
+
+  // Non-text filters (immediate updates)
+  const [type, setType] = useState('')
+  const [technology, setTechnology] = useState('')
+  const [magnetOrientation, setMagnetOrientation] = useState('')
+  const [magnetPosition, setMagnetPosition] = useState('')
+  const [magnetPolarity, setMagnetPolarity] = useState('')
+  const [pcbThickness, setPcbThickness] = useState('')
   const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>('name')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
-  // Debounce search input
-  const debouncedSetSearch = useMemo(
-    () => debounce((value: string) => {
-      setDebouncedSearch(value)
-      setPage(1)
-    }, 300),
+  // Create debounced setters
+  const debouncedUpdate = useMemo(
+    () => debounce((updates: Record<string, string>) => {
+      Object.entries(updates).forEach(([key, value]) => {
+        switch (key) {
+          case 'search': setDebouncedSearch(value); break;
+          case 'manufacturer': setDebouncedManufacturer(value); break;
+          case 'topHousing': setDebouncedTopHousing(value); break;
+          case 'bottomHousing': setDebouncedBottomHousing(value); break;
+          case 'stem': setDebouncedStem(value); break;
+          case 'springWeight': setDebouncedSpringWeight(value); break;
+          case 'springLength': setDebouncedSpringLength(value); break;
+          case 'compatibility': setDebouncedCompatibility(value); break;
+          case 'actuationForceMin': setDebouncedActuationForceMin(value); break;
+          case 'actuationForceMax': setDebouncedActuationForceMax(value); break;
+          case 'bottomOutForceMin': setDebouncedBottomOutForceMin(value); break;
+          case 'bottomOutForceMax': setDebouncedBottomOutForceMax(value); break;
+          case 'preTravelMin': setDebouncedPreTravelMin(value); break;
+          case 'preTravelMax': setDebouncedPreTravelMax(value); break;
+          case 'bottomOutMin': setDebouncedBottomOutMin(value); break;
+          case 'bottomOutMax': setDebouncedBottomOutMax(value); break;
+          case 'initialForceMin': setDebouncedInitialForceMin(value); break;
+          case 'initialForceMax': setDebouncedInitialForceMax(value); break;
+          case 'initialMagneticFluxMin': setDebouncedInitialMagneticFluxMin(value); break;
+          case 'initialMagneticFluxMax': setDebouncedInitialMagneticFluxMax(value); break;
+          case 'bottomOutMagneticFluxMin': setDebouncedBottomOutMagneticFluxMin(value); break;
+          case 'bottomOutMagneticFluxMax': setDebouncedBottomOutMagneticFluxMax(value); break;
+        }
+      });
+      setPage(1); // Reset to first page when filters change
+    }, 500),
     []
   )
 
+  // Update debounced values when immediate values change
   useEffect(() => {
-    debouncedSetSearch(search)
-  }, [search, debouncedSetSearch])
+    debouncedUpdate({
+      search,
+      manufacturer,
+      topHousing,
+      bottomHousing,
+      stem,
+      springWeight,
+      springLength,
+      compatibility,
+      actuationForceMin,
+      actuationForceMax,
+      bottomOutForceMin,
+      bottomOutForceMax,
+      preTravelMin,
+      preTravelMax,
+      bottomOutMin,
+      bottomOutMax,
+      initialForceMin,
+      initialForceMax,
+      initialMagneticFluxMin,
+      initialMagneticFluxMax,
+      bottomOutMagneticFluxMin,
+      bottomOutMagneticFluxMax,
+    });
+  }, [search, manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedUpdate])
 
   // Fetch master switches
   useEffect(() => {
@@ -120,33 +194,33 @@ export default function BrowseMasterSwitchesPage() {
           page: page.toString(),
           limit: '50',
           ...(debouncedSearch && { search: debouncedSearch }),
-          ...(manufacturer && { manufacturer }),
+          ...(debouncedManufacturer && { manufacturer: debouncedManufacturer }),
           ...(type && { type }),
           ...(technology && { technology }),
-          ...(topHousing && { topHousing }),
-          ...(bottomHousing && { bottomHousing }),
-          ...(stem && { stem }),
-          ...(springWeight && { springWeight }),
-          ...(springLength && { springLength }),
-          ...(compatibility && { compatibility }),
+          ...(debouncedTopHousing && { topHousing: debouncedTopHousing }),
+          ...(debouncedBottomHousing && { bottomHousing: debouncedBottomHousing }),
+          ...(debouncedStem && { stem: debouncedStem }),
+          ...(debouncedSpringWeight && { springWeight: debouncedSpringWeight }),
+          ...(debouncedSpringLength && { springLength: debouncedSpringLength }),
+          ...(debouncedCompatibility && { compatibility: debouncedCompatibility }),
           ...(magnetOrientation && { magnetOrientation }),
           ...(magnetPosition && { magnetPosition }),
           ...(magnetPolarity && { magnetPolarity }),
           ...(pcbThickness && { pcbThickness }),
-          ...(actuationForceMin && { actuationForceMin }),
-          ...(actuationForceMax && { actuationForceMax }),
-          ...(bottomOutForceMin && { bottomOutForceMin }),
-          ...(bottomOutForceMax && { bottomOutForceMax }),
-          ...(preTravelMin && { preTravelMin }),
-          ...(preTravelMax && { preTravelMax }),
-          ...(bottomOutMin && { bottomOutMin }),
-          ...(bottomOutMax && { bottomOutMax }),
-          ...(initialForceMin && { initialForceMin }),
-          ...(initialForceMax && { initialForceMax }),
-          ...(initialMagneticFluxMin && { initialMagneticFluxMin }),
-          ...(initialMagneticFluxMax && { initialMagneticFluxMax }),
-          ...(bottomOutMagneticFluxMin && { bottomOutMagneticFluxMin }),
-          ...(bottomOutMagneticFluxMax && { bottomOutMagneticFluxMax }),
+          ...(debouncedActuationForceMin && { actuationForceMin: debouncedActuationForceMin }),
+          ...(debouncedActuationForceMax && { actuationForceMax: debouncedActuationForceMax }),
+          ...(debouncedBottomOutForceMin && { bottomOutForceMin: debouncedBottomOutForceMin }),
+          ...(debouncedBottomOutForceMax && { bottomOutForceMax: debouncedBottomOutForceMax }),
+          ...(debouncedPreTravelMin && { preTravelMin: debouncedPreTravelMin }),
+          ...(debouncedPreTravelMax && { preTravelMax: debouncedPreTravelMax }),
+          ...(debouncedBottomOutMin && { bottomOutMin: debouncedBottomOutMin }),
+          ...(debouncedBottomOutMax && { bottomOutMax: debouncedBottomOutMax }),
+          ...(debouncedInitialForceMin && { initialForceMin: debouncedInitialForceMin }),
+          ...(debouncedInitialForceMax && { initialForceMax: debouncedInitialForceMax }),
+          ...(debouncedInitialMagneticFluxMin && { initialMagneticFluxMin: debouncedInitialMagneticFluxMin }),
+          ...(debouncedInitialMagneticFluxMax && { initialMagneticFluxMax: debouncedInitialMagneticFluxMax }),
+          ...(debouncedBottomOutMagneticFluxMin && { bottomOutMagneticFluxMin: debouncedBottomOutMagneticFluxMin }),
+          ...(debouncedBottomOutMagneticFluxMax && { bottomOutMagneticFluxMax: debouncedBottomOutMagneticFluxMax }),
           sort,
           order,
         })
@@ -165,9 +239,10 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     fetchSwitches()
-  }, [session, status, router, page, debouncedSearch, manufacturer, type, technology, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, actuationForceMin, actuationForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, sort, order])
+  }, [session, status, router, page, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, debouncedActuationForceMin, debouncedActuationForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
 
   const clearAllFilters = () => {
+    setSearch('')
     setManufacturer('')
     setType('')
     setTechnology('')
@@ -195,10 +270,10 @@ export default function BrowseMasterSwitchesPage() {
     setInitialMagneticFluxMax('')
     setBottomOutMagneticFluxMin('')
     setBottomOutMagneticFluxMax('')
-    setPage(1)
+    // Page reset will be handled by debounced update
   }
 
-  const hasActiveFilters = manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || actuationForceMin || actuationForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
+  const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || actuationForceMin || actuationForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -296,10 +371,7 @@ export default function BrowseMasterSwitchesPage() {
               <input
                 type="text"
                 value={manufacturer}
-                onChange={(e) => {
-                  setManufacturer(e.target.value)
-                  setPage(1)
-                }}
+                onChange={(e) => setManufacturer(e.target.value)}
                 placeholder="Filter by manufacturer..."
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               />
@@ -313,7 +385,7 @@ export default function BrowseMasterSwitchesPage() {
                 value={type}
                 onChange={(e) => {
                   setType(e.target.value)
-                  setPage(1)
+                  setPage(1) // Keep immediate page reset for dropdowns
                 }}
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
@@ -334,7 +406,7 @@ export default function BrowseMasterSwitchesPage() {
                 value={technology}
                 onChange={(e) => {
                   setTechnology(e.target.value)
-                  setPage(1)
+                  setPage(1) // Keep immediate page reset for dropdowns
                 }}
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
@@ -385,7 +457,7 @@ export default function BrowseMasterSwitchesPage() {
                     const [newSort, newOrder] = e.target.value.split('-') as [typeof sort, typeof order]
                     setSort(newSort)
                     setOrder(newOrder)
-                    setPage(1)
+                    setPage(1) // Keep immediate page reset for sort changes
                   }}
                   className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                 >
@@ -412,10 +484,7 @@ export default function BrowseMasterSwitchesPage() {
                     <input
                       type="text"
                       value={topHousing}
-                      onChange={(e) => {
-                        setTopHousing(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setTopHousing(e.target.value)}
                       placeholder="e.g., Polycarbonate"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     />
@@ -427,10 +496,7 @@ export default function BrowseMasterSwitchesPage() {
                     <input
                       type="text"
                       value={bottomHousing}
-                      onChange={(e) => {
-                        setBottomHousing(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setBottomHousing(e.target.value)}
                       placeholder="e.g., Nylon"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     />
@@ -442,10 +508,7 @@ export default function BrowseMasterSwitchesPage() {
                     <input
                       type="text"
                       value={stem}
-                      onChange={(e) => {
-                        setStem(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setStem(e.target.value)}
                       placeholder="e.g., POM"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     />
@@ -464,10 +527,7 @@ export default function BrowseMasterSwitchesPage() {
                     <input
                       type="text"
                       value={springWeight}
-                      onChange={(e) => {
-                        setSpringWeight(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setSpringWeight(e.target.value)}
                       placeholder="e.g., 62g"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     />
@@ -479,10 +539,7 @@ export default function BrowseMasterSwitchesPage() {
                     <input
                       type="text"
                       value={springLength}
-                      onChange={(e) => {
-                        setSpringLength(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setSpringLength(e.target.value)}
                       placeholder="e.g., 14mm"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     />
@@ -494,10 +551,7 @@ export default function BrowseMasterSwitchesPage() {
                     <input
                       type="text"
                       value={compatibility}
-                      onChange={(e) => {
-                        setCompatibility(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setCompatibility(e.target.value)}
                       placeholder="e.g., MX-style"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     />
@@ -517,10 +571,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={initialForceMin}
-                        onChange={(e) => {
-                          setInitialForceMin(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setInitialForceMin(e.target.value)}
                         placeholder="Min"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -528,10 +579,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={initialForceMax}
-                        onChange={(e) => {
-                          setInitialForceMax(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setInitialForceMax(e.target.value)}
                         placeholder="Max"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -545,10 +593,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={actuationForceMin}
-                        onChange={(e) => {
-                          setActuationForceMin(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setActuationForceMin(e.target.value)}
                         placeholder="Min"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -556,10 +601,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={actuationForceMax}
-                        onChange={(e) => {
-                          setActuationForceMax(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setActuationForceMax(e.target.value)}
                         placeholder="Max"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -573,10 +615,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={bottomOutForceMin}
-                        onChange={(e) => {
-                          setBottomOutForceMin(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setBottomOutForceMin(e.target.value)}
                         placeholder="Min"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -584,10 +623,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={bottomOutForceMax}
-                        onChange={(e) => {
-                          setBottomOutForceMax(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setBottomOutForceMax(e.target.value)}
                         placeholder="Max"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -609,10 +645,7 @@ export default function BrowseMasterSwitchesPage() {
                         type="number"
                         step="0.01"
                         value={preTravelMin}
-                        onChange={(e) => {
-                          setPreTravelMin(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setPreTravelMin(e.target.value)}
                         placeholder="Min"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -621,10 +654,7 @@ export default function BrowseMasterSwitchesPage() {
                         type="number"
                         step="0.01"
                         value={preTravelMax}
-                        onChange={(e) => {
-                          setPreTravelMax(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setPreTravelMax(e.target.value)}
                         placeholder="Max"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -639,10 +669,7 @@ export default function BrowseMasterSwitchesPage() {
                         type="number"
                         step="0.01"
                         value={bottomOutMin}
-                        onChange={(e) => {
-                          setBottomOutMin(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setBottomOutMin(e.target.value)}
                         placeholder="Min"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -651,10 +678,7 @@ export default function BrowseMasterSwitchesPage() {
                         type="number"
                         step="0.01"
                         value={bottomOutMax}
-                        onChange={(e) => {
-                          setBottomOutMax(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setBottomOutMax(e.target.value)}
                         placeholder="Max"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -747,10 +771,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={initialMagneticFluxMin}
-                        onChange={(e) => {
-                          setInitialMagneticFluxMin(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setInitialMagneticFluxMin(e.target.value)}
                         placeholder="Min"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -758,10 +779,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={initialMagneticFluxMax}
-                        onChange={(e) => {
-                          setInitialMagneticFluxMax(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setInitialMagneticFluxMax(e.target.value)}
                         placeholder="Max"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -775,10 +793,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={bottomOutMagneticFluxMin}
-                        onChange={(e) => {
-                          setBottomOutMagneticFluxMin(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setBottomOutMagneticFluxMin(e.target.value)}
                         placeholder="Min"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
@@ -786,10 +801,7 @@ export default function BrowseMasterSwitchesPage() {
                       <input
                         type="number"
                         value={bottomOutMagneticFluxMax}
-                        onChange={(e) => {
-                          setBottomOutMagneticFluxMax(e.target.value)
-                          setPage(1)
-                        }}
+                        onChange={(e) => setBottomOutMagneticFluxMax(e.target.value)}
                         placeholder="Max"
                         className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                       />
