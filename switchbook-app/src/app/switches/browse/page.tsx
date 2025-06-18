@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
 import debounce from 'lodash/debounce'
+import MultiSelect from '@/components/MultiSelect'
 
 interface MasterSwitch {
   id: string
@@ -49,6 +50,16 @@ interface Pagination {
   limit: number
 }
 
+// Material options for dropdowns
+const materialOptions = [
+  { value: 'POM', label: 'POM' },
+  { value: 'POK', label: 'POK' },
+  { value: 'Nylon', label: 'Nylon' },
+  { value: 'PA66', label: 'PA66' },
+  { value: 'PA12', label: 'PA12' },
+  { value: 'PC/Polycarbonate', label: 'PC/Polycarbonate' },
+]
+
 export default function BrowseMasterSwitchesPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -60,9 +71,9 @@ export default function BrowseMasterSwitchesPage() {
   // Filters - UI state (immediate updates)
   const [search, setSearch] = useState('')
   const [manufacturer, setManufacturer] = useState('')
-  const [topHousing, setTopHousing] = useState('')
-  const [bottomHousing, setBottomHousing] = useState('')
-  const [stem, setStem] = useState('')
+  const [topHousing, setTopHousing] = useState<string[]>([])
+  const [bottomHousing, setBottomHousing] = useState<string[]>([])
+  const [stem, setStem] = useState<string[]>([])
   const [springWeight, setSpringWeight] = useState('')
   const [springLength, setSpringLength] = useState('')
   const [compatibility, setCompatibility] = useState('')
@@ -84,9 +95,9 @@ export default function BrowseMasterSwitchesPage() {
   // Filters - Debounced state (used for API calls)
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [debouncedManufacturer, setDebouncedManufacturer] = useState('')
-  const [debouncedTopHousing, setDebouncedTopHousing] = useState('')
-  const [debouncedBottomHousing, setDebouncedBottomHousing] = useState('')
-  const [debouncedStem, setDebouncedStem] = useState('')
+  const [debouncedTopHousing, setDebouncedTopHousing] = useState<string[]>([])
+  const [debouncedBottomHousing, setDebouncedBottomHousing] = useState<string[]>([])
+  const [debouncedStem, setDebouncedStem] = useState<string[]>([])
   const [debouncedSpringWeight, setDebouncedSpringWeight] = useState('')
   const [debouncedSpringLength, setDebouncedSpringLength] = useState('')
   const [debouncedCompatibility, setDebouncedCompatibility] = useState('')
@@ -119,31 +130,31 @@ export default function BrowseMasterSwitchesPage() {
 
   // Create debounced setters
   const debouncedUpdate = useMemo(
-    () => debounce((updates: Record<string, string>) => {
+    () => debounce((updates: Record<string, string | string[]>) => {
       Object.entries(updates).forEach(([key, value]) => {
         switch (key) {
-          case 'search': setDebouncedSearch(value); break;
-          case 'manufacturer': setDebouncedManufacturer(value); break;
-          case 'topHousing': setDebouncedTopHousing(value); break;
-          case 'bottomHousing': setDebouncedBottomHousing(value); break;
-          case 'stem': setDebouncedStem(value); break;
-          case 'springWeight': setDebouncedSpringWeight(value); break;
-          case 'springLength': setDebouncedSpringLength(value); break;
-          case 'compatibility': setDebouncedCompatibility(value); break;
-          case 'actuationForceMin': setDebouncedActuationForceMin(value); break;
-          case 'actuationForceMax': setDebouncedActuationForceMax(value); break;
-          case 'bottomOutForceMin': setDebouncedBottomOutForceMin(value); break;
-          case 'bottomOutForceMax': setDebouncedBottomOutForceMax(value); break;
-          case 'preTravelMin': setDebouncedPreTravelMin(value); break;
-          case 'preTravelMax': setDebouncedPreTravelMax(value); break;
-          case 'bottomOutMin': setDebouncedBottomOutMin(value); break;
-          case 'bottomOutMax': setDebouncedBottomOutMax(value); break;
-          case 'initialForceMin': setDebouncedInitialForceMin(value); break;
-          case 'initialForceMax': setDebouncedInitialForceMax(value); break;
-          case 'initialMagneticFluxMin': setDebouncedInitialMagneticFluxMin(value); break;
-          case 'initialMagneticFluxMax': setDebouncedInitialMagneticFluxMax(value); break;
-          case 'bottomOutMagneticFluxMin': setDebouncedBottomOutMagneticFluxMin(value); break;
-          case 'bottomOutMagneticFluxMax': setDebouncedBottomOutMagneticFluxMax(value); break;
+          case 'search': setDebouncedSearch(value as string); break;
+          case 'manufacturer': setDebouncedManufacturer(value as string); break;
+          case 'topHousing': setDebouncedTopHousing(value as string[]); break;
+          case 'bottomHousing': setDebouncedBottomHousing(value as string[]); break;
+          case 'stem': setDebouncedStem(value as string[]); break;
+          case 'springWeight': setDebouncedSpringWeight(value as string); break;
+          case 'springLength': setDebouncedSpringLength(value as string); break;
+          case 'compatibility': setDebouncedCompatibility(value as string); break;
+          case 'actuationForceMin': setDebouncedActuationForceMin(value as string); break;
+          case 'actuationForceMax': setDebouncedActuationForceMax(value as string); break;
+          case 'bottomOutForceMin': setDebouncedBottomOutForceMin(value as string); break;
+          case 'bottomOutForceMax': setDebouncedBottomOutForceMax(value as string); break;
+          case 'preTravelMin': setDebouncedPreTravelMin(value as string); break;
+          case 'preTravelMax': setDebouncedPreTravelMax(value as string); break;
+          case 'bottomOutMin': setDebouncedBottomOutMin(value as string); break;
+          case 'bottomOutMax': setDebouncedBottomOutMax(value as string); break;
+          case 'initialForceMin': setDebouncedInitialForceMin(value as string); break;
+          case 'initialForceMax': setDebouncedInitialForceMax(value as string); break;
+          case 'initialMagneticFluxMin': setDebouncedInitialMagneticFluxMin(value as string); break;
+          case 'initialMagneticFluxMax': setDebouncedInitialMagneticFluxMax(value as string); break;
+          case 'bottomOutMagneticFluxMin': setDebouncedBottomOutMagneticFluxMin(value as string); break;
+          case 'bottomOutMagneticFluxMax': setDebouncedBottomOutMagneticFluxMax(value as string); break;
         }
       });
       setPage(1); // Reset to first page when filters change
@@ -197,9 +208,9 @@ export default function BrowseMasterSwitchesPage() {
           ...(debouncedManufacturer && { manufacturer: debouncedManufacturer }),
           ...(type && { type }),
           ...(technology && { technology }),
-          ...(debouncedTopHousing && { topHousing: debouncedTopHousing }),
-          ...(debouncedBottomHousing && { bottomHousing: debouncedBottomHousing }),
-          ...(debouncedStem && { stem: debouncedStem }),
+          ...(debouncedTopHousing.length > 0 && { topHousing: debouncedTopHousing.join(',') }),
+          ...(debouncedBottomHousing.length > 0 && { bottomHousing: debouncedBottomHousing.join(',') }),
+          ...(debouncedStem.length > 0 && { stem: debouncedStem.join(',') }),
           ...(debouncedSpringWeight && { springWeight: debouncedSpringWeight }),
           ...(debouncedSpringLength && { springLength: debouncedSpringLength }),
           ...(debouncedCompatibility && { compatibility: debouncedCompatibility }),
@@ -246,9 +257,9 @@ export default function BrowseMasterSwitchesPage() {
     setManufacturer('')
     setType('')
     setTechnology('')
-    setTopHousing('')
-    setBottomHousing('')
-    setStem('')
+    setTopHousing([])
+    setBottomHousing([])
+    setStem([])
     setSpringWeight('')
     setSpringLength('')
     setCompatibility('')
@@ -273,7 +284,7 @@ export default function BrowseMasterSwitchesPage() {
     // Page reset will be handled by debounced update
   }
 
-  const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || actuationForceMin || actuationForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
+  const hasActiveFilters = search || manufacturer || type || technology || topHousing.length > 0 || bottomHousing.length > 0 || stem.length > 0 || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || actuationForceMin || actuationForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -481,36 +492,33 @@ export default function BrowseMasterSwitchesPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Top Housing
                     </label>
-                    <input
-                      type="text"
+                    <MultiSelect
+                      options={materialOptions}
                       value={topHousing}
-                      onChange={(e) => setTopHousing(e.target.value)}
-                      placeholder="e.g., Polycarbonate"
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      onChange={setTopHousing}
+                      placeholder="Select materials..."
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Bottom Housing
                     </label>
-                    <input
-                      type="text"
+                    <MultiSelect
+                      options={materialOptions}
                       value={bottomHousing}
-                      onChange={(e) => setBottomHousing(e.target.value)}
-                      placeholder="e.g., Nylon"
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      onChange={setBottomHousing}
+                      placeholder="Select materials..."
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Stem
                     </label>
-                    <input
-                      type="text"
+                    <MultiSelect
+                      options={materialOptions}
                       value={stem}
-                      onChange={(e) => setStem(e.target.value)}
-                      placeholder="e.g., POM"
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      onChange={setStem}
+                      placeholder="Select materials..."
                     />
                   </div>
                 </div>

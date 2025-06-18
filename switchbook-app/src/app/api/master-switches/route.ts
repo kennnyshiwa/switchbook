@@ -86,6 +86,57 @@ export async function GET(request: Request) {
       order 
     } = querySchema.parse(params)
 
+    // Helper function to build material conditions
+    const buildMaterialConditions = (materials: string) => {
+      const materialList = materials.split(',').map(m => m.trim()).filter(m => m)
+      
+      if (materialList.length === 0) return undefined
+      
+      // Build OR conditions for multiple materials
+      const orConditions: any[] = []
+      
+      materialList.forEach(material => {
+        if (material === 'PC/Polycarbonate') {
+          // Special handling for PC/Polycarbonate - match either PC or Polycarbonate
+          orConditions.push(
+            { contains: 'PC', mode: 'insensitive' },
+            { contains: 'Polycarbonate', mode: 'insensitive' }
+          )
+        } else {
+          orConditions.push({ contains: material, mode: 'insensitive' })
+        }
+      })
+      
+      return orConditions.length > 1 ? { OR: orConditions } : orConditions[0]
+    }
+
+    // Build where clause with material filters
+    const materialFilters: any[] = []
+    
+    // Handle topHousing filter
+    if (topHousing) {
+      const condition = buildMaterialConditions(topHousing)
+      if (condition) {
+        materialFilters.push({ topHousing: condition })
+      }
+    }
+    
+    // Handle bottomHousing filter
+    if (bottomHousing) {
+      const condition = buildMaterialConditions(bottomHousing)
+      if (condition) {
+        materialFilters.push({ bottomHousing: condition })
+      }
+    }
+    
+    // Handle stem filter
+    if (stem) {
+      const condition = buildMaterialConditions(stem)
+      if (condition) {
+        materialFilters.push({ stem: condition })
+      }
+    }
+
     // Build where clause
     const where: Prisma.MasterSwitchWhereInput = {
       status: MasterSwitchStatus.APPROVED,
@@ -99,9 +150,8 @@ export async function GET(request: Request) {
       ...(manufacturer && { manufacturer: { contains: manufacturer, mode: 'insensitive' } }),
       ...(type && { type: type as any }),
       ...(technology && { technology: technology as any }),
-      ...(topHousing && { topHousing: { contains: topHousing, mode: 'insensitive' } }),
-      ...(bottomHousing && { bottomHousing: { contains: bottomHousing, mode: 'insensitive' } }),
-      ...(stem && { stem: { contains: stem, mode: 'insensitive' } }),
+      // Apply material filters using AND to ensure all selected filters match
+      ...(materialFilters.length > 0 && { AND: materialFilters }),
       ...(springWeight && { springWeight: { contains: springWeight, mode: 'insensitive' } }),
       ...(springLength && { springLength: { contains: springLength, mode: 'insensitive' } }),
       ...(compatibility && { compatibility: { contains: compatibility, mode: 'insensitive' } }),
