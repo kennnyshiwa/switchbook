@@ -58,8 +58,6 @@ const materialOptions = [
   { value: 'PA12', label: 'PA12' },
   { value: 'PC', label: 'PC' },
   { value: 'Polycarbonate', label: 'Polycarbonate' },
-  { value: 'ABS', label: 'ABS' },
-  { value: 'PBT', label: 'PBT' },
   { value: 'UHMWPE', label: 'UHMWPE' },
 ]
 
