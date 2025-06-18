@@ -230,7 +230,14 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
             </div>
           )}
 
-          <SwitchForm register={register} errors={errors} setValue={setValue} watch={watch} showFrankenswitch={showFrankenswitch} />
+          <SwitchForm 
+            register={register} 
+            errors={errors} 
+            setValue={setValue} 
+            watch={watch} 
+            showFrankenswitch={showFrankenswitch} 
+            isLinkedToMaster={!!switchItem.masterSwitchId}
+          />
 
           <div className="flex justify-end space-x-3 pt-4">
             <button

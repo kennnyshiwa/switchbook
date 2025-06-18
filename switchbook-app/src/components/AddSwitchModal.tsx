@@ -124,7 +124,14 @@ export default function AddSwitchModal({ userId, onClose, onSwitchAdded }: AddSw
           )}
 
           <div className="relative">
-            <SwitchForm register={register} errors={errors} setValue={setValue} watch={watch} showFrankenswitch={showFrankenswitch} />
+            <SwitchForm 
+              register={register} 
+              errors={errors} 
+              setValue={setValue} 
+              watch={watch} 
+              showFrankenswitch={showFrankenswitch} 
+              isLinkedToMaster={!!selectedMasterSwitchId}
+            />
             
             {/* Show suggestions when typing switch name */}
             {switchName && switchName.length >= 2 && !selectedMasterSwitchId && (

@@ -292,10 +292,15 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
           )}
 
           {switchItem.notes && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{linkify(switchItem.notes)}</p>
+            <div className={`mt-2 ${switchItem.masterSwitchId ? 'p-2 bg-gray-100 dark:bg-gray-700 rounded-md' : ''}`}>
+              {switchItem.masterSwitchId && (
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Master Database Notes</p>
+              )}
+              <p className="text-sm text-gray-500 dark:text-gray-400">{linkify(switchItem.notes)}</p>
+            </div>
           )}
 
-          {switchItem.personalNotes && (
+          {switchItem.masterSwitchId && switchItem.personalNotes && (
             <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
               <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">Personal Notes</p>
               <p className="text-sm text-blue-700 dark:text-blue-300">{linkify(switchItem.personalNotes)}</p>
