@@ -55,6 +55,7 @@ model Switch {
   bottomOut       Float?
   manufacturer    String?
   notes           String?
+  personalNotes   String?
   imageUrl        String?
   topHousing      String?
   bottomHousing   String?
