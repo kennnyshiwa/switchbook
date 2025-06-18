@@ -93,19 +93,10 @@ export async function GET(request: Request) {
       if (materialList.length === 0) return undefined
       
       // Build OR conditions for multiple materials
-      const orConditions: any[] = []
-      
-      materialList.forEach(material => {
-        if (material === 'PC/Polycarbonate') {
-          // Special handling for PC/Polycarbonate - match either PC or Polycarbonate
-          orConditions.push(
-            { contains: 'PC', mode: 'insensitive' },
-            { contains: 'Polycarbonate', mode: 'insensitive' }
-          )
-        } else {
-          orConditions.push({ contains: material, mode: 'insensitive' })
-        }
-      })
+      const orConditions: any[] = materialList.map(material => ({
+        contains: material,
+        mode: 'insensitive'
+      }))
       
       return orConditions.length > 1 ? { OR: orConditions } : orConditions[0]
     }

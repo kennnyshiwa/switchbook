@@ -57,7 +57,11 @@ const materialOptions = [
   { value: 'Nylon', label: 'Nylon' },
   { value: 'PA66', label: 'PA66' },
   { value: 'PA12', label: 'PA12' },
-  { value: 'PC/Polycarbonate', label: 'PC/Polycarbonate' },
+  { value: 'PC', label: 'PC' },
+  { value: 'Polycarbonate', label: 'Polycarbonate' },
+  { value: 'ABS', label: 'ABS' },
+  { value: 'PBT', label: 'PBT' },
+  { value: 'UHMWPE', label: 'UHMWPE' },
 ]
 
 export default function BrowseMasterSwitchesPage() {
