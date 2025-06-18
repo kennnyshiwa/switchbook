@@ -101,9 +101,6 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Notes
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Personal Notes
-              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Actions
               </th>
@@ -244,11 +241,24 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                     {!switchItem.frankenTop && !switchItem.frankenBottom && !switchItem.frankenStem && '-'}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-                  {switchItem.notes ? linkify(switchItem.notes) : '-'}
-                </td>
-                <td className="px-6 py-4 text-sm text-blue-700 dark:text-blue-300 max-w-xs">
-                  {switchItem.personalNotes ? linkify(switchItem.personalNotes) : '-'}
+                <td className="px-6 py-4 text-sm max-w-xs">
+                  <div className="space-y-2">
+                    {switchItem.notes && (
+                      <div>
+                        {switchItem.masterSwitchId && (
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400 block">Master Notes:</span>
+                        )}
+                        <span className="text-gray-500 dark:text-gray-400">{linkify(switchItem.notes)}</span>
+                      </div>
+                    )}
+                    {switchItem.masterSwitchId && switchItem.personalNotes && (
+                      <div>
+                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300 block">Personal Notes:</span>
+                        <span className="text-blue-600 dark:text-blue-400">{linkify(switchItem.personalNotes)}</span>
+                      </div>
+                    )}
+                    {!switchItem.notes && (!switchItem.masterSwitchId || !switchItem.personalNotes) && '-'}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center space-x-2">
