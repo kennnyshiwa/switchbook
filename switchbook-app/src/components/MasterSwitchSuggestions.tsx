@@ -72,7 +72,7 @@ export default function MasterSwitchSuggestions({ searchQuery, setValue, onSelec
 
   useEffect(() => {
     searchMasterSwitches(searchQuery)
-  }, [searchQuery])
+  }, [searchQuery, searchMasterSwitches])
 
   const handleSelectSwitch = (masterSwitch: MasterSwitch) => {
     // Map master switch data to form fields

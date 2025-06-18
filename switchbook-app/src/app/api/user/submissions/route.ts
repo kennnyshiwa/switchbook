@@ -51,7 +51,6 @@ export async function GET() {
         status: true,
         rejectionReason: true,
         editedAt: true,
-        approvedAt: true,
         approvedBy: {
           select: {
             username: true
