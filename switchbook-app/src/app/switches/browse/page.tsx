@@ -63,9 +63,34 @@ export default function BrowseMasterSwitchesPage() {
   const [manufacturer, setManufacturer] = useState('')
   const [type, setType] = useState('')
   const [technology, setTechnology] = useState('')
+  const [topHousing, setTopHousing] = useState('')
+  const [bottomHousing, setBottomHousing] = useState('')
+  const [stem, setStem] = useState('')
+  const [springWeight, setSpringWeight] = useState('')
+  const [springLength, setSpringLength] = useState('')
+  const [compatibility, setCompatibility] = useState('')
+  const [magnetOrientation, setMagnetOrientation] = useState('')
+  const [magnetPosition, setMagnetPosition] = useState('')
+  const [magnetPolarity, setMagnetPolarity] = useState('')
+  const [pcbThickness, setPcbThickness] = useState('')
+  const [actuationForceMin, setActuationForceMin] = useState('')
+  const [actuationForceMax, setActuationForceMax] = useState('')
+  const [bottomOutForceMin, setBottomOutForceMin] = useState('')
+  const [bottomOutForceMax, setBottomOutForceMax] = useState('')
+  const [preTravelMin, setPreTravelMin] = useState('')
+  const [preTravelMax, setPreTravelMax] = useState('')
+  const [bottomOutMin, setBottomOutMin] = useState('')
+  const [bottomOutMax, setBottomOutMax] = useState('')
+  const [initialForceMin, setInitialForceMin] = useState('')
+  const [initialForceMax, setInitialForceMax] = useState('')
+  const [initialMagneticFluxMin, setInitialMagneticFluxMin] = useState('')
+  const [initialMagneticFluxMax, setInitialMagneticFluxMax] = useState('')
+  const [bottomOutMagneticFluxMin, setBottomOutMagneticFluxMin] = useState('')
+  const [bottomOutMagneticFluxMax, setBottomOutMagneticFluxMax] = useState('')
   const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>('name')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   // Debounce search input
   const debouncedSetSearch = useMemo(
@@ -98,6 +123,30 @@ export default function BrowseMasterSwitchesPage() {
           ...(manufacturer && { manufacturer }),
           ...(type && { type }),
           ...(technology && { technology }),
+          ...(topHousing && { topHousing }),
+          ...(bottomHousing && { bottomHousing }),
+          ...(stem && { stem }),
+          ...(springWeight && { springWeight }),
+          ...(springLength && { springLength }),
+          ...(compatibility && { compatibility }),
+          ...(magnetOrientation && { magnetOrientation }),
+          ...(magnetPosition && { magnetPosition }),
+          ...(magnetPolarity && { magnetPolarity }),
+          ...(pcbThickness && { pcbThickness }),
+          ...(actuationForceMin && { actuationForceMin }),
+          ...(actuationForceMax && { actuationForceMax }),
+          ...(bottomOutForceMin && { bottomOutForceMin }),
+          ...(bottomOutForceMax && { bottomOutForceMax }),
+          ...(preTravelMin && { preTravelMin }),
+          ...(preTravelMax && { preTravelMax }),
+          ...(bottomOutMin && { bottomOutMin }),
+          ...(bottomOutMax && { bottomOutMax }),
+          ...(initialForceMin && { initialForceMin }),
+          ...(initialForceMax && { initialForceMax }),
+          ...(initialMagneticFluxMin && { initialMagneticFluxMin }),
+          ...(initialMagneticFluxMax && { initialMagneticFluxMax }),
+          ...(bottomOutMagneticFluxMin && { bottomOutMagneticFluxMin }),
+          ...(bottomOutMagneticFluxMax && { bottomOutMagneticFluxMax }),
           sort,
           order,
         })
@@ -116,7 +165,40 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     fetchSwitches()
-  }, [session, status, router, page, debouncedSearch, manufacturer, type, technology, sort, order])
+  }, [session, status, router, page, debouncedSearch, manufacturer, type, technology, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, actuationForceMin, actuationForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, sort, order])
+
+  const clearAllFilters = () => {
+    setManufacturer('')
+    setType('')
+    setTechnology('')
+    setTopHousing('')
+    setBottomHousing('')
+    setStem('')
+    setSpringWeight('')
+    setSpringLength('')
+    setCompatibility('')
+    setMagnetOrientation('')
+    setMagnetPosition('')
+    setMagnetPolarity('')
+    setPcbThickness('')
+    setActuationForceMin('')
+    setActuationForceMax('')
+    setBottomOutForceMin('')
+    setBottomOutForceMax('')
+    setPreTravelMin('')
+    setPreTravelMax('')
+    setBottomOutMin('')
+    setBottomOutMax('')
+    setInitialForceMin('')
+    setInitialForceMax('')
+    setInitialMagneticFluxMin('')
+    setInitialMagneticFluxMax('')
+    setBottomOutMagneticFluxMin('')
+    setBottomOutMagneticFluxMax('')
+    setPage(1)
+  }
+
+  const hasActiveFilters = manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || actuationForceMin || actuationForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -192,7 +274,8 @@ export default function BrowseMasterSwitchesPage() {
 
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Basic Filters Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Search
@@ -202,7 +285,7 @@ export default function BrowseMasterSwitchesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search switches..."
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               />
             </div>
 
@@ -218,7 +301,7 @@ export default function BrowseMasterSwitchesPage() {
                   setPage(1)
                 }}
                 placeholder="Filter by manufacturer..."
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               />
             </div>
 
@@ -232,7 +315,7 @@ export default function BrowseMasterSwitchesPage() {
                   setType(e.target.value)
                   setPage(1)
                 }}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
                 <option value="">All Types</option>
                 <option value="LINEAR">Linear</option>
@@ -245,25 +328,477 @@ export default function BrowseMasterSwitchesPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Sort By
+                Technology
               </label>
               <select
-                value={`${sort}-${order}`}
+                value={technology}
                 onChange={(e) => {
-                  const [newSort, newOrder] = e.target.value.split('-') as [typeof sort, typeof order]
-                  setSort(newSort)
-                  setOrder(newOrder)
+                  setTechnology(e.target.value)
                   setPage(1)
                 }}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
-                <option value="name-asc">Name (A-Z)</option>
-                <option value="name-desc">Name (Z-A)</option>
-                <option value="viewCount-desc">Most Popular</option>
-                <option value="createdAt-desc">Recently Added</option>
+                <option value="">All Technologies</option>
+                <option value="MECHANICAL">Mechanical</option>
+                <option value="OPTICAL">Optical</option>
+                <option value="MAGNETIC">Magnetic</option>
+                <option value="INDUCTIVE">Inductive</option>
+                <option value="ELECTRO_CAPACITIVE">Electro Capacitive</option>
               </select>
             </div>
           </div>
+
+          {/* Advanced Filters Toggle */}
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              <svg 
+                className={`w-4 h-4 transform transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
+            </button>
+
+            <div className="flex items-center gap-4">
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  Clear All Filters
+                </button>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sort By
+                </label>
+                <select
+                  value={`${sort}-${order}`}
+                  onChange={(e) => {
+                    const [newSort, newOrder] = e.target.value.split('-') as [typeof sort, typeof order]
+                    setSort(newSort)
+                    setOrder(newOrder)
+                    setPage(1)
+                  }}
+                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="viewCount-desc">Most Popular</option>
+                  <option value="createdAt-desc">Recently Added</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-6">
+              {/* Materials */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Materials</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Top Housing
+                    </label>
+                    <input
+                      type="text"
+                      value={topHousing}
+                      onChange={(e) => {
+                        setTopHousing(e.target.value)
+                        setPage(1)
+                      }}
+                      placeholder="e.g., Polycarbonate"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Bottom Housing
+                    </label>
+                    <input
+                      type="text"
+                      value={bottomHousing}
+                      onChange={(e) => {
+                        setBottomHousing(e.target.value)
+                        setPage(1)
+                      }}
+                      placeholder="e.g., Nylon"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Stem
+                    </label>
+                    <input
+                      type="text"
+                      value={stem}
+                      onChange={(e) => {
+                        setStem(e.target.value)
+                        setPage(1)
+                      }}
+                      placeholder="e.g., POM"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Spring & Physical */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Spring & Physical</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Spring Weight
+                    </label>
+                    <input
+                      type="text"
+                      value={springWeight}
+                      onChange={(e) => {
+                        setSpringWeight(e.target.value)
+                        setPage(1)
+                      }}
+                      placeholder="e.g., 62g"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Spring Length
+                    </label>
+                    <input
+                      type="text"
+                      value={springLength}
+                      onChange={(e) => {
+                        setSpringLength(e.target.value)
+                        setPage(1)
+                      }}
+                      placeholder="e.g., 14mm"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Compatibility
+                    </label>
+                    <input
+                      type="text"
+                      value={compatibility}
+                      onChange={(e) => {
+                        setCompatibility(e.target.value)
+                        setPage(1)
+                      }}
+                      placeholder="e.g., MX-style"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Force Ranges */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Force Specifications (grams)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Initial Force Range
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={initialForceMin}
+                        onChange={(e) => {
+                          setInitialForceMin(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Min"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                      <span className="self-center text-gray-500">-</span>
+                      <input
+                        type="number"
+                        value={initialForceMax}
+                        onChange={(e) => {
+                          setInitialForceMax(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Max"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Actuation Force Range
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={actuationForceMin}
+                        onChange={(e) => {
+                          setActuationForceMin(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Min"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                      <span className="self-center text-gray-500">-</span>
+                      <input
+                        type="number"
+                        value={actuationForceMax}
+                        onChange={(e) => {
+                          setActuationForceMax(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Max"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Bottom Out Force Range
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={bottomOutForceMin}
+                        onChange={(e) => {
+                          setBottomOutForceMin(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Min"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                      <span className="self-center text-gray-500">-</span>
+                      <input
+                        type="number"
+                        value={bottomOutForceMax}
+                        onChange={(e) => {
+                          setBottomOutForceMax(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Max"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Travel Ranges */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Travel Distances (mm)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Pre-Travel Range
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={preTravelMin}
+                        onChange={(e) => {
+                          setPreTravelMin(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Min"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                      <span className="self-center text-gray-500">-</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={preTravelMax}
+                        onChange={(e) => {
+                          setPreTravelMax(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Max"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Total Travel Range
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={bottomOutMin}
+                        onChange={(e) => {
+                          setBottomOutMin(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Min"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                      <span className="self-center text-gray-500">-</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={bottomOutMax}
+                        onChange={(e) => {
+                          setBottomOutMax(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Max"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Magnetic Properties */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Magnetic Properties</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Orientation
+                    </label>
+                    <select
+                      value={magnetOrientation}
+                      onChange={(e) => {
+                        setMagnetOrientation(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    >
+                      <option value="">All Orientations</option>
+                      <option value="Horizontal">Horizontal</option>
+                      <option value="Vertical">Vertical</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Position
+                    </label>
+                    <select
+                      value={magnetPosition}
+                      onChange={(e) => {
+                        setMagnetPosition(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    >
+                      <option value="">All Positions</option>
+                      <option value="Center">Center</option>
+                      <option value="Off-Center">Off-Center</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Polarity
+                    </label>
+                    <select
+                      value={magnetPolarity}
+                      onChange={(e) => {
+                        setMagnetPolarity(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    >
+                      <option value="">All Polarities</option>
+                      <option value="North">North</option>
+                      <option value="South">South</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      PCB Thickness
+                    </label>
+                    <select
+                      value={pcbThickness}
+                      onChange={(e) => {
+                        setPcbThickness(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    >
+                      <option value="">All Thicknesses</option>
+                      <option value="1.2mm">1.2mm</option>
+                      <option value="1.6mm">1.6mm</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Magnetic Flux Ranges */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Initial Magnetic Flux Range (Gs)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={initialMagneticFluxMin}
+                        onChange={(e) => {
+                          setInitialMagneticFluxMin(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Min"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                      <span className="self-center text-gray-500">-</span>
+                      <input
+                        type="number"
+                        value={initialMagneticFluxMax}
+                        onChange={(e) => {
+                          setInitialMagneticFluxMax(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Max"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Bottom Out Magnetic Flux Range (Gs)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={bottomOutMagneticFluxMin}
+                        onChange={(e) => {
+                          setBottomOutMagneticFluxMin(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Min"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                      <span className="self-center text-gray-500">-</span>
+                      <input
+                        type="number"
+                        value={bottomOutMagneticFluxMax}
+                        onChange={(e) => {
+                          setBottomOutMagneticFluxMax(e.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Max"
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Results */}
