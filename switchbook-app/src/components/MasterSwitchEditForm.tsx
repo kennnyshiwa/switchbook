@@ -5,48 +5,50 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import ManufacturerAutocomplete from './ManufacturerAutocomplete';
 import { useState } from 'react';
+import { validateImageUrl } from '@/lib/image-security';
 
-// Schema for edit suggestion
+// Schema for edit suggestion - matching the submission form
 const editSuggestionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
-  chineseName: z.string().optional().nullable(),
+  chineseName: z.string().optional(),
   manufacturer: z.string().min(1, 'Manufacturer is required'),
-  brand: z.string().optional().nullable(),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().nullable(),
-  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().nullable(),
-  compatibility: z.string().optional().nullable(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional(),
+  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional(),
+  compatibility: z.string().optional(),
   
-  // Physical specifications
-  actuationForce: z.number().min(0).max(200).optional().or(z.nan()),
-  bottomOutForce: z.number().min(0).max(200).optional().or(z.nan()),
+  // Force specifications
+  initialForce: z.number().min(0).max(1000).optional().or(z.nan()),
+  actuationForce: z.number().min(0).max(1000).optional().or(z.nan()),
+  bottomOutForce: z.number().min(0).max(1000).optional().or(z.nan()),
   preTravel: z.number().min(0).max(10).optional().or(z.nan()),
-  totalTravel: z.number().min(0).max(10).optional().or(z.nan()),
+  bottomOut: z.number().min(0).max(10).optional().or(z.nan()),
   
   // Spring specifications
-  springType: z.string().optional().nullable(),
-  springForce: z.string().optional().nullable(),
-  springMaterialType: z.string().optional().nullable(),
-  springLength: z.string().optional().nullable(),
+  springWeight: z.string().optional(),
+  springLength: z.string().optional(),
   
-  // Housing specifications
-  topHousingMaterial: z.string().optional().nullable(),
-  bottomHousingMaterial: z.string().optional().nullable(),
-  stemMaterial: z.string().optional().nullable(),
-  stemColor: z.string().optional().nullable(),
+  // Materials
+  topHousing: z.string().optional(),
+  bottomHousing: z.string().optional(),
+  stem: z.string().optional(),
+  
+  // Magnetic specifications
+  magnetOrientation: z.string().optional(),
+  magnetPosition: z.string().optional(),
+  magnetPolarity: z.string().optional(),
+  initialMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan()),
+  bottomOutMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan()),
+  pcbThickness: z.string().optional(),
   
   // Additional info
-  preLubed: z.boolean().optional(),
-  releaseYear: z.number().min(1970).max(new Date().getFullYear() + 1).optional().or(z.nan()),
-  lifespan: z.string().optional().nullable(),
-  productUrl: z.string().optional().nullable().refine(
-    (val) => !val || val === '' || /^https?:\/\/.+/.test(val),
-    { message: 'Please enter a valid URL or leave empty' }
-  ),
-  imageUrl: z.string().optional().nullable().refine(
-    (val) => !val || val === '' || /^https?:\/\/.+/.test(val),
-    { message: 'Please enter a valid URL or leave empty' }
-  ),
-  notes: z.string().optional().nullable(),
+  imageUrl: z.string().optional().refine((url) => {
+    if (!url || url === "") return true
+    const validation = validateImageUrl(url)
+    return validation.valid
+  }, {
+    message: "Invalid image URL or security violation"
+  }),
+  notes: z.string().optional(),
   
   // Edit reason
   editReason: z.string().min(10, 'Please explain what you changed and why'),
@@ -64,6 +66,9 @@ interface MasterSwitchEditFormProps {
 
 export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: MasterSwitchEditFormProps) {
   const [changedFields, setChangedFields] = useState<Set<string>>(new Set());
+  const [showMagneticFields, setShowMagneticFields] = useState(
+    currentData.technology === 'MAGNETIC'
+  );
   
   const {
     register,
@@ -76,32 +81,23 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     resolver: zodResolver(editSuggestionSchema),
     defaultValues: {
       ...currentData,
-      totalTravel: currentData.bottomOut || '',
-      springForce: currentData.springWeight || '',
-      topHousingMaterial: currentData.topHousing || '',
-      bottomHousingMaterial: currentData.bottomHousing || '',
-      stemMaterial: currentData.stem || '',
-      imageUrl: currentData.imageUrl || '',
-      productUrl: currentData.productUrl || '',
       editReason: '',
     },
   });
 
   const manufacturerValue = watch('manufacturer');
+  const technologyValue = watch('technology');
+
+  // Show magnetic fields when magnetic technology is selected
+  if (technologyValue === 'MAGNETIC' && !showMagneticFields) {
+    setShowMagneticFields(true);
+  } else if (technologyValue !== 'MAGNETIC' && showMagneticFields) {
+    setShowMagneticFields(false);
+  }
 
   // Track field changes
   const handleFieldChange = (fieldName: string, newValue: any) => {
-    // Map form field names to currentData field names
-    const fieldMapping: { [key: string]: string } = {
-      totalTravel: 'bottomOut',
-      springForce: 'springWeight',
-      topHousingMaterial: 'topHousing',
-      bottomHousingMaterial: 'bottomHousing',
-      stemMaterial: 'stem',
-    };
-    
-    const dataFieldName = fieldMapping[fieldName] || fieldName;
-    const originalValue = (currentData as any)[dataFieldName];
+    const originalValue = (currentData as any)[fieldName];
     
     if (newValue !== originalValue) {
       setChangedFields(prev => new Set(prev).add(fieldName));
@@ -127,11 +123,13 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     // Convert NaN values to undefined for optional number fields
     const cleanedData = {
       ...data,
+      initialForce: isNaN(data.initialForce as number) ? undefined : data.initialForce,
       actuationForce: isNaN(data.actuationForce as number) ? undefined : data.actuationForce,
       bottomOutForce: isNaN(data.bottomOutForce as number) ? undefined : data.bottomOutForce,
       preTravel: isNaN(data.preTravel as number) ? undefined : data.preTravel,
-      totalTravel: isNaN(data.totalTravel as number) ? undefined : data.totalTravel,
-      releaseYear: isNaN(data.releaseYear as number) ? undefined : data.releaseYear,
+      bottomOut: isNaN(data.bottomOut as number) ? undefined : data.bottomOut,
+      initialMagneticFlux: isNaN(data.initialMagneticFlux as number) ? undefined : data.initialMagneticFlux,
+      bottomOutMagneticFlux: isNaN(data.bottomOutMagneticFlux as number) ? undefined : data.bottomOutMagneticFlux,
       changedFields: Array.from(changedFields),
     };
     
@@ -157,7 +155,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
 
       {/* Basic Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Basic Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -170,10 +168,11 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
                 handleFieldChange('name', e.target.value);
               }}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Cherry MX Red"
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
             )}
           </div>
 
@@ -188,7 +187,8 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
                 handleFieldChange('chineseName', e.target.value);
               }}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., 樱桃红轴"
             />
           </div>
 
@@ -209,7 +209,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Type
+              Switch Type
             </label>
             <select
               {...register('type')}
@@ -217,7 +217,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
                 register('type').onChange(e);
                 handleFieldChange('type', e.target.value);
               }}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
             >
               <option value="">Select type</option>
               <option value="LINEAR">Linear</option>
@@ -227,13 +227,69 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               <option value="SILENT_TACTILE">Silent Tactile</option>
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Technology
+            </label>
+            <select
+              {...register('technology')}
+              onChange={(e) => {
+                register('technology').onChange(e);
+                handleFieldChange('technology', e.target.value);
+              }}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+            >
+              <option value="">Select technology</option>
+              <option value="MECHANICAL">Mechanical</option>
+              <option value="OPTICAL">Optical</option>
+              <option value="MAGNETIC">Magnetic</option>
+              <option value="INDUCTIVE">Inductive</option>
+              <option value="ELECTRO_CAPACITIVE">Electro Capacitive</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Compatibility
+            </label>
+            <input
+              {...register('compatibility')}
+              onChange={(e) => {
+                register('compatibility').onChange(e);
+                handleFieldChange('compatibility', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., MX-style, Alps, Choc"
+            />
+          </div>
         </div>
       </div>
 
       {/* Force Specifications */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Force Specifications</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Force Specifications</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Initial Force (g)
+            </label>
+            <input
+              {...register('initialForce', { valueAsNumber: true })}
+              onChange={(e) => {
+                register('initialForce', { valueAsNumber: true }).onChange(e);
+                handleFieldChange('initialForce', e.target.valueAsNumber);
+              }}
+              type="number"
+              step="0.1"
+              min="0"
+              max="1000"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="20"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Actuation Force (g)
@@ -247,8 +303,9 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               type="number"
               step="0.1"
               min="0"
-              max="200"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              max="1000"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="45"
             />
           </div>
 
@@ -265,14 +322,15 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               type="number"
               step="0.1"
               min="0"
-              max="200"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              max="1000"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="62"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Pre-Travel (mm)
+              Pre Travel (mm)
             </label>
             <input
               {...register('preTravel', { valueAsNumber: true })}
@@ -284,25 +342,272 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               step="0.01"
               min="0"
               max="10"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="2.0"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Total Travel (mm)
+              Bottom Out/Total Travel (mm)
             </label>
             <input
-              {...register('totalTravel', { valueAsNumber: true })}
+              {...register('bottomOut', { valueAsNumber: true })}
               onChange={(e) => {
-                register('totalTravel', { valueAsNumber: true }).onChange(e);
-                handleFieldChange('totalTravel', e.target.valueAsNumber);
+                register('bottomOut', { valueAsNumber: true }).onChange(e);
+                handleFieldChange('bottomOut', e.target.valueAsNumber);
               }}
               type="number"
               step="0.01"
               min="0"
               max="10"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="4.0"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Spring Weight
+            </label>
+            <input
+              {...register('springWeight')}
+              onChange={(e) => {
+                register('springWeight').onChange(e);
+                handleFieldChange('springWeight', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="62g"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Spring Length
+            </label>
+            <input
+              {...register('springLength')}
+              onChange={(e) => {
+                register('springLength').onChange(e);
+                handleFieldChange('springLength', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="14mm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Materials */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Materials</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Top Housing
+            </label>
+            <input
+              {...register('topHousing')}
+              onChange={(e) => {
+                register('topHousing').onChange(e);
+                handleFieldChange('topHousing', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Polycarbonate, Nylon"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Bottom Housing
+            </label>
+            <input
+              {...register('bottomHousing')}
+              onChange={(e) => {
+                register('bottomHousing').onChange(e);
+                handleFieldChange('bottomHousing', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Nylon, POM"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Stem
+            </label>
+            <input
+              {...register('stem')}
+              onChange={(e) => {
+                register('stem').onChange(e);
+                handleFieldChange('stem', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., POM, UHMWPE"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Magnetic Fields (conditional) */}
+      {showMagneticFields && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Magnetic Specifications</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Initial Magnetic Flux (Gs)
+              </label>
+              <input
+                {...register('initialMagneticFlux', { valueAsNumber: true })}
+                onChange={(e) => {
+                  register('initialMagneticFlux', { valueAsNumber: true }).onChange(e);
+                  handleFieldChange('initialMagneticFlux', e.target.valueAsNumber);
+                }}
+                type="number"
+                step="0.1"
+                min="0"
+                max="10000"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="35"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Bottom Out Magnetic Flux (Gs)
+              </label>
+              <input
+                {...register('bottomOutMagneticFlux', { valueAsNumber: true })}
+                onChange={(e) => {
+                  register('bottomOutMagneticFlux', { valueAsNumber: true }).onChange(e);
+                  handleFieldChange('bottomOutMagneticFlux', e.target.valueAsNumber);
+                }}
+                type="number"
+                step="0.1"
+                min="0"
+                max="10000"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="3500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Magnetic Pole Orientation
+              </label>
+              <select
+                {...register('magnetOrientation')}
+                onChange={(e) => {
+                  register('magnetOrientation').onChange(e);
+                  handleFieldChange('magnetOrientation', e.target.value);
+                }}
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              >
+                <option value="">Select orientation</option>
+                <option value="Horizontal">Horizontal</option>
+                <option value="Vertical">Vertical</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Magnet Position
+              </label>
+              <select
+                {...register('magnetPosition')}
+                onChange={(e) => {
+                  register('magnetPosition').onChange(e);
+                  handleFieldChange('magnetPosition', e.target.value);
+                }}
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              >
+                <option value="">Select position</option>
+                <option value="Center">Center</option>
+                <option value="Off-Center">Off-Center</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                PCB Thickness
+              </label>
+              <select
+                {...register('pcbThickness')}
+                onChange={(e) => {
+                  register('pcbThickness').onChange(e);
+                  handleFieldChange('pcbThickness', e.target.value);
+                }}
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              >
+                <option value="">Select thickness</option>
+                <option value="1.2mm">1.2mm</option>
+                <option value="1.6mm">1.6mm</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Magnet Polarity
+              </label>
+              <select
+                {...register('magnetPolarity')}
+                onChange={(e) => {
+                  register('magnetPolarity').onChange(e);
+                  handleFieldChange('magnetPolarity', e.target.value);
+                }}
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              >
+                <option value="">Select polarity</option>
+                <option value="North">North</option>
+                <option value="South">South</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Additional Information */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Additional Information</h2>
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Image URL
+            </label>
+            <input
+              {...register('imageUrl')}
+              onChange={(e) => {
+                register('imageUrl').onChange(e);
+                handleFieldChange('imageUrl', e.target.value);
+              }}
+              type="url"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="https://example.com/switch.jpg"
+            />
+            {errors.imageUrl && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Notes
+            </label>
+            <textarea
+              {...register('notes')}
+              onChange={(e) => {
+                register('notes').onChange(e);
+                handleFieldChange('notes', e.target.value);
+              }}
+              rows={3}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="Any additional information about the switch..."
             />
           </div>
         </div>
@@ -310,7 +615,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
 
       {/* Edit Reason */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Edit Details</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Edit Details</h2>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             What did you change and why? <span className="text-red-500">*</span>
@@ -318,11 +623,11 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
           <textarea
             {...register('editReason')}
             rows={4}
-            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
             placeholder="Please explain what information you've updated and provide any sources or references for your changes..."
           />
           {errors.editReason && (
-            <p className="mt-1 text-sm text-red-600">{errors.editReason.message}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.editReason.message}</p>
           )}
         </div>
       </div>
