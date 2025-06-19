@@ -11,13 +11,14 @@ model User {
   id                      String                  @id @default(cuid())
   email                   String                  @unique
   username                String                  @unique
-  password                String?
+  password                String?                 // Made optional for OAuth users
   role                    UserRole                @default(USER)
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   shareableId             String                  @unique @default(cuid())
   emailVerified           DateTime?
   showForceCurves         Boolean                 @default(true)
+  emailNotifications      Boolean                 @default(true)
   accounts                Account[]
   dismissedNotifications  DismissedNotification[]
   forceCurveFeedback      ForceCurveFeedback[]
