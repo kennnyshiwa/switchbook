@@ -22,6 +22,7 @@ model User {
   passwordResetTokens   PasswordResetToken[]
   forceCurvePreferences ForceCurvePreference[]
   showForceCurves       Boolean               @default(true)
+  emailNotifications    Boolean               @default(true)
   manufacturers         Manufacturer[]
   accounts              Account[]
   forceCurveFeedback    ForceCurveFeedback[]

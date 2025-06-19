@@ -20,6 +20,7 @@ export default async function SettingsPage() {
       role: true,
       shareableId: true,
       showForceCurves: true,
+      emailNotifications: true,
       password: true,
       accounts: {
         select: {

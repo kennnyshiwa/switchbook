@@ -6,6 +6,23 @@ import { prisma } from './prisma'
 // Initialize Mailgun client
 const mailgun = new Mailgun(formData)
 
+// Helper function to check if user has email notifications enabled
+async function shouldSendEmailNotification(userId?: string, email?: string): Promise<boolean> {
+  if (!userId && !email) return true // Default to sending if we can't check
+  
+  try {
+    const user = await prisma.user.findFirst({
+      where: userId ? { id: userId } : { email: email! },
+      select: { emailNotifications: true }
+    })
+    
+    return user?.emailNotifications ?? true // Default to true if not found
+  } catch (error) {
+    console.error('Error checking email notification preference:', error)
+    return true // Default to sending on error
+  }
+}
+
 function getMailgunClient() {
   const apiKey = process.env.MAILGUN_API_KEY
   const domain = process.env.MAILGUN_DOMAIN
@@ -163,6 +180,12 @@ export async function sendAdminNewSubmissionEmail(
   switchName: string,
   switchId: string
 ) {
+  // Check if admin has email notifications enabled
+  const shouldSend = await shouldSendEmailNotification(undefined, adminEmail)
+  if (!shouldSend) {
+    return { success: true, skipped: true }
+  }
+
   const client = getMailgunClient()
   
   if (!client) {
@@ -231,6 +254,12 @@ export async function sendAdminEditSuggestionEmail(
   switchId: string,
   editId: string
 ) {
+  // Check if admin has email notifications enabled
+  const shouldSend = await shouldSendEmailNotification(undefined, adminEmail)
+  if (!shouldSend) {
+    return { success: true, skipped: true }
+  }
+
   const client = getMailgunClient()
   
   if (!client) {
@@ -297,6 +326,12 @@ export async function sendMasterSwitchApprovalEmail(
   switchName: string,
   switchId: string
 ) {
+  // Check if user has email notifications enabled
+  const shouldSend = await shouldSendEmailNotification(undefined, userEmail)
+  if (!shouldSend) {
+    return { success: true, skipped: true }
+  }
+
   const client = getMailgunClient()
   
   if (!client) {
@@ -353,6 +388,12 @@ export async function sendMasterSwitchRejectionEmail(
   switchName: string,
   reason: string
 ) {
+  // Check if user has email notifications enabled
+  const shouldSend = await shouldSendEmailNotification(undefined, userEmail)
+  if (!shouldSend) {
+    return { success: true, skipped: true }
+  }
+
   const client = getMailgunClient()
   
   if (!client) {
@@ -410,6 +451,12 @@ export async function sendEditSuggestionApprovalEmail(
   switchName: string,
   switchId: string
 ) {
+  // Check if user has email notifications enabled
+  const shouldSend = await shouldSendEmailNotification(undefined, userEmail)
+  if (!shouldSend) {
+    return { success: true, skipped: true }
+  }
+
   const client = getMailgunClient()
   
   if (!client) {
@@ -462,6 +509,12 @@ export async function sendEditSuggestionRejectionEmail(
   switchId: string,
   reason: string
 ) {
+  // Check if user has email notifications enabled
+  const shouldSend = await shouldSendEmailNotification(undefined, userEmail)
+  if (!shouldSend) {
+    return { success: true, skipped: true }
+  }
+
   const client = getMailgunClient()
   
   if (!client) {
@@ -527,9 +580,12 @@ export async function sendNewManufacturerNotification(
     return { success: false, error: 'Email service not configured' }
   }
 
-  // Get all admin users
+  // Get all admin users with email notifications enabled
   const adminUsers = await prisma.user.findMany({
-    where: { role: 'ADMIN' },
+    where: { 
+      role: 'ADMIN',
+      emailNotifications: true 
+    },
     select: { email: true, username: true }
   })
 
