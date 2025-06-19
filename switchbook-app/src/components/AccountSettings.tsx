@@ -19,6 +19,7 @@ interface AccountSettingsProps {
     role: string
     shareableId: string
     showForceCurves: boolean
+    emailNotifications: boolean
     password: string | null
     accounts: Array<{
       provider: string
@@ -33,6 +34,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
   const [showForceCurves, setShowForceCurves] = useState(user.showForceCurves)
+  const [emailNotifications, setEmailNotifications] = useState(user.emailNotifications)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false)
@@ -48,25 +50,39 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
     resolver: zodResolver(changePasswordSchema),
   })
 
-  const handleForceCurvesToggle = async (enabled: boolean) => {
+  const handleSettingsUpdate = async (setting: string, value: boolean) => {
     setIsUpdating(true)
     try {
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ showForceCurves: enabled })
+        body: JSON.stringify({ [setting]: value })
       })
 
       if (response.ok) {
-        setShowForceCurves(enabled)
+        if (setting === 'showForceCurves') {
+          setShowForceCurves(value)
+        } else if (setting === 'emailNotifications') {
+          setEmailNotifications(value)
+        }
       } else {
         alert('Failed to update setting. Please try again.')
-        setShowForceCurves(!enabled) // Revert on error
+        // Revert on error
+        if (setting === 'showForceCurves') {
+          setShowForceCurves(!value)
+        } else if (setting === 'emailNotifications') {
+          setEmailNotifications(!value)
+        }
       }
     } catch (error) {
-      console.error('Error updating force curves setting:', error)
+      console.error('Error updating setting:', error)
       alert('An error occurred. Please try again.')
-      setShowForceCurves(!enabled) // Revert on error
+      // Revert on error
+      if (setting === 'showForceCurves') {
+        setShowForceCurves(!value)
+      } else if (setting === 'emailNotifications') {
+        setEmailNotifications(!value)
+      }
     } finally {
       setIsUpdating(false)
     }
@@ -259,7 +275,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Preferences</h2>
         
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h3 className="text-sm font-medium text-gray-900 dark:text-white">Force Curves</h3>
@@ -270,7 +286,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
             <div className="flex items-center ml-4">
               <button
                 type="button"
-                onClick={() => handleForceCurvesToggle(!showForceCurves)}
+                onClick={() => handleSettingsUpdate('showForceCurves', !showForceCurves)}
                 disabled={isUpdating}
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 disabled:opacity-50 ${
                   showForceCurves ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
@@ -283,6 +299,35 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
                   aria-hidden="true"
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                     showForceCurves ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Receive email notifications for master database submissions and updates. Password reset emails will always be sent regardless of this setting.
+              </p>
+            </div>
+            <div className="flex items-center ml-4">
+              <button
+                type="button"
+                onClick={() => handleSettingsUpdate('emailNotifications', !emailNotifications)}
+                disabled={isUpdating}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 disabled:opacity-50 ${
+                  emailNotifications ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+                role="switch"
+                aria-checked={emailNotifications}
+                title={emailNotifications ? 'Disable email notifications' : 'Enable email notifications'}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    emailNotifications ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
