@@ -16,14 +16,21 @@ export function needsProxy(url: string): boolean {
  * Get the appropriate image URL (proxied if necessary)
  */
 export function getImageUrl(url: string | null | undefined): string | null {
-  if (!url || url.trim() === '') return null
+  console.log('getImageUrl called with:', url)
+  
+  if (!url || url.trim() === '') {
+    console.log('getImageUrl returning null - empty or null URL')
+    return null
+  }
   
   // Check if the URL is expired (for Notion URLs)
   if (url.includes('exp=')) {
     const expMatch = url.match(/exp=(\d+)/)
     if (expMatch) {
       const expirationTime = parseInt(expMatch[1]) * 1000 // Convert to milliseconds
-      if (Date.now() > expirationTime) {
+      const currentTime = Date.now()
+      console.log('Checking expiration:', { expirationTime, currentTime, expired: currentTime > expirationTime })
+      if (currentTime > expirationTime) {
         console.warn('Image URL expired:', url)
         return null
       }
@@ -32,9 +39,12 @@ export function getImageUrl(url: string | null | undefined): string | null {
   
   // Use proxy for problematic domains
   if (needsProxy(url)) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`
+    const proxiedUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`
+    console.log('Using proxy for URL:', { original: url, proxied: proxiedUrl })
+    return proxiedUrl
   }
   
+  console.log('getImageUrl returning original URL:', url)
   return url
 }
 
