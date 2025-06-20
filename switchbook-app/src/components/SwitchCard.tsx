@@ -9,7 +9,6 @@ import ForceCurvesButton from './ForceCurvesButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 import ImageCarousel from './ImageCarousel'
-import ImageGallery from './ImageGallery'
 
 interface SwitchImage {
   id: string
@@ -37,8 +36,6 @@ interface SwitchCardProps {
 function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, forceCurvesCached, savedPreference }: SwitchCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const [showGallery, setShowGallery] = useState(false)
-  const [galleryStartIndex, setGalleryStartIndex] = useState(0)
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this switch?')) return
@@ -59,15 +56,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div 
-          className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center cursor-pointer"
-          onClick={() => {
-            if (switchItem.images && switchItem.images.length > 0) {
-              setShowGallery(true)
-              setGalleryStartIndex(0)
-            }
-          }}
-        >
+        <div className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
           <ImageCarousel
             images={switchItem.images || []}
             fallbackImage={switchItem.imageUrl}
@@ -348,16 +337,6 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
         </div>
       </div>
     </div>
-
-    {/* Image Gallery Modal */}
-    {switchItem.images && switchItem.images.length > 0 && (
-      <ImageGallery
-        images={switchItem.images}
-        isOpen={showGallery}
-        onClose={() => setShowGallery(false)}
-        initialIndex={galleryStartIndex}
-      />
-    )}
     </>
   )
 }
