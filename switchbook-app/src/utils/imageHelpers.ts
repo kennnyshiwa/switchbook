@@ -16,7 +16,7 @@ export function needsProxy(url: string): boolean {
  * Get the appropriate image URL (proxied if necessary)
  */
 export function getImageUrl(url: string | null | undefined): string | null {
-  if (!url) return null
+  if (!url || url.trim() === '') return null
   
   // Check if the URL is expired (for Notion URLs)
   if (url.includes('exp=')) {

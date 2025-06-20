@@ -51,10 +51,10 @@ export default function ImageCarousel({
     }
   }, [isHovered, images.length])
 
-  // Reset error state when images change
+  // Reset error state when images or fallbackImage change
   useEffect(() => {
     setImageError(false)
-  }, [images, currentIndex])
+  }, [images, currentIndex, fallbackImage])
 
   // Determine which image to show
   let imageUrl: string | null = null
@@ -97,7 +97,13 @@ export default function ImageCarousel({
         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
         onError={(e) => {
           console.error('Image failed to load:', imageUrl)
-          setImageError(true)
+          // Only set error if we don't have a fallback or if the fallback also failed
+          if (!fallbackImage || imageUrl === getImageUrl(fallbackImage)) {
+            setImageError(true)
+          } else if (images.length > 0) {
+            // If we have images array and current one failed, try next
+            setCurrentIndex((prev) => (prev + 1) % images.length)
+          }
         }}
         unoptimized={true}
       />
