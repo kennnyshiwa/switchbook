@@ -75,6 +75,10 @@ model Switch {
   isModified      Boolean          @default(false)
   modifiedFields  Json?            // Array of field names that were modified
   masterSwitchVersion Int?         // Version of the master switch this was based on
+  
+  // Image relationships
+  images          SwitchImage[]
+  primaryImageId  String?
 }
 
 model Manufacturer {
@@ -240,6 +244,8 @@ model MasterSwitch {
   // Relations
   userSwitches          Switch[]
   edits                 MasterSwitchEdit[]
+  images                SwitchImage[]
+  primaryImageId        String?
   
   @@index([name, manufacturer])
   @@index([status])
@@ -305,4 +311,30 @@ model DismissedNotification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, type])
+}
+
+// Image storage models
+model SwitchImage {
+  id         String    @id @default(cuid())
+  switchId   String?
+  switch     Switch?   @relation(fields: [switchId], references: [id], onDelete: Cascade)
+  masterSwitchId String?
+  masterSwitch MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  url        String    // Vercel Blob URL or external URL
+  type       ImageType @default(UPLOADED)
+  order      Int       @default(0)
+  caption    String?
+  width      Int?
+  height     Int?
+  size       Int?      // File size in bytes
+  uploadedAt DateTime  @default(now())
+  
+  @@index([switchId])
+  @@index([masterSwitchId])
+  @@index([order])
+}
+
+enum ImageType {
+  UPLOADED
+  LINKED
 }

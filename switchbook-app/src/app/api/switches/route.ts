@@ -136,6 +136,11 @@ export async function GET(request: Request) {
     const switches = await prisma.switch.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" },
+      include: {
+        images: {
+          orderBy: { order: 'asc' }
+        }
+      }
     })
 
     return NextResponse.json(switches)

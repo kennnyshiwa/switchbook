@@ -10,8 +10,22 @@ import EditSwitchModal from './EditSwitchModal'
 import CollectionControls, { SortOption, ViewMode, FilterOptions, ActiveFilters } from './CollectionControls'
 import { findForceCurveData } from '@/utils/forceCurves'
 
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+  thumbnailUrl?: string
+  mediumUrl?: string
+}
+
+interface ExtendedSwitch extends Switch {
+  images?: SwitchImage[]
+}
+
 interface SwitchCollectionProps {
-  switches: Switch[]
+  switches: ExtendedSwitch[]
   userId: string
   showForceCurves: boolean
   forceCurvePreferences: ForceCurvePreference[]
@@ -20,7 +34,7 @@ interface SwitchCollectionProps {
 export default function SwitchCollection({ switches: initialSwitches, userId, showForceCurves, forceCurvePreferences }: SwitchCollectionProps) {
   const [switches, setSwitches] = useState(initialSwitches)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [editingSwitch, setEditingSwitch] = useState<Switch | null>(null)
+  const [editingSwitch, setEditingSwitch] = useState<ExtendedSwitch | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('recent')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -39,12 +53,12 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     localStorage.setItem('switchViewMode', viewMode)
   }, [viewMode])
 
-  const handleSwitchAdded = (newSwitch: Switch) => {
+  const handleSwitchAdded = (newSwitch: ExtendedSwitch) => {
     setSwitches([newSwitch, ...switches])
     setShowAddModal(false)
   }
 
-  const handleSwitchUpdated = (updatedSwitch: Switch) => {
+  const handleSwitchUpdated = (updatedSwitch: ExtendedSwitch) => {
     setSwitches(switches.map(s => s.id === updatedSwitch.id ? updatedSwitch : s))
     setEditingSwitch(null)
   }

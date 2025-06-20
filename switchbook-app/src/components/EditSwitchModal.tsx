@@ -7,13 +7,28 @@ import { z } from 'zod'
 import { switchSchema } from '@/lib/validation'
 import { Switch } from '@prisma/client'
 import SwitchForm from './SwitchForm'
+import SwitchImageManager from './SwitchImageManager'
+
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+  thumbnailUrl?: string
+  mediumUrl?: string
+}
+
+interface ExtendedSwitch extends Switch {
+  images?: SwitchImage[]
+}
 
 type SwitchFormData = z.infer<typeof switchSchema>
 
 interface EditSwitchModalProps {
-  switch: Switch
+  switch: ExtendedSwitch
   onClose: () => void
-  onSwitchUpdated: (updatedSwitch: Switch) => void
+  onSwitchUpdated: (updatedSwitch: ExtendedSwitch) => void
 }
 
 export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchUpdated }: EditSwitchModalProps) {
@@ -256,6 +271,19 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
             </button>
           </div>
         </form>
+
+        {/* Image Manager Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Images</h3>
+          <SwitchImageManager
+            switchId={switchItem.id}
+            images={switchItem.images || []}
+            onImagesUpdated={(images) => {
+              // Update the switch with new images
+              onSwitchUpdated({ ...switchItem, images })
+            }}
+          />
+        </div>
       </div>
     </div>
   )

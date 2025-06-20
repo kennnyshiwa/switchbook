@@ -11,10 +11,24 @@ import MasterSwitchSuggestions from './MasterSwitchSuggestions'
 
 type SwitchFormData = z.infer<typeof switchSchema>
 
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+  thumbnailUrl?: string
+  mediumUrl?: string
+}
+
+interface ExtendedSwitch extends Switch {
+  images?: SwitchImage[]
+}
+
 interface AddSwitchModalProps {
   userId: string
   onClose: () => void
-  onSwitchAdded: (newSwitch: Switch) => void
+  onSwitchAdded: (newSwitch: ExtendedSwitch) => void
 }
 
 export default function AddSwitchModal({ userId, onClose, onSwitchAdded }: AddSwitchModalProps) {
