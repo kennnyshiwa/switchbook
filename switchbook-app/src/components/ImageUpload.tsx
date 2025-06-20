@@ -22,7 +22,8 @@ export default function ImageUpload({ switchId, onImageUploaded, disabled = fals
     setError(null)
 
     // Validate file type
-    if (!IMAGE_CONFIG.allowedMimeTypes.includes(file.type)) {
+    const allowedTypes = IMAGE_CONFIG.allowedMimeTypes as readonly string[]
+    if (!allowedTypes.includes(file.type)) {
       setError('Invalid file type. Please upload a JPEG, PNG, WebP, or HEIC image.')
       return
     }
@@ -99,14 +100,23 @@ export default function ImageUpload({ switchId, onImageUploaded, disabled = fals
 
     const file = e.dataTransfer.files[0]
     if (file && !disabled && !isUploading) {
-      // Create a synthetic event
-      const syntheticEvent = {
-        target: {
-          files: [file]
-        }
-      } as React.ChangeEvent<HTMLInputElement>
+      // Directly validate and upload the file
+      setError(null)
       
-      handleFileSelect(syntheticEvent)
+      // Validate file type
+      const allowedTypes = IMAGE_CONFIG.allowedMimeTypes as readonly string[]
+      if (!allowedTypes.includes(file.type)) {
+        setError('Invalid file type. Please upload a JPEG, PNG, WebP, or HEIC image.')
+        return
+      }
+      
+      // Validate file size
+      if (file.size > IMAGE_CONFIG.maxFileSize) {
+        setError(`File size must not exceed ${IMAGE_CONFIG.maxFileSize / 1024 / 1024}MB`)
+        return
+      }
+      
+      uploadFile(file)
     }
   }
 

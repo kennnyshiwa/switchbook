@@ -31,7 +31,8 @@ export function getImagePath(userId: string, switchId: string, imageId: string, 
 }
 
 export function isValidImageType(mimeType: string): boolean {
-  return IMAGE_CONFIG.allowedMimeTypes.includes(mimeType.toLowerCase())
+  const allowedTypes = IMAGE_CONFIG.allowedMimeTypes as readonly string[]
+  return allowedTypes.includes(mimeType.toLowerCase())
 }
 
 export function isValidFileSize(size: number): boolean {
@@ -45,5 +46,6 @@ export function getFileExtension(filename: string): string {
 
 export function isValidExtension(filename: string): boolean {
   const ext = `.${getFileExtension(filename)}`
-  return IMAGE_CONFIG.allowedExtensions.includes(ext)
+  const allowedExtensions = IMAGE_CONFIG.allowedExtensions as readonly string[]
+  return allowedExtensions.includes(ext)
 }

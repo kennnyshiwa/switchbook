@@ -162,7 +162,9 @@ export async function POST(
     }
 
     // Read file buffer
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const arrayBuffer = await file.arrayBuffer()
+    const uint8Array = new Uint8Array(arrayBuffer)
+    const buffer: Buffer = Buffer.from(uint8Array)
 
     // Validate and get image metadata
     const validation = await validateAndProcessImage(buffer, file.type)
@@ -174,7 +176,7 @@ export async function POST(
     }
 
     // Convert HEIC/HEIF to JPEG if needed
-    let processedBuffer = buffer
+    let processedBuffer: Buffer = buffer
     let fileExtension = getFileExtension(file.name)
     if (file.type === 'image/heic' || file.type === 'image/heif') {
       processedBuffer = await convertHeicToJpeg(buffer)
@@ -319,7 +321,7 @@ export async function DELETE(
     })
 
     // If this was the primary image, update to the next available image
-    if (image.switch.primaryImageId === imageId) {
+    if (image.switch?.primaryImageId === imageId) {
       const nextImage = await prisma.switchImage.findFirst({
         where: {
           switchId: id,
