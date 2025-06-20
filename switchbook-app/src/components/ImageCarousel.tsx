@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
+import { getImageUrl } from '@/utils/imageHelpers'
 
 interface SwitchImage {
   id: string
@@ -25,6 +26,7 @@ export default function ImageCarousel({
   className = ''
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [imageError, setImageError] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -49,17 +51,23 @@ export default function ImageCarousel({
     }
   }, [isHovered, images.length])
 
+  // Reset error state when images change
+  useEffect(() => {
+    setImageError(false)
+  }, [images, currentIndex])
+
   // Determine which image to show
   let imageUrl: string | null = null
   
-  if (images.length > 0) {
+  if (images.length > 0 && !imageError) {
     const currentImage = images[currentIndex]
-    imageUrl = currentImage.thumbnailUrl || currentImage.url
-  } else if (fallbackImage) {
-    imageUrl = fallbackImage
+    const rawUrl = currentImage.thumbnailUrl || currentImage.url
+    imageUrl = getImageUrl(rawUrl)
+  } else if (fallbackImage && !imageError) {
+    imageUrl = getImageUrl(fallbackImage)
   }
 
-  if (!imageUrl) {
+  if (!imageUrl || imageError) {
     return (
       <div className={`${className} bg-gray-200 dark:bg-gray-700 flex items-center justify-center`}>
         <svg
@@ -87,6 +95,11 @@ export default function ImageCarousel({
         fill
         className="object-cover transition-opacity duration-300"
         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+        onError={(e) => {
+          console.error('Image failed to load:', imageUrl)
+          setImageError(true)
+        }}
+        unoptimized={true}
       />
       
       {/* Image indicators */}
