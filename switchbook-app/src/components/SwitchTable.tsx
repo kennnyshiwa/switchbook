@@ -8,10 +8,24 @@ import ForceCurvesButton from './ForceCurvesButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+  thumbnailUrl?: string
+  mediumUrl?: string
+}
+
+interface ExtendedSwitch extends Switch {
+  images?: SwitchImage[]
+}
+
 interface SwitchTableProps {
-  switches: Switch[]
+  switches: ExtendedSwitch[]
   onDelete: (switchId: string) => void
-  onEdit: (switchData: Switch) => void
+  onEdit: (switchData: ExtendedSwitch) => void
   showForceCurves: boolean
   forceCurveCache?: Map<string, boolean>
   forceCurvePreferencesMap?: Map<string, { folder: string; url: string }>
@@ -20,7 +34,7 @@ interface SwitchTableProps {
 function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCache, forceCurvePreferencesMap }: SwitchTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const handleDelete = async (switchItem: Switch) => {
+  const handleDelete = async (switchItem: ExtendedSwitch) => {
     if (!confirm('Are you sure you want to delete this switch?')) return
 
     setDeletingId(switchItem.id)

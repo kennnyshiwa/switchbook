@@ -8,152 +8,148 @@ datasource db {
 }
 
 model User {
-  id                    String                @id @default(cuid())
-  email                 String                @unique
-  username              String                @unique
-  password              String?               // Made optional for OAuth users
-  role                  UserRole              @default(USER)
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-  switches              Switch[]
-  shareableId           String                @unique @default(cuid())
-  emailVerified         DateTime?
-  verificationTokens    VerificationToken[]
-  passwordResetTokens   PasswordResetToken[]
-  forceCurvePreferences ForceCurvePreference[]
-  showForceCurves       Boolean               @default(true)
-  manufacturers         Manufacturer[]
-  accounts              Account[]
-  forceCurveFeedback    ForceCurveFeedback[]
-  submittedMasterSwitches MasterSwitch[]       @relation("SubmittedBy")
-  approvedMasterSwitches  MasterSwitch[]       @relation("ApprovedBy")
-  masterSwitchEdits       MasterSwitchEdit[]   @relation("EditedBy")
-  approvedEdits           MasterSwitchEdit[]   @relation("ApprovedEditBy")
-  notifications           Notification[]
+  id                      String                  @id @default(cuid())
+  email                   String                  @unique
+  username                String                  @unique
+  password                String?
+  role                    UserRole                @default(USER)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  shareableId             String                  @unique @default(cuid())
+  emailVerified           DateTime?
+  showForceCurves         Boolean                 @default(true)
+  accounts                Account[]
   dismissedNotifications  DismissedNotification[]
+  forceCurveFeedback      ForceCurveFeedback[]
+  forceCurvePreferences   ForceCurvePreference[]
+  manufacturers           Manufacturer[]
+  approvedMasterSwitches  MasterSwitch[]          @relation("ApprovedBy")
+  submittedMasterSwitches MasterSwitch[]          @relation("SubmittedBy")
+  approvedEdits           MasterSwitchEdit[]      @relation("ApprovedEditBy")
+  masterSwitchEdits       MasterSwitchEdit[]      @relation("EditedBy")
+  notifications           Notification[]
+  passwordResetTokens     PasswordResetToken[]
+  switches                Switch[]
+  verificationTokens      VerificationToken[]
 }
 
 model Switch {
-  id              String           @id @default(cuid())
-  name            String
-  chineseName     String?
-  type            SwitchType?
-  technology      SwitchTechnology?
-  magnetOrientation String?
-  magnetPosition  String?
-  magnetPolarity  String?
-  initialForce    Float?
-  initialMagneticFlux Float?
+  id                    String            @id @default(cuid())
+  name                  String
+  type                  SwitchType?
+  springWeight          String?
+  springLength          String?
+  actuationForce        Float?
+  bottomOutForce        Float?
+  preTravel             Float?
+  bottomOut             Float?
+  manufacturer          String?
+  notes                 String?
+  imageUrl              String?
+  topHousing            String?
+  bottomHousing         String?
+  stem                  String?
+  dateObtained          DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  userId                String
+  chineseName           String?
+  compatibility         String?
+  magnetOrientation     String?
+  technology            SwitchTechnology?
+  magnetPosition        String?
+  initialForce          Float?
+  initialMagneticFlux   Float?
   bottomOutMagneticFlux Float?
-  pcbThickness    String?
-  compatibility   String?
-  springWeight    String?
-  springLength    String?
-  actuationForce  Float?
-  bottomOutForce  Float?
-  preTravel       Float?
-  bottomOut       Float?
-  manufacturer    String?
-  notes           String?
-  personalNotes   String?
-  imageUrl        String?
-  topHousing      String?
-  bottomHousing   String?
-  stem            String?
-  frankenTop      String?
-  frankenBottom   String?
-  frankenStem     String?
-  dateObtained    DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  userId          String
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Master switch relationship
-  masterSwitchId  String?
-  masterSwitch    MasterSwitch?    @relation(fields: [masterSwitchId], references: [id], onDelete: SetNull)
-  isModified      Boolean          @default(false)
-  modifiedFields  Json?            // Array of field names that were modified
-  masterSwitchVersion Int?         // Version of the master switch this was based on
-  
-  // Image relationships
-  images          SwitchImage[]
-  primaryImageId  String?
+  pcbThickness          String?
+  magnetPolarity        String?
+  frankenBottom         String?
+  frankenStem           String?
+  frankenTop            String?
+  isModified            Boolean           @default(false)
+  masterSwitchId        String?
+  masterSwitchVersion   Int?
+  modifiedFields        Json?
+  personalNotes         String?
+  primaryImageId        String?
+  masterSwitch          MasterSwitch?     @relation(fields: [masterSwitchId], references: [id])
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images                SwitchImage[]
 }
 
 model Manufacturer {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  aliases     String[]
-  verified    Boolean  @default(false)
-  addedBy     String?
-  user        User?    @relation(fields: [addedBy], references: [id], onDelete: SetNull)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  aliases   String[]
+  verified  Boolean  @default(false)
+  addedBy   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [addedBy], references: [id])
 }
 
 model VerificationToken {
-  id         String   @id @default(cuid())
-  token      String   @unique
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PasswordResetToken {
-  id         String   @id @default(cuid())
-  token      String   @unique
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ForceCurvePreference {
-  id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  switchName       String
-  manufacturer     String?
-  selectedFolder   String
-  selectedUrl      String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  id             String   @id @default(cuid())
+  userId         String
+  switchName     String
+  manufacturer   String?
+  selectedFolder String
+  selectedUrl    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, switchName, manufacturer])
 }
 
 model ForceCurveCache {
-  id                 String   @id @default(cuid())
-  switchName         String
-  manufacturer       String?
-  hasForceCurve      Boolean
-  lastCheckedAt      DateTime @default(now())
-  nextCheckAt        DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  
+  id            String    @id @default(cuid())
+  switchName    String
+  manufacturer  String?
+  hasForceCurve Boolean
+  lastCheckedAt DateTime  @default(now())
+  nextCheckAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   @@unique([switchName, manufacturer])
 }
 
 model ForceCurveFeedback {
-  id                 String   @id @default(cuid())
-  userId             String
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  switchName         String
-  manufacturer       String?
-  incorrectMatch     String   // The folder name that was incorrectly matched
-  feedbackType       String   // 'incorrect_match', 'no_match_found', 'suggest_match'
-  suggestedMatch     String?  // User's suggested correct match (optional)
-  notes              String?  // Additional notes from user
-  createdAt          DateTime @default(now())
-  
+  id             String   @id @default(cuid())
+  userId         String
+  switchName     String
+  manufacturer   String?
+  incorrectMatch String
+  feedbackType   String
+  suggestedMatch String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([switchName, manufacturer])
 }
 
 model Account {
-  id                String  @id @default(cuid())
+  id                String   @id @default(cuid())
   userId            String
   type              String
   provider          String
@@ -167,10 +163,128 @@ model Account {
   session_state     String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+}
+
+model MasterSwitch {
+  id                     String             @id @default(cuid())
+  name                   String
+  chineseName            String?
+  type                   SwitchType?
+  technology             SwitchTechnology?
+  magnetOrientation      String?
+  magnetPosition         String?
+  magnetPolarity         String?
+  initialForce           Float?
+  initialMagneticFlux    Float?
+  bottomOutMagneticFlux  Float?
+  pcbThickness           String?
+  compatibility          String?
+  springWeight           String?
+  springLength           String?
+  actuationForce         Float?
+  bottomOutForce         Float?
+  preTravel              Float?
+  bottomOut              Float?
+  manufacturer           String?
+  notes                  String?
+  imageUrl               String?
+  topHousing             String?
+  bottomHousing          String?
+  stem                   String?
+  frankenTop             String?
+  frankenBottom          String?
+  frankenStem            String?
+  submittedById          String
+  approvedById           String?
+  approvedAt             DateTime?
+  status                 MasterSwitchStatus @default(PENDING)
+  rejectionReason        String?
+  version                Int                @default(1)
+  viewCount              Int                @default(0)
+  lastModifiedAt         DateTime           @default(now())
+  originalSubmissionData Json?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  primaryImageId         String?
+  approvedBy             User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
+  submittedBy            User               @relation("SubmittedBy", fields: [submittedById], references: [id])
+  edits                  MasterSwitchEdit[]
+  userSwitches           Switch[]
+  images                 SwitchImage[]
+
+  @@index([name, manufacturer])
+  @@index([status])
+  @@index([submittedById])
+}
+
+model MasterSwitchEdit {
+  id              String             @id @default(cuid())
+  masterSwitchId  String
+  editedById      String
+  previousData    Json
+  newData         Json
+  changedFields   Json
+  editedAt        DateTime           @default(now())
+  approvedById    String?
+  status          MasterSwitchStatus @default(PENDING)
+  rejectionReason String?
+  approvedBy      User?              @relation("ApprovedEditBy", fields: [approvedById], references: [id])
+  editedBy        User               @relation("EditedBy", fields: [editedById], references: [id])
+  masterSwitch    MasterSwitch       @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+
+  @@index([masterSwitchId])
+  @@index([editedById])
+  @@index([status])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  linkText  String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model DismissedNotification {
+  id                      String   @id @default(cuid())
+  userId                  String
+  type                    String
+  dismissedAt             DateTime @default(now())
+  lastMasterUpdateVersion Int?
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+model SwitchImage {
+  id             String        @id @default(cuid())
+  switchId       String?
+  masterSwitchId String?
+  url            String
+  type           ImageType     @default(UPLOADED)
+  order          Int           @default(0)
+  caption        String?
+  width          Int?
+  height         Int?
+  size           Int?
+  uploadedAt     DateTime      @default(now())
+  masterSwitch   MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  switch         Switch?       @relation(fields: [switchId], references: [id], onDelete: Cascade)
+
+  @@index([switchId])
+  @@index([masterSwitchId])
+  @@index([order])
 }
 
 enum UserRole {
@@ -194,104 +308,10 @@ enum SwitchTechnology {
   ELECTRO_CAPACITIVE
 }
 
-// Master Switch Database Models
-model MasterSwitch {
-  id                    String               @id @default(cuid())
-  name                  String
-  chineseName           String?
-  type                  SwitchType?
-  technology            SwitchTechnology?
-  magnetOrientation     String?
-  magnetPosition        String?
-  magnetPolarity        String?
-  initialForce          Float?
-  initialMagneticFlux   Float?
-  bottomOutMagneticFlux Float?
-  pcbThickness          String?
-  compatibility         String?
-  springWeight          String?
-  springLength          String?
-  actuationForce        Float?
-  bottomOutForce        Float?
-  preTravel             Float?
-  bottomOut             Float?
-  manufacturer          String?
-  notes                 String?
-  imageUrl              String?
-  topHousing            String?
-  bottomHousing         String?
-  stem                  String?
-  frankenTop            String?
-  frankenBottom         String?
-  frankenStem           String?
-  
-  // Submission metadata
-  submittedById         String
-  submittedBy           User                 @relation("SubmittedBy", fields: [submittedById], references: [id])
-  approvedById          String?
-  approvedBy            User?                @relation("ApprovedBy", fields: [approvedById], references: [id])
-  approvedAt            DateTime?
-  status                MasterSwitchStatus   @default(PENDING)
-  rejectionReason       String?
-  version               Int                  @default(1)
-  viewCount             Int                  @default(0)
-  lastModifiedAt        DateTime             @default(now())
-  originalSubmissionData Json?               // Store original submission for audit
-  
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  
-  // Relations
-  userSwitches          Switch[]
-  edits                 MasterSwitchEdit[]
-  images                SwitchImage[]
-  primaryImageId        String?
-  
-  @@index([name, manufacturer])
-  @@index([status])
-  @@index([submittedById])
-}
-
-model MasterSwitchEdit {
-  id                    String               @id @default(cuid())
-  masterSwitchId        String
-  masterSwitch          MasterSwitch         @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
-  editedById            String
-  editedBy              User                 @relation("EditedBy", fields: [editedById], references: [id])
-  previousData          Json                 // Store the entire previous state
-  newData               Json                 // Store the proposed new state
-  changedFields         Json                 // Array of field names that changed
-  editedAt              DateTime             @default(now())
-  approvedById          String?
-  approvedBy            User?                @relation("ApprovedEditBy", fields: [approvedById], references: [id])
-  status                MasterSwitchStatus   @default(PENDING)
-  rejectionReason       String?
-  
-  @@index([masterSwitchId])
-  @@index([editedById])
-  @@index([status])
-}
-
 enum MasterSwitchStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-model Notification {
-  id          String             @id @default(cuid())
-  userId      String
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        NotificationType
-  title       String
-  message     String
-  link        String?
-  linkText    String?
-  read        Boolean            @default(false)
-  createdAt   DateTime           @default(now())
-  
-  @@index([userId, read])
-  @@index([createdAt])
 }
 
 enum NotificationType {
@@ -299,39 +319,6 @@ enum NotificationType {
   SUBMISSION_REJECTED
   EDIT_APPROVED
   EDIT_REJECTED
-}
-
-model DismissedNotification {
-  id                      String   @id @default(cuid())
-  userId                  String
-  type                    String
-  dismissedAt             DateTime @default(now())
-  lastMasterUpdateVersion Int?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, type])
-}
-
-// Image storage models
-model SwitchImage {
-  id         String    @id @default(cuid())
-  switchId   String?
-  switch     Switch?   @relation(fields: [switchId], references: [id], onDelete: Cascade)
-  masterSwitchId String?
-  masterSwitch MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
-  url        String    // Vercel Blob URL or external URL
-  type       ImageType @default(UPLOADED)
-  order      Int       @default(0)
-  caption    String?
-  width      Int?
-  height     Int?
-  size       Int?      // File size in bytes
-  uploadedAt DateTime  @default(now())
-  
-  @@index([switchId])
-  @@index([masterSwitchId])
-  @@index([order])
 }
 
 enum ImageType {
