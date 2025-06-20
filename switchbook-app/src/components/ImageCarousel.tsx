@@ -87,12 +87,13 @@ export default function ImageCarousel({
 
   return (
     <div className={`${className} relative overflow-hidden group`}>
-      <Image
+      <img
         src={imageUrl}
         alt={alt}
-        fill
-        className="object-cover transition-opacity duration-300"
-        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+        onLoad={() => {
+          console.log('Image loaded successfully:', imageUrl)
+        }}
         onError={(e) => {
           console.error('Image failed to load:', imageUrl)
           // Only set error if we don't have a fallback or if the fallback also failed
@@ -103,7 +104,6 @@ export default function ImageCarousel({
             setCurrentIndex((prev) => (prev + 1) % images.length)
           }
         }}
-        unoptimized={true}
       />
       
       {/* Navigation arrows - only show when hovering and multiple images */}
