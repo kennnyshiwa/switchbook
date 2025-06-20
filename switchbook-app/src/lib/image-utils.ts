@@ -22,8 +22,11 @@ export async function validateAndProcessImage(
       return { valid: false, error: 'File type does not match its content' }
     }
 
+    // Create a new buffer from the input to ensure proper type compatibility
+    const inputBuffer = Buffer.from(buffer)
+    
     // Get image metadata
-    const metadata = await sharp(buffer).metadata()
+    const metadata = await sharp(inputBuffer).metadata()
     
     if (!metadata.width || !metadata.height) {
       return { valid: false, error: 'Invalid image dimensions' }
@@ -59,14 +62,17 @@ export async function createImageVariants(buffer: Buffer): Promise<{
   medium: Buffer
   original: Buffer
 }> {
+  // Create a new buffer from the input to ensure proper type compatibility
+  const inputBuffer = Buffer.from(buffer)
+  
   // Strip EXIF data from original
-  const original = await sharp(buffer)
+  const original = await sharp(inputBuffer)
     .rotate() // Auto-rotate based on EXIF
-    .removeMetadata()
+    .withMetadata({ orientation: undefined }) // Remove EXIF orientation but keep other metadata
     .toBuffer()
 
   // Create thumbnail
-  const thumbnail = await sharp(buffer)
+  const thumbnail = await sharp(inputBuffer)
     .rotate()
     .resize(
       IMAGE_CONFIG.imageSizes.thumbnail.width,
@@ -76,12 +82,11 @@ export async function createImageVariants(buffer: Buffer): Promise<{
         position: 'centre'
       }
     )
-    .removeMetadata()
     .jpeg({ quality: 85 })
     .toBuffer()
 
   // Create medium size
-  const medium = await sharp(buffer)
+  const medium = await sharp(inputBuffer)
     .rotate()
     .resize(
       IMAGE_CONFIG.imageSizes.medium.width,
@@ -91,7 +96,6 @@ export async function createImageVariants(buffer: Buffer): Promise<{
         withoutEnlargement: true
       }
     )
-    .removeMetadata()
     .jpeg({ quality: 90 })
     .toBuffer()
 
@@ -132,7 +136,9 @@ function isValidFileSignature(buffer: Buffer, mimeType: string): boolean {
 
 // Convert HEIC/HEIF to JPEG
 export async function convertHeicToJpeg(buffer: Buffer): Promise<Buffer> {
-  return await sharp(buffer)
+  // Create a new buffer from the input to ensure proper type compatibility
+  const inputBuffer = Buffer.from(buffer)
+  return await sharp(inputBuffer)
     .rotate()
     .jpeg({ quality: 90 })
     .toBuffer()
