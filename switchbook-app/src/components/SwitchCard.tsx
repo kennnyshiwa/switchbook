@@ -8,11 +8,27 @@ import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
+import ImageCarousel from './ImageCarousel'
+import ImageGallery from './ImageGallery'
+
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+  thumbnailUrl?: string
+  mediumUrl?: string
+}
+
+interface ExtendedSwitch extends Switch {
+  images?: SwitchImage[]
+}
 
 interface SwitchCardProps {
-  switch: Switch
+  switch: ExtendedSwitch
   onDelete: (switchId: string) => void
-  onEdit: (switchData: Switch) => void
+  onEdit: (switchData: ExtendedSwitch) => void
   showForceCurves: boolean
   forceCurvesCached?: boolean
   savedPreference?: { folder: string; url: string }
@@ -20,6 +36,9 @@ interface SwitchCardProps {
 
 function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, forceCurvesCached, savedPreference }: SwitchCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [showGallery, setShowGallery] = useState(false)
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0)
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this switch?')) return
@@ -34,24 +53,29 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
 
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-      <div className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        {switchItem.imageUrl ? (
-          <Image
-            src={switchItem.imageUrl}
+    <>
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div 
+          className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center cursor-pointer"
+          onClick={() => {
+            if (switchItem.images && switchItem.images.length > 0) {
+              setShowGallery(true)
+              setGalleryStartIndex(0)
+            }
+          }}
+        >
+          <ImageCarousel
+            images={switchItem.images || []}
+            fallbackImage={switchItem.imageUrl}
             alt={switchItem.name}
-            fill
-            className="object-contain"
+            isHovered={isHovered}
+            className="absolute inset-0"
           />
-        ) : (
-          <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-            <svg className="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-sm font-medium">No Image</span>
-          </div>
-        )}
-      </div>
+        </div>
       
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
@@ -324,6 +348,17 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
         </div>
       </div>
     </div>
+
+    {/* Image Gallery Modal */}
+    {switchItem.images && switchItem.images.length > 0 && (
+      <ImageGallery
+        images={switchItem.images}
+        isOpen={showGallery}
+        onClose={() => setShowGallery(false)}
+        initialIndex={galleryStartIndex}
+      />
+    )}
+    </>
   )
 }
 

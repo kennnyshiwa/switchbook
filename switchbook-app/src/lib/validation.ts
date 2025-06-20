@@ -76,3 +76,16 @@ export const changePasswordSchema = z.object({
   message: "Passwords don't match",
   path: ["confirmPassword"],
 })
+
+// Image upload validation
+export const imageUploadSchema = z.object({
+  caption: z.string().max(200).optional(),
+  order: z.number().int().min(0).optional()
+})
+
+export const reorderImagesSchema = z.object({
+  images: z.array(z.object({
+    id: z.string(),
+    order: z.number().int().min(0)
+  }))
+})

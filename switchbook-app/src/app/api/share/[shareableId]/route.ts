@@ -13,7 +13,12 @@ export async function GET(
       select: {
         username: true,
         switches: {
-          orderBy: { createdAt: "desc" }
+          orderBy: { createdAt: "desc" },
+          include: {
+            images: {
+              orderBy: { order: 'asc' }
+            }
+          }
         }
       }
     })

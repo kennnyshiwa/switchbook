@@ -20,7 +20,12 @@ export default async function DashboardPage() {
     where: { id: session.user.id },
     include: {
       switches: {
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
+        include: {
+          images: {
+            orderBy: { order: 'asc' }
+          }
+        }
       },
       forceCurvePreferences: true
     }
