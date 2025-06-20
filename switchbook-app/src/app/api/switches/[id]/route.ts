@@ -118,6 +118,11 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
           modifiedFields: modifiedFields
         } : {})
       },
+      include: {
+        images: {
+          orderBy: { order: 'asc' }
+        }
+      }
     })
 
     return NextResponse.json(updatedSwitch)

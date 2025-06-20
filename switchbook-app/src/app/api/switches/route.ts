@@ -91,6 +91,11 @@ async function createSwitchHandler(request: NextRequest) {
           masterSwitchVersion: masterSwitch.version,
           isModified: false
         },
+        include: {
+          images: {
+            orderBy: { order: 'asc' }
+          }
+        }
       })
 
       return NextResponse.json(newSwitch)
@@ -102,6 +107,11 @@ async function createSwitchHandler(request: NextRequest) {
         ...transformedData,
         userId,
       },
+      include: {
+        images: {
+          orderBy: { order: 'asc' }
+        }
+      }
     })
 
     return NextResponse.json(newSwitch)
