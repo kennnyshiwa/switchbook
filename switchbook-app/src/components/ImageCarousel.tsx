@@ -27,29 +27,17 @@ export default function ImageCarousel({
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [imageError, setImageError] = useState(false)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  useEffect(() => {
-    if (isHovered && images.length > 1) {
-      // Start cycling through images
-      intervalRef.current = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % images.length)
-      }, 1000) // Change image every second
-    } else {
-      // Stop cycling and reset to first image
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-      setCurrentIndex(0)
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isHovered, images.length])
+  
+  // Manual navigation functions
+  const goToPrevious = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent triggering the gallery
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length)
+  }
+  
+  const goToNext = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent triggering the gallery
+    setCurrentIndex((prev) => (prev + 1) % images.length)
+  }
 
   // Reset error state when images or fallbackImage change
   useEffect(() => {
@@ -58,14 +46,24 @@ export default function ImageCarousel({
 
   // Determine which image to show
   let imageUrl: string | null = null
+  const hasImages = images && images.length > 0
   
-  if (images.length > 0 && !imageError) {
+  if (hasImages && !imageError) {
     const currentImage = images[currentIndex]
     const rawUrl = currentImage.thumbnailUrl || currentImage.url
     imageUrl = getImageUrl(rawUrl)
   } else if (fallbackImage && !imageError) {
     imageUrl = getImageUrl(fallbackImage)
   }
+
+  console.log('ImageCarousel render:', { 
+    hasImages, 
+    imagesCount: images?.length || 0, 
+    currentIndex, 
+    imageUrl, 
+    fallbackImage,
+    imageError 
+  })
 
   if (!imageUrl || imageError) {
     return (
@@ -88,7 +86,7 @@ export default function ImageCarousel({
   }
 
   return (
-    <div className={`${className} relative overflow-hidden`}>
+    <div className={`${className} relative overflow-hidden group`}>
       <Image
         src={imageUrl}
         alt={alt}
@@ -108,24 +106,53 @@ export default function ImageCarousel({
         unoptimized={true}
       />
       
+      {/* Navigation arrows - only show when hovering and multiple images */}
+      {isHovered && hasImages && images.length > 1 && (
+        <>
+          <button
+            onClick={goToPrevious}
+            className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
+            aria-label="Previous image"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={goToNext}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
+            aria-label="Next image"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
+      
       {/* Image indicators */}
-      {isHovered && images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
+      {isHovered && hasImages && images.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           {images.map((_, index) => (
-            <div
+            <button
               key={index}
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+              onClick={(e) => {
+                e.stopPropagation()
+                setCurrentIndex(index)
+              }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
                 index === currentIndex
-                  ? 'bg-white w-3'
-                  : 'bg-white/50'
+                  ? 'bg-white w-6'
+                  : 'bg-white/50 w-1.5 hover:bg-white/75'
               }`}
+              aria-label={`Go to image ${index + 1}`}
             />
           ))}
         </div>
       )}
       
-      {/* Image count badge */}
-      {images.length > 1 && !isHovered && (
+      {/* Image count badge - only show when not hovering */}
+      {hasImages && images.length > 1 && !isHovered && (
         <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 text-white text-xs rounded-full flex items-center space-x-1">
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
