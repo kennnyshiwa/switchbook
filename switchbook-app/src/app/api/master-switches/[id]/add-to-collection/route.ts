@@ -86,6 +86,24 @@ export async function POST(
       }
     })
 
+    // If master switch has an imageUrl, create a linked image for the user's switch
+    if (masterSwitch.imageUrl) {
+      const switchImage = await prisma.switchImage.create({
+        data: {
+          switchId: newSwitch.id,
+          url: masterSwitch.imageUrl,
+          type: 'LINKED',
+          order: 0
+        }
+      })
+
+      // Set as primary image
+      await prisma.switch.update({
+        where: { id: newSwitch.id },
+        data: { primaryImageId: switchImage.id }
+      })
+    }
+
     return NextResponse.json({
       message: 'Switch added to your collection',
       switchId: newSwitch.id
