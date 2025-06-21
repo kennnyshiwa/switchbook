@@ -194,7 +194,7 @@ export default function SwitchImageManager({
                   src={getImageUrl(image, 'thumb')}
                   alt={image.caption || `Image ${index + 1}`}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
                 />
                 
