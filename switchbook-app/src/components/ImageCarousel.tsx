@@ -44,10 +44,10 @@ export default function ImageCarousel({
     setCurrentIndex((prev) => (prev + 1) % images.length)
   }
 
-  // Reset error state when images or fallbackImage change
+  // Reset error state when images change
   useEffect(() => {
     setImageError(false)
-  }, [images, currentIndex, fallbackImage])
+  }, [images, currentIndex])
 
   // Determine which image to show
   let imageUrl: string | null = null
@@ -59,8 +59,6 @@ export default function ImageCarousel({
       const rawUrl = currentImage.thumbnailUrl || currentImage.url
       imageUrl = getImageUrl(rawUrl)
     }
-  } else if (fallbackImage && !imageError) {
-    imageUrl = getImageUrl(fallbackImage)
   }
 
   if (!imageUrl || imageError) {
@@ -93,12 +91,12 @@ export default function ImageCarousel({
           // Image loaded successfully
         }}
         onError={(e) => {
-          // Only set error if we don't have a fallback or if the fallback also failed
-          if (!fallbackImage || imageUrl === getImageUrl(fallbackImage)) {
-            setImageError(true)
-          } else if (images.length > 0) {
-            // If we have images array and current one failed, try next
+          if (images.length > 1) {
+            // If we have multiple images and current one failed, try next
             setCurrentIndex((prev) => (prev + 1) % images.length)
+          } else {
+            // Only one image or no images, set error
+            setImageError(true)
           }
         }}
       />

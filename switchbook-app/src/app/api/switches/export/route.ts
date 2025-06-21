@@ -47,7 +47,6 @@ export async function GET(req: NextRequest) {
       'Franken Bottom',
       'Franken Stem',
       'Notes',
-      'Image URL',
       'Date Obtained'
     ]
 
@@ -79,7 +78,6 @@ export async function GET(req: NextRequest) {
       switchItem.frankenBottom || '',
       switchItem.frankenStem || '',
       switchItem.notes || '',
-      switchItem.imageUrl || '',
       switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : ''
     ])
 

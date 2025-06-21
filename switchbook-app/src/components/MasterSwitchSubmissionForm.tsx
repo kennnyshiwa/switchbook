@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import ManufacturerAutocomplete from './ManufacturerAutocomplete';
 import { useState } from 'react';
-import { validateImageUrl } from '@/lib/image-security';
 
 // Schema for master switch submission
 const masterSwitchSubmissionSchema = z.object({
@@ -41,13 +40,6 @@ const masterSwitchSubmissionSchema = z.object({
   pcbThickness: z.string().optional(),
   
   // Additional info
-  imageUrl: z.string().optional().refine((url) => {
-    if (!url || url === "") return true
-    const validation = validateImageUrl(url)
-    return validation.valid
-  }, {
-    message: "Invalid image URL or security violation"
-  }),
   notes: z.string().optional(),
   
   // Submission reason
@@ -442,21 +434,6 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Additional Information</h2>
         <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Image URL
-            </label>
-            <input
-              {...register('imageUrl')}
-              type="url"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="https://example.com/switch.jpg"
-            />
-            {errors.imageUrl && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
-            )}
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Notes

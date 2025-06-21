@@ -27,7 +27,6 @@ interface EditableSwitchData {
   preTravel?: number
   bottomOut?: number
   notes?: string
-  imageUrl?: string
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -506,18 +505,6 @@ const SwitchEditRow = memo(({
           </td>
         )
 
-      case 'imageUrl':
-        return (
-          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
-            <input
-              type="url"
-              value={localValues.imageUrl || ''}
-              onChange={(e) => handleChange('imageUrl', e.target.value)}
-              className={className}
-            />
-          </td>
-        )
-
       case 'dateObtained':
         return (
           <td key={columnId} className="px-3 py-4 whitespace-nowrap">
@@ -590,7 +577,6 @@ const defaultColumns: ColumnConfig[] = [
   { id: 'frankenBottom', label: 'Franken Bottom', field: 'frankenBottom', minWidth: 'min-w-[80px]' },
   { id: 'frankenStem', label: 'Franken Stem', field: 'frankenStem', minWidth: 'min-w-[80px]' },
   { id: 'notes', label: 'Notes', field: 'notes', minWidth: 'min-w-[120px]' },
-  { id: 'imageUrl', label: 'Image URL', field: 'imageUrl', minWidth: 'min-w-[120px]' },
   { id: 'dateObtained', label: 'Date Obtained', field: 'dateObtained', minWidth: 'min-w-[120px]' },
 ]
 
@@ -641,7 +627,6 @@ export default function BulkEditPage() {
             preTravel: sw.preTravel || undefined,
             bottomOut: sw.bottomOut || undefined,
             notes: sw.notes || '',
-            imageUrl: sw.imageUrl || '',
             topHousing: sw.topHousing || '',
             bottomHousing: sw.bottomHousing || '',
             stem: sw.stem || '',
@@ -702,7 +687,7 @@ export default function BulkEditPage() {
       'name', 'chineseName', 'type', 'technology', 'magnetOrientation', 'magnetPosition', 
       'magnetPolarity', 'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
       'pcbThickness', 'compatibility', 'manufacturer', 'springWeight', 'springLength',
-      'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'notes', 'imageUrl',
+      'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'notes',
       'topHousing', 'bottomHousing', 'stem', 'frankenTop', 'frankenBottom', 'frankenStem', 'dateObtained'
     ]
     
@@ -1363,7 +1348,6 @@ export default function BulkEditPage() {
                           preTravel: sw.preTravel || undefined,
                           bottomOut: sw.bottomOut || undefined,
                           notes: sw.notes || '',
-                          imageUrl: sw.imageUrl || '',
                           topHousing: sw.topHousing || '',
                           bottomHousing: sw.bottomHousing || '',
                           stem: sw.stem || '',

@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
         springWeight: userSwitch.masterSwitch.springWeight,
         springLength: userSwitch.masterSwitch.springLength,
         notes: userSwitch.masterSwitch.notes,
-        imageUrl: userSwitch.masterSwitch.imageUrl,
         topHousing: userSwitch.masterSwitch.topHousing,
         bottomHousing: userSwitch.masterSwitch.bottomHousing,
         stem: userSwitch.masterSwitch.stem,

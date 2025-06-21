@@ -22,7 +22,6 @@ interface MasterSwitch {
   springWeight?: string
   springLength?: string
   notes?: string
-  imageUrl?: string
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -829,18 +828,6 @@ export default function BrowseMasterSwitchesPage() {
                     key={switchItem.id}
                     className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition-shadow flex flex-col max-h-[600px]"
                   >
-                    {switchItem.imageUrl && (
-                      <div className="relative w-full h-48 mb-4 flex-shrink-0">
-                        <Image
-                          src={switchItem.imageUrl}
-                          alt={switchItem.name}
-                          fill
-                          className="object-cover rounded-md"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                      </div>
-                    )}
-                    
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex-shrink-0">
                       {switchItem.name}
                       {switchItem.chineseName && (

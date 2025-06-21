@@ -441,9 +441,6 @@ export default function AdminMasterSwitchesPage() {
                       {submission.originalSubmissionData.compatibility && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Compatibility:</span> {submission.originalSubmissionData.compatibility}</p>
                       )}
-                      {submission.originalSubmissionData.imageUrl && (
-                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Image URL:</span> <a href={submission.originalSubmissionData.imageUrl} target="_blank" className="text-blue-600 hover:underline dark:text-blue-400">View Image</a></p>
-                      )}
                       {submission.originalSubmissionData.notes && (
                         <div className="text-gray-900 dark:text-white">
                           <span className="font-medium">Notes:</span>

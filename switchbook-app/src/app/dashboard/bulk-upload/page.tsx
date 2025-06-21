@@ -26,7 +26,6 @@ interface ParsedSwitch {
   preTravel?: number
   bottomOut?: number
   notes?: string
-  imageUrl?: string
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -586,15 +585,6 @@ const SwitchTableRow = memo(({
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
-          type="url"
-          value={localValues.imageUrl || ''}
-          onChange={(e) => handleChange('imageUrl', e.target.value)}
-          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          disabled={switchItem.isDuplicate && !switchItem.overwrite}
-        />
-      </td>
-      <td className="px-3 py-4 whitespace-nowrap">
-        <input
           type="date"
           value={localValues.dateObtained || ''}
           onChange={(e) => handleChange('dateObtained', e.target.value)}
@@ -678,7 +668,6 @@ export default function BulkUploadPage() {
     { key: 'frankenBottom', label: 'Franken Bottom', required: false },
     { key: 'frankenStem', label: 'Franken Stem', required: false },
     { key: 'notes', label: 'Notes', required: false },
-    { key: 'imageUrl', label: 'Image URL', required: false },
     { key: 'dateObtained', label: 'Date Obtained', required: false },
   ]
 
@@ -727,7 +716,6 @@ export default function BulkUploadPage() {
       '', // Franken Bottom
       '', // Franken Stem
       'Great for gaming', // Notes
-      '', // Image URL
       '2024-01-15' // Date Obtained
     ]
     

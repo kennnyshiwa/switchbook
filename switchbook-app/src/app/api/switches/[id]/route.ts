@@ -5,8 +5,6 @@ import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
 import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
-import { getClientIdentifier } from "@/lib/rate-limit"
-import { checkImageValidationRateLimit } from "@/lib/image-security"
 import { withSmartRateLimit } from "@/lib/with-rate-limit"
 
 interface RouteParams {
@@ -43,22 +41,7 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
       )
     }
 
-    // Additional rate limiting for image URL validation - only if imageUrl is actually changing
-    if (body && typeof body === 'object' && 'imageUrl' in body && body.imageUrl) {
-      const newImageUrl = body.imageUrl as string
-      const currentImageUrl = switchItem.imageUrl
-      
-      // Only apply rate limiting if the image URL is actually changing
-      if (newImageUrl !== currentImageUrl) {
-        const clientIP = getClientIdentifier(request)
-        if (!checkImageValidationRateLimit(clientIP)) {
-          return NextResponse.json(
-            { error: "Too many image validation requests. Please try again later." },
-            { status: 429 }
-          )
-        }
-      }
-    }
+    // Rate limiting removed as imageUrl field is deprecated
     
     const validatedData = switchSchema.parse(body)
     
@@ -86,7 +69,7 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
       const fieldsToCheck = [
         'name', 'chineseName', 'type', 'technology', 'manufacturer',
         'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut',
-        'springWeight', 'springLength', 'notes', 'imageUrl',
+        'springWeight', 'springLength', 'notes',
         'topHousing', 'bottomHousing', 'stem',
         'magnetOrientation', 'magnetPosition', 'magnetPolarity',
         'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',

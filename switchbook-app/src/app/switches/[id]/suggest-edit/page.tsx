@@ -29,7 +29,6 @@ interface MasterSwitchData {
   releaseYear?: number;
   lifespan?: string;
   productUrl?: string;
-  imageUrl?: string;
   notes?: string;
   status: string;
 }

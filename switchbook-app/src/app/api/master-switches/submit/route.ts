@@ -38,7 +38,6 @@ const submissionSchema = z.object({
   pcbThickness: z.string().optional().nullable(),
   
   // Additional info
-  imageUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   
   // Submission details
