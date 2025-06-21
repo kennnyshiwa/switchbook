@@ -190,6 +190,7 @@ model MasterSwitch {
   bottomOut              Float?
   manufacturer           String?
   notes                  String?
+  imageUrl               String?
   topHousing             String?
   bottomHousing          String?
   stem                   String?

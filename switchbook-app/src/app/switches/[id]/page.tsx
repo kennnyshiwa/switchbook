@@ -30,6 +30,7 @@ interface MasterSwitchDetail {
   bottomOut?: number
   manufacturer?: string
   notes?: string
+  imageUrl?: string
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -262,6 +263,16 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
 
         {/* Main Content */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          {/* Image Section */}
+          {switchData.imageUrl && (
+            <div className="relative h-96 bg-gray-100 dark:bg-gray-900">
+              <img
+                src={switchData.imageUrl}
+                alt={switchData.name}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          )}
 
           <div className="p-6 space-y-6">
             {/* Basic Information */}
