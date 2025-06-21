@@ -143,11 +143,11 @@ export default function ImageCarousel({
   console.log('9. About to render img element with URL:', imageUrl)
   
   return (
-    <div className={`${className} relative overflow-hidden group`}>
+    <div className={`relative ${className} overflow-hidden group`}>
       <img
         src={imageUrl}
         alt={alt}
-        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+        className="w-full h-full object-cover transition-opacity duration-300"
         onLoad={() => {
           console.log('Image loaded successfully:', imageUrl)
         }}
@@ -169,7 +169,7 @@ export default function ImageCarousel({
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
             aria-label="Previous image"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@ export default function ImageCarousel({
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-all duration-200 opacity-0 group-hover:opacity-100"
             aria-label="Next image"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,7 +190,7 @@ export default function ImageCarousel({
       
       {/* Image indicators */}
       {isHovered && hasImages && images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           {images.map((_, index) => (
             <button
               key={index}
