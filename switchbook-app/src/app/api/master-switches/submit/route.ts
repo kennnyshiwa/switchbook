@@ -188,7 +188,6 @@ export async function POST(req: NextRequest) {
         bottomOutMagneticFlux: validated.bottomOutMagneticFlux || null,
         pcbThickness: validated.pcbThickness || null,
         notes: validated.notes || null,
-        imageUrl: validated.imageUrl || null,
         status: 'PENDING',
         submittedById: session.user.id,
         // Store the full submission data for audit purposes

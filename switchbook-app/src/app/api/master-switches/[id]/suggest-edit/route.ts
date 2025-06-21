@@ -107,7 +107,6 @@ export async function POST(
           bottomHousing: validated.bottomHousingMaterial,
           stem: validated.stemMaterial,
           notes: validated.notes,
-          imageUrl: validated.imageUrl,
           // Store additional fields in the JSON
           stemColor: validated.stemColor,
           preLubed: validated.preLubed,
