@@ -59,8 +59,7 @@ export async function GET(req: NextRequest) {
         bottomOutMagneticFlux: true,
         pcbThickness: true,
         compatibility: true,
-        notes: true,
-        imageUrl: true
+        notes: true
       },
       take: 10, // Limit results
       orderBy: {
