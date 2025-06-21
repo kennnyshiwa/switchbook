@@ -41,6 +41,7 @@ const masterSwitchSubmissionSchema = z.object({
   
   // Additional info
   notes: z.string().optional(),
+  imageUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
   
   // Submission reason
   submissionNotes: z.string().min(10, 'Please provide details about this switch and why it should be added'),
@@ -444,6 +445,24 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="Any additional information about the switch..."
             />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Image URL
+            </label>
+            <input
+              {...register('imageUrl')}
+              type="url"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="https://example.com/switch-image.jpg"
+            />
+            {errors.imageUrl && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
+            )}
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Provide a URL to an image of the switch. Uploads are not available for master switches.
+            </p>
           </div>
         </div>
       </div>
