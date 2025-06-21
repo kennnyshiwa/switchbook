@@ -46,7 +46,6 @@ export default function ImageCarousel({
 
   // Reset error state when images or fallbackImage change
   useEffect(() => {
-    console.log('useEffect: Resetting imageError to false')
     setImageError(false)
   }, [images, currentIndex, fallbackImage])
 
@@ -54,71 +53,15 @@ export default function ImageCarousel({
   let imageUrl: string | null = null
   const hasImages = images && images.length > 0
   
-  // Add detailed logging for debugging
-  console.log('=== ImageCarousel Debug Start ===')
-  console.log('1. Initial state:', { hasImages, imageError, currentIndex })
-  console.log('1b. Images array:', images)
-  console.log('1c. Images structure check:', images?.map(img => ({ 
-    hasId: !!img.id, 
-    hasUrl: !!img.url, 
-    urlValue: img.url,
-    hasThumbnailUrl: !!img.thumbnailUrl,
-    thumbnailUrlValue: img.thumbnailUrl
-  })))
-  
   if (hasImages && !imageError) {
     const currentImage = images[safeCurrentIndex]
-    console.log('2. Current image object:', currentImage)
-    console.log('2a. Using safeCurrentIndex:', safeCurrentIndex, 'original currentIndex:', currentIndex)
-    console.log('2b. Current image structure:', {
-      id: currentImage?.id,
-      url: currentImage?.url,
-      thumbnailUrl: currentImage?.thumbnailUrl,
-      hasValidUrl: !!(currentImage?.thumbnailUrl || currentImage?.url)
-    })
-    
-    // Add safety check for currentImage
-    if (!currentImage) {
-      console.error('ERROR: currentImage is undefined! currentIndex:', currentIndex, 'images.length:', images.length)
-    } else {
+    if (currentImage) {
       const rawUrl = currentImage.thumbnailUrl || currentImage.url
-      console.log('3. Raw URL before getImageUrl:', rawUrl)
-      console.log('3a. Raw URL type:', typeof rawUrl)
-      console.log('3b. Raw URL truthiness:', !!rawUrl)
-      
-      if (!rawUrl) {
-        console.error('ERROR: No valid URL found in currentImage!', {
-          thumbnailUrl: currentImage.thumbnailUrl,
-          url: currentImage.url,
-          currentImage
-        })
-      }
-      
       imageUrl = getImageUrl(rawUrl)
-      console.log('4. URL after getImageUrl:', imageUrl)
     }
   } else if (fallbackImage && !imageError) {
-    console.log('5. Using fallback image:', fallbackImage)
     imageUrl = getImageUrl(fallbackImage)
-    console.log('6. Fallback URL after getImageUrl:', imageUrl)
-  } else {
-    console.log('7. No image to display - hasImages:', hasImages, 'imageError:', imageError)
   }
-
-  console.log('8. Final render decision:', { 
-    imageUrl, 
-    willRenderPlaceholder: !imageUrl || imageError 
-  })
-  console.log('=== ImageCarousel Debug End ===')
-
-  console.log('ImageCarousel render:', { 
-    hasImages, 
-    imagesCount: images?.length || 0, 
-    currentIndex, 
-    imageUrl, 
-    fallbackImage,
-    imageError 
-  })
 
   if (!imageUrl || imageError) {
     return (
@@ -140,20 +83,16 @@ export default function ImageCarousel({
     )
   }
 
-  console.log('9. About to render img element with URL:', imageUrl)
-  
   return (
     <div className={`relative ${className} overflow-hidden group`}>
       <img
         src={imageUrl}
         alt={alt}
-        className="w-full h-full object-cover transition-opacity duration-300"
+        className="w-full h-full object-contain transition-opacity duration-300"
         onLoad={() => {
-          console.log('Image loaded successfully:', imageUrl)
+          // Image loaded successfully
         }}
         onError={(e) => {
-          console.error('Image failed to load:', imageUrl)
-          console.error('Image error event:', e)
           // Only set error if we don't have a fallback or if the fallback also failed
           if (!fallbackImage || imageUrl === getImageUrl(fallbackImage)) {
             setImageError(true)

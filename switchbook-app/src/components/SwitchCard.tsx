@@ -56,7 +56,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="relative h-48 bg-gray-100 dark:bg-gray-700">
+        <div className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
           <ImageCarousel
             images={switchItem.images || []}
             fallbackImage={switchItem.imageUrl}
