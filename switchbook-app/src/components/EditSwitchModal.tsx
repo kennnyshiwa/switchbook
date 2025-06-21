@@ -70,7 +70,6 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       bottomOut: switchItem.bottomOut || undefined,
       springWeight: switchItem.springWeight || '',
       springLength: switchItem.springLength || '',
-      imageUrl: switchItem.imageUrl || '',
       notes: switchItem.notes || '',
       personalNotes: switchItem.personalNotes || '',
       topHousing: switchItem.topHousing || '',

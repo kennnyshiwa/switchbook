@@ -22,7 +22,6 @@ interface SwitchData {
   bottomOut?: number | null;
   notes?: string | null;
   personalNotes?: string | null;
-  imageUrl?: string | null;
   topHousing?: string | null;
   bottomHousing?: string | null;
   stem?: string | null;
@@ -55,7 +54,6 @@ export function transformSwitchData(data: SwitchData) {
     bottomOut: data.bottomOut || null,
     notes: data.notes || null,
     personalNotes: data.personalNotes || null,
-    imageUrl: data.imageUrl || null,
     topHousing: data.topHousing || null,
     bottomHousing: data.bottomHousing || null,
     stem: data.stem || null,

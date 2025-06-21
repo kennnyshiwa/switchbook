@@ -69,7 +69,6 @@ export async function POST(
         bottomOut: masterSwitch.bottomOut,
         manufacturer: masterSwitch.manufacturer,
         notes: masterSwitch.notes,
-        imageUrl: masterSwitch.imageUrl,
         topHousing: masterSwitch.topHousing,
         bottomHousing: masterSwitch.bottomHousing,
         stem: masterSwitch.stem,

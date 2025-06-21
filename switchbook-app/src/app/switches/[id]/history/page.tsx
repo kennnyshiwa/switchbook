@@ -97,7 +97,6 @@ export default function MasterSwitchHistoryPage({ params }: { params: Promise<{ 
       bottomHousing: 'Bottom Housing Material',
       stem: 'Stem Material',
       notes: 'Notes',
-      imageUrl: 'Image URL',
       compatibility: 'Compatibility',
       stemColor: 'Stem Color',
       preLubed: 'Pre-Lubed',

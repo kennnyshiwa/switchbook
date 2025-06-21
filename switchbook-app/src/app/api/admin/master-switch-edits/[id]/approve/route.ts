@@ -50,7 +50,7 @@ export async function POST(
     const fieldsToUpdate = [
       'name', 'chineseName', 'manufacturer', 'type', 'technology',
       'compatibility', 'actuationForce', 'bottomOutForce', 'preTravel',
-      'notes', 'imageUrl'
+      'notes'
     ]
 
     // Map form fields to database fields

@@ -33,7 +33,6 @@ async function main() {
       stem: 'POM',
       compatibility: 'MX-style',
       notes: 'Classic linear switch, smooth and light. Popular for gaming.',
-      imageUrl: 'https://mechanicalkeyboards.com/cdn/shop/products/cherry_mx_red_1024x1024.jpg',
       submittedById: adminUser.id,
       approvedById: adminUser.id,
       approvedAt: new Date(),

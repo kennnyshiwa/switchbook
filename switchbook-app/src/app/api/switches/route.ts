@@ -6,8 +6,6 @@ import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
 import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
 import { withSmartRateLimit } from "@/lib/with-rate-limit"
-import { getClientIdentifier } from "@/lib/rate-limit"
-import { checkImageValidationRateLimit } from "@/lib/image-security"
 
 async function createSwitchHandler(request: NextRequest) {
   try {
@@ -40,17 +38,6 @@ async function createSwitchHandler(request: NextRequest) {
     }
 
     const body = await request.json()
-    
-    // Additional rate limiting for image URL validation
-    if (body.imageUrl) {
-      const clientIP = getClientIdentifier(request)
-      if (!checkImageValidationRateLimit(clientIP)) {
-        return NextResponse.json(
-          { error: "Too many image validation requests. Please try again later." },
-          { status: 429 }
-        )
-      }
-    }
     
     const validatedData = switchSchema.parse(body)
     

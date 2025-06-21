@@ -33,7 +33,6 @@ interface MasterSwitch {
   pcbThickness?: string
   compatibility?: string
   notes?: string
-  imageUrl?: string
 }
 
 interface MasterSwitchSuggestionsProps {
@@ -91,7 +90,7 @@ export default function MasterSwitchSuggestions({ searchQuery, setValue, onSelec
     if (masterSwitch.bottomHousing) setValue('bottomHousing', masterSwitch.bottomHousing)
     if (masterSwitch.stem) setValue('stem', masterSwitch.stem)
     if (masterSwitch.notes) setValue('notes', masterSwitch.notes)
-    if (masterSwitch.imageUrl) setValue('imageUrl', masterSwitch.imageUrl)
+    // imageUrl field removed
     
     // Magnetic switch properties
     if (masterSwitch.magnetOrientation) setValue('magnetOrientation', masterSwitch.magnetOrientation)

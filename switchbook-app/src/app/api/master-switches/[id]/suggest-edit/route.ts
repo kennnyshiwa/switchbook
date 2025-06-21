@@ -27,7 +27,6 @@ const editSuggestionSchema = z.object({
   releaseYear: z.number().optional().nullable(),
   lifespan: z.string().optional().nullable(),
   productUrl: z.string().optional().nullable(),
-  imageUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   editReason: z.string().min(10),
   changedFields: z.array(z.string()).min(1),

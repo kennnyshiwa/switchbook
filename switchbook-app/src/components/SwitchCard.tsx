@@ -59,7 +59,6 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
         <div className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
           <ImageCarousel
             images={switchItem.images || []}
-            fallbackImage={switchItem.imageUrl}
             alt={switchItem.name}
             isHovered={isHovered}
             className="w-full h-full"

@@ -29,7 +29,6 @@ interface MasterSwitchDetail {
   bottomOut?: number
   manufacturer?: string
   notes?: string
-  imageUrl?: string
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -253,19 +252,6 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
 
         {/* Main Content */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          {switchData.imageUrl && (
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="relative mx-auto" style={{ maxWidth: '600px', height: '400px' }}>
-                <Image
-                  src={switchData.imageUrl}
-                  alt={switchData.name}
-                  fill
-                  className="object-contain rounded-lg"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
-                />
-              </div>
-            </div>
-          )}
 
           <div className="p-6 space-y-6">
             {/* Basic Information */}
