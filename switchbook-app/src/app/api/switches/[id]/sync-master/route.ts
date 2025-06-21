@@ -165,7 +165,7 @@ export async function GET(
       const fieldsToCheck = [
         'name', 'chineseName', 'type', 'technology', 'manufacturer',
         'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut',
-        'springWeight', 'springLength', 'notes', 'imageUrl',
+        'springWeight', 'springLength', 'notes',
         'topHousing', 'bottomHousing', 'stem',
         'magnetOrientation', 'magnetPosition', 'magnetPolarity',
         'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
