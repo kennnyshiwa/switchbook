@@ -102,6 +102,41 @@ export async function POST(
       }
     })
 
+    // If master switch has an imageUrl, create a linked image for the user's switch
+    if (masterSwitch.imageUrl) {
+      // Check if this image URL already exists for this switch
+      const existingImage = await prisma.switchImage.findFirst({
+        where: {
+          switchId: userSwitchId,
+          url: masterSwitch.imageUrl
+        }
+      })
+
+      if (!existingImage) {
+        const switchImage = await prisma.switchImage.create({
+          data: {
+            switchId: userSwitchId,
+            url: masterSwitch.imageUrl,
+            type: 'LINKED',
+            order: 0
+          }
+        })
+
+        // Set as primary image if no primary image exists
+        const switchWithImages = await prisma.switch.findUnique({
+          where: { id: userSwitchId },
+          select: { primaryImageId: true }
+        })
+
+        if (!switchWithImages?.primaryImageId) {
+          await prisma.switch.update({
+            where: { id: userSwitchId },
+            data: { primaryImageId: switchImage.id }
+          })
+        }
+      }
+    }
+
     return NextResponse.json({
       message: 'Switch successfully linked to master switch',
       switchId: updatedSwitch.id

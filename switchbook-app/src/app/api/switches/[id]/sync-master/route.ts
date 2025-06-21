@@ -73,6 +73,41 @@ export async function POST(
       }
     })
 
+    // Sync master switch imageUrl if it exists
+    if (userSwitch.masterSwitch.imageUrl) {
+      // Check if this image URL already exists for this switch
+      const existingImage = await prisma.switchImage.findFirst({
+        where: {
+          switchId: id,
+          url: userSwitch.masterSwitch.imageUrl
+        }
+      })
+
+      if (!existingImage) {
+        const switchImage = await prisma.switchImage.create({
+          data: {
+            switchId: id,
+            url: userSwitch.masterSwitch.imageUrl,
+            type: 'LINKED',
+            order: 0
+          }
+        })
+
+        // Set as primary image if no primary image exists
+        const switchWithImages = await prisma.switch.findUnique({
+          where: { id },
+          select: { primaryImageId: true }
+        })
+
+        if (!switchWithImages?.primaryImageId) {
+          await prisma.switch.update({
+            where: { id },
+            data: { primaryImageId: switchImage.id }
+          })
+        }
+      }
+    }
+
     return NextResponse.json({
       message: 'Switch synced with master database',
       switch: updatedSwitch
