@@ -46,6 +46,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
   const [submissionNotes, setSubmissionNotes] = useState('')
   const [similarSwitches, setSimilarSwitches] = useState<any[]>([])
   const [confirmNotDuplicate, setConfirmNotDuplicate] = useState(false)
+  const [localImages, setLocalImages] = useState<SwitchImage[]>(switchItem.images || [])
 
   const {
     register,
@@ -92,6 +93,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     if (switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) {
       setShowFrankenswitch(true)
     }
+    // Update local images when switch prop changes
+    setLocalImages(switchItem.images || [])
   }, [switchItem])
 
   // Check sync status on mount
@@ -128,7 +131,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       }
 
       const data = await response.json()
-      onSwitchUpdated(data.switch)
+      // Preserve local images when syncing
+      onSwitchUpdated({ ...data.switch, images: localImages })
       setSyncStatus(prev => prev ? { ...prev, hasUpdates: false, isModified: false } : null)
     } catch (error) {
       setError('Failed to sync with master database. Please try again.')
@@ -155,7 +159,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       }
 
       const updatedSwitch = await response.json()
-      onSwitchUpdated(updatedSwitch)
+      // Include the current local images in the updated switch data
+      onSwitchUpdated({ ...updatedSwitch, images: localImages })
       
       // Refresh sync status after update
       const syncResponse = await fetch(`/api/switches/${switchItem.id}/sync-master`)
@@ -364,10 +369,10 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Images</h3>
           <SwitchImageManager
             switchId={switchItem.id}
-            images={switchItem.images || []}
+            images={localImages}
             onImagesUpdated={(images) => {
-              // Update the switch with new images
-              onSwitchUpdated({ ...switchItem, images })
+              // Only update local state, don't close the modal
+              setLocalImages(images)
             }}
           />
         </div>

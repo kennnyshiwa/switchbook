@@ -60,7 +60,10 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
   const handleSwitchUpdated = (updatedSwitch: ExtendedSwitch) => {
     setSwitches(switches.map(s => s.id === updatedSwitch.id ? updatedSwitch : s))
-    setEditingSwitch(null)
+    // Update the editing switch with new data but keep modal open
+    if (editingSwitch && editingSwitch.id === updatedSwitch.id) {
+      setEditingSwitch(updatedSwitch)
+    }
   }
 
   const handleSwitchDeleted = (switchId: string) => {
