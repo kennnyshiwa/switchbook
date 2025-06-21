@@ -11,7 +11,10 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "postinstall": "npx prisma generate"
+    "postinstall": "npx prisma generate",
+    "script:analyze-duplicates": "tsx scripts/analyze-duplicate-images.ts",
+    "script:deduplicate-images": "tsx scripts/deduplicate-images.ts",
+    "script:migrate-images-safe": "tsx scripts/migrate-image-urls-safe.ts"
   },
   "keywords": [],
   "author": "",
@@ -51,6 +54,7 @@
   "devDependencies": {
     "@types/lodash": "^4.17.17",
     "eslint": "^9.28.0",
-    "eslint-config-next": "^15.3.3"
+    "eslint-config-next": "^15.3.3",
+    "tsx": "^4.20.3"
   }
 }
