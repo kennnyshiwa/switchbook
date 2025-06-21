@@ -30,9 +30,9 @@ export default function LinkToCollectionDialog({
       try {
         const response = await fetch('/api/switches')
         if (response.ok) {
-          const data = await response.json()
+          const switches = await response.json()
           // Filter out switches that are already linked to a master switch
-          const unlinkedSwitches = data.switches.filter((sw: Switch) => !sw.masterSwitchId)
+          const unlinkedSwitches = switches.filter((sw: Switch) => !sw.masterSwitchId)
           setUserSwitches(unlinkedSwitches)
           setFilteredSwitches(unlinkedSwitches)
         }
