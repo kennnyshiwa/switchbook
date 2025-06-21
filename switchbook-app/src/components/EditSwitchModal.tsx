@@ -41,6 +41,11 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     isModified: boolean;
   } | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [isSubmittingToMaster, setIsSubmittingToMaster] = useState(false)
+  const [showSubmissionDialog, setShowSubmissionDialog] = useState(false)
+  const [submissionNotes, setSubmissionNotes] = useState('')
+  const [similarSwitches, setSimilarSwitches] = useState<any[]>([])
+  const [confirmNotDuplicate, setConfirmNotDuplicate] = useState(false)
 
   const {
     register,
@@ -165,6 +170,79 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     }
   }
 
+  const handleSubmitToMaster = async () => {
+    if (submissionNotes.length < 10) {
+      setError('Please provide submission notes (at least 10 characters) explaining what makes this switch unique or why it should be added to the master database.')
+      return
+    }
+
+    setIsSubmittingToMaster(true)
+    setError(null)
+
+    try {
+      const currentData = watch()
+      const submissionData = {
+        name: currentData.name,
+        chineseName: currentData.chineseName || null,
+        manufacturer: currentData.manufacturer,
+        type: currentData.type || null,
+        technology: currentData.technology || null,
+        compatibility: currentData.compatibility || null,
+        initialForce: currentData.initialForce || null,
+        actuationForce: currentData.actuationForce || null,
+        bottomOutForce: currentData.bottomOutForce || null,
+        preTravel: currentData.preTravel || null,
+        bottomOut: currentData.bottomOut || null,
+        springWeight: currentData.springWeight || null,
+        springLength: currentData.springLength || null,
+        topHousing: currentData.topHousing || null,
+        bottomHousing: currentData.bottomHousing || null,
+        stem: currentData.stem || null,
+        magnetOrientation: currentData.magnetOrientation || null,
+        magnetPosition: currentData.magnetPosition || null,
+        magnetPolarity: currentData.magnetPolarity || null,
+        initialMagneticFlux: currentData.initialMagneticFlux || null,
+        bottomOutMagneticFlux: currentData.bottomOutMagneticFlux || null,
+        pcbThickness: currentData.pcbThickness || null,
+        notes: currentData.notes || null,
+        submissionNotes: submissionNotes,
+        confirmNotDuplicate: confirmNotDuplicate
+      }
+
+      const response = await fetch('/api/master-switches/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submissionData),
+      })
+
+      const data = await response.json()
+
+      if (response.status === 409 && data.similarSwitches) {
+        // Similar switches found, show them to the user
+        setSimilarSwitches(data.similarSwitches)
+        setConfirmNotDuplicate(true)
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit to master database')
+      }
+
+      // Success
+      setShowSubmissionDialog(false)
+      setSubmissionNotes('')
+      setSimilarSwitches([])
+      setConfirmNotDuplicate(false)
+      alert('Switch submitted successfully! It will be reviewed by an admin before being added to the master database.')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to submit to master database. Please try again.')
+    } finally {
+      setIsSubmittingToMaster(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-80 flex items-center justify-center p-4 z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -268,6 +346,16 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
             >
               {isLoading ? 'Updating...' : 'Update Switch'}
             </button>
+            {!switchItem.masterSwitchId && (
+              <button
+                type="button"
+                onClick={() => setShowSubmissionDialog(true)}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 dark:bg-purple-500 border border-transparent rounded-md hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50"
+              >
+                Submit to Master DB
+              </button>
+            )}
           </div>
         </form>
 
@@ -284,6 +372,84 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
           />
         </div>
       </div>
+
+      {/* Submit to Master DB Dialog */}
+      {showSubmissionDialog && (
+        <div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-80 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Submit to Master Database</h3>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {error && (
+                <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+                  <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+                </div>
+              )}
+
+              {similarSwitches.length > 0 && (
+                <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4">
+                  <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                    Similar switches found:
+                  </h4>
+                  <ul className="space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+                    {similarSwitches.map((sw) => (
+                      <li key={sw.id}>
+                        {sw.name} by {sw.manufacturer} ({Math.round(sw.similarity * 100)}% similar)
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                    Please confirm this is not a duplicate switch.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="submissionNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Submission Notes (required)
+                </label>
+                <textarea
+                  id="submissionNotes"
+                  value={submissionNotes}
+                  onChange={(e) => setSubmissionNotes(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                  placeholder="Explain what makes this switch unique or why it should be added to the master database..."
+                />
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Minimum 10 characters required
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSubmissionDialog(false)
+                  setSubmissionNotes('')
+                  setSimilarSwitches([])
+                  setConfirmNotDuplicate(false)
+                  setError(null)
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitToMaster}
+                disabled={isSubmittingToMaster || submissionNotes.length < 10}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 dark:bg-purple-500 border border-transparent rounded-md hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50"
+              >
+                {isSubmittingToMaster ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
