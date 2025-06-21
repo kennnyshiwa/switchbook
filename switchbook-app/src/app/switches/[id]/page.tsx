@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
+import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
 
 interface MasterSwitchDetail {
   id: string
@@ -59,6 +60,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
   const [showSubmittedMessage, setShowSubmittedMessage] = useState(false)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -211,13 +213,21 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                   )}
                 </>
               ) : (
-                <button
-                  onClick={addToCollection}
-                  disabled={adding}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {adding ? 'Adding...' : 'Add to Collection'}
-                </button>
+                <>
+                  <button
+                    onClick={addToCollection}
+                    disabled={adding}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {adding ? 'Adding...' : 'Add to Collection'}
+                  </button>
+                  <button
+                    onClick={() => setShowLinkDialog(true)}
+                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Link to Collection
+                  </button>
+                </>
               )}
               
               {switchData.status === 'APPROVED' && (
@@ -481,6 +491,20 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
           </div>
         </div>
       </div>
+
+      {/* Link to Collection Dialog */}
+      {showLinkDialog && switchData && (
+        <LinkToCollectionDialog
+          masterSwitchId={switchData.id}
+          masterSwitchName={switchData.name}
+          onClose={() => setShowLinkDialog(false)}
+          onSuccess={() => {
+            setShowLinkDialog(false)
+            // Refresh the page data to show the updated status
+            window.location.reload()
+          }}
+        />
+      )}
     </div>
   )
 }
