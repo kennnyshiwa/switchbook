@@ -55,6 +55,7 @@ export default function BrowseMasterSwitchesPage() {
   const [switches, setSwitches] = useState<MasterSwitch[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
   const [addingSwitch, setAddingSwitch] = useState<string | null>(null)
   
   // Filters - UI state (immediate updates)
@@ -117,12 +118,19 @@ export default function BrowseMasterSwitchesPage() {
   const [page, setPage] = useState(1)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
-  // Create debounced setters
-  const debouncedUpdate = useMemo(
+  // Create debounced setters for search (faster) and other filters (slower)
+  const debouncedSearchUpdate = useMemo(
+    () => debounce((value: string) => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 200), // Faster debounce for search
+    []
+  )
+  
+  const debouncedFilterUpdate = useMemo(
     () => debounce((updates: Record<string, string>) => {
       Object.entries(updates).forEach(([key, value]) => {
         switch (key) {
-          case 'search': setDebouncedSearch(value); break;
           case 'manufacturer': setDebouncedManufacturer(value); break;
           case 'topHousing': setDebouncedTopHousing(value); break;
           case 'bottomHousing': setDebouncedBottomHousing(value); break;
@@ -147,14 +155,18 @@ export default function BrowseMasterSwitchesPage() {
         }
       });
       setPage(1); // Reset to first page when filters change
-    }, 500),
+    }, 400), // Standard debounce for other filters
     []
   )
 
-  // Update debounced values when immediate values change
+  // Update debounced search value
   useEffect(() => {
-    debouncedUpdate({
-      search,
+    debouncedSearchUpdate(search);
+  }, [search, debouncedSearchUpdate])
+  
+  // Update debounced filter values
+  useEffect(() => {
+    debouncedFilterUpdate({
       manufacturer,
       topHousing,
       bottomHousing,
@@ -177,7 +189,7 @@ export default function BrowseMasterSwitchesPage() {
       bottomOutMagneticFluxMin,
       bottomOutMagneticFluxMax,
     });
-  }, [search, manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedUpdate])
+  }, [manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedFilterUpdate])
 
   // Fetch master switches
   useEffect(() => {
@@ -188,7 +200,12 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     const fetchSwitches = async () => {
-      setLoading(true)
+      // Only show loading spinner on initial load
+      if (switches.length === 0) {
+        setLoading(true)
+      } else {
+        setIsSearching(true)
+      }
       try {
         const params = new URLSearchParams({
           page: page.toString(),
@@ -235,6 +252,7 @@ export default function BrowseMasterSwitchesPage() {
         console.error('Failed to fetch master switches:', error)
       } finally {
         setLoading(false)
+        setIsSearching(false)
       }
     }
 
@@ -302,7 +320,7 @@ export default function BrowseMasterSwitchesPage() {
     }
   }
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading' || (loading && switches.length === 0)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -320,8 +338,17 @@ export default function BrowseMasterSwitchesPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                 Browse Master Switches
+                {isSearching && (
+                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Updating results...
+                  </span>
+                )}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Discover and add switches from our community-curated database
@@ -355,13 +382,25 @@ export default function BrowseMasterSwitchesPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Search
               </label>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search switches..."
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search switches..."
+                  className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 pr-8 text-sm"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div>
@@ -814,8 +853,18 @@ export default function BrowseMasterSwitchesPage() {
         </div>
 
         {/* Results */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          {switches.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow relative">
+          {/* Loading overlay */}
+          {isSearching && (
+            <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 z-10 flex items-center justify-center rounded-lg">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Searching...</p>
+              </div>
+            </div>
+          )}
+          
+          {switches.length === 0 && !isSearching ? (
             <div className="p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400">
                 No switches found matching your criteria
