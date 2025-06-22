@@ -50,28 +50,16 @@ export async function POST(
     const fieldsToUpdate = [
       'name', 'chineseName', 'manufacturer', 'type', 'technology',
       'compatibility', 'actuationForce', 'bottomOutForce', 'preTravel',
-      'notes'
+      'notes', 'imageUrl', 'topHousing', 'bottomHousing', 'stem',
+      'springWeight', 'springLength', 'bottomOut', 'magnetOrientation',
+      'magnetPosition', 'magnetPolarity', 'initialForce', 'initialMagneticFlux',
+      'bottomOutMagneticFlux', 'pcbThickness', 'frankenTop', 'frankenBottom',
+      'frankenStem'
     ]
 
-    // Map form fields to database fields
-    const fieldMapping: { [key: string]: string } = {
-      totalTravel: 'bottomOut',
-      springForce: 'springWeight',
-      topHousingMaterial: 'topHousing',
-      bottomHousingMaterial: 'bottomHousing',
-      stemMaterial: 'stem'
-    }
-
     for (const field of fieldsToUpdate) {
-      if (field in newData) {
+      if (field in newData && newData[field] !== undefined) {
         updateData[field] = newData[field]
-      }
-    }
-
-    // Handle mapped fields
-    for (const [formField, dbField] of Object.entries(fieldMapping)) {
-      if (formField in newData) {
-        updateData[dbField] = newData[formField]
       }
     }
 
