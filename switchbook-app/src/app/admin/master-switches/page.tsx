@@ -441,10 +441,35 @@ export default function AdminMasterSwitchesPage() {
                       {submission.originalSubmissionData.compatibility && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Compatibility:</span> {submission.originalSubmissionData.compatibility}</p>
                       )}
+                      {submission.originalSubmissionData.imageUrl && (
+                        <div className="text-gray-900 dark:text-white">
+                          <span className="font-medium">Image URL:</span>
+                          <a href={submission.originalSubmissionData.imageUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 hover:underline dark:text-blue-400">
+                            {submission.originalSubmissionData.imageUrl}
+                          </a>
+                          <div className="mt-2">
+                            <img 
+                              src={submission.originalSubmissionData.imageUrl} 
+                              alt={`${submission.originalSubmissionData.name} preview`}
+                              className="w-48 h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
                       {submission.originalSubmissionData.notes && (
                         <div className="text-gray-900 dark:text-white">
                           <span className="font-medium">Notes:</span>
                           <p className="mt-1 text-gray-600 dark:text-gray-400">{submission.originalSubmissionData.notes}</p>
+                        </div>
+                      )}
+                      {submission.originalSubmissionData.submissionNotes && (
+                        <div className="text-gray-900 dark:text-white">
+                          <span className="font-medium">Submission Reason:</span>
+                          <p className="mt-1 text-gray-600 dark:text-gray-400">{submission.originalSubmissionData.submissionNotes}</p>
                         </div>
                       )}
                     </div>

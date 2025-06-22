@@ -41,7 +41,7 @@ const masterSwitchSubmissionSchema = z.object({
   
   // Additional info
   notes: z.string().optional(),
-  imageUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  imageUrl: z.union([z.string().url('Invalid URL'), z.literal('')]).optional(),
   
   // Submission reason
   submissionNotes: z.string().min(10, 'Please provide details about this switch and why it should be added'),
@@ -79,6 +79,8 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       bottomOut: isNaN(data.bottomOut as number) ? undefined : data.bottomOut,
       initialMagneticFlux: isNaN(data.initialMagneticFlux as number) ? undefined : data.initialMagneticFlux,
       bottomOutMagneticFlux: isNaN(data.bottomOutMagneticFlux as number) ? undefined : data.bottomOutMagneticFlux,
+      // Clean imageUrl - convert empty string to undefined
+      imageUrl: data.imageUrl && data.imageUrl.trim() !== '' ? data.imageUrl.trim() : undefined,
     };
     
     onSubmit(cleanedData);
