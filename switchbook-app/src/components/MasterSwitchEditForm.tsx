@@ -9,39 +9,39 @@ import { useState } from 'react';
 // Schema for edit suggestion - matching the submission form
 const editSuggestionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
-  chineseName: z.string().optional(),
+  chineseName: z.string().optional().nullable().or(z.literal('')),
   manufacturer: z.string().min(1, 'Manufacturer is required'),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional(),
-  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional(),
-  compatibility: z.string().optional(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().nullable(),
+  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().nullable(),
+  compatibility: z.string().optional().nullable().or(z.literal('')),
   
   // Force specifications
-  initialForce: z.number().min(0).max(1000).optional().or(z.nan()),
-  actuationForce: z.number().min(0).max(1000).optional().or(z.nan()),
-  bottomOutForce: z.number().min(0).max(1000).optional().or(z.nan()),
-  preTravel: z.number().min(0).max(10).optional().or(z.nan()),
-  bottomOut: z.number().min(0).max(10).optional().or(z.nan()),
+  initialForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
+  actuationForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
+  bottomOutForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
+  preTravel: z.number().min(0).max(10).optional().nullable().or(z.nan()),
+  bottomOut: z.number().min(0).max(10).optional().nullable().or(z.nan()),
   
   // Spring specifications
-  springWeight: z.string().optional(),
-  springLength: z.string().optional(),
+  springWeight: z.string().optional().nullable().or(z.literal('')),
+  springLength: z.string().optional().nullable().or(z.literal('')),
   
   // Materials
-  topHousing: z.string().optional(),
-  bottomHousing: z.string().optional(),
-  stem: z.string().optional(),
+  topHousing: z.string().optional().nullable().or(z.literal('')),
+  bottomHousing: z.string().optional().nullable().or(z.literal('')),
+  stem: z.string().optional().nullable().or(z.literal('')),
   
   // Magnetic specifications
-  magnetOrientation: z.string().optional(),
-  magnetPosition: z.string().optional(),
-  magnetPolarity: z.string().optional(),
-  initialMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan()),
-  bottomOutMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan()),
-  pcbThickness: z.string().optional(),
+  magnetOrientation: z.string().optional().nullable().or(z.literal('')),
+  magnetPosition: z.string().optional().nullable().or(z.literal('')),
+  magnetPolarity: z.string().optional().nullable().or(z.literal('')),
+  initialMagneticFlux: z.number().min(0).max(10000).optional().nullable().or(z.nan()),
+  bottomOutMagneticFlux: z.number().min(0).max(10000).optional().nullable().or(z.nan()),
+  pcbThickness: z.string().optional().nullable().or(z.literal('')),
   
   // Additional info
-  notes: z.string().optional(),
-  imageUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  notes: z.string().optional().nullable().or(z.literal('')),
+  imageUrl: z.union([z.string().url('Invalid URL'), z.literal(''), z.null()]).optional(),
   
   // Edit reason
   editReason: z.string().min(10, 'Please explain what you changed and why'),
@@ -63,6 +63,33 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     currentData.technology === 'MAGNETIC'
   );
   
+  // Clean initial data - convert null to empty string or undefined for form
+  const cleanedInitialData = {
+    ...currentData,
+    // Convert null strings to empty strings
+    chineseName: currentData.chineseName || '',
+    compatibility: currentData.compatibility || '',
+    springWeight: currentData.springWeight || '',
+    springLength: currentData.springLength || '',
+    topHousing: currentData.topHousing || '',
+    bottomHousing: currentData.bottomHousing || '',
+    stem: currentData.stem || '',
+    magnetOrientation: currentData.magnetOrientation || '',
+    magnetPosition: currentData.magnetPosition || '',
+    magnetPolarity: currentData.magnetPolarity || '',
+    pcbThickness: currentData.pcbThickness || '',
+    notes: currentData.notes || '',
+    imageUrl: currentData.imageUrl || '',
+    // Keep numbers as is (they can be null/undefined)
+    initialForce: currentData.initialForce,
+    actuationForce: currentData.actuationForce,
+    bottomOutForce: currentData.bottomOutForce,
+    preTravel: currentData.preTravel,
+    bottomOut: currentData.bottomOut,
+    initialMagneticFlux: currentData.initialMagneticFlux,
+    bottomOutMagneticFlux: currentData.bottomOutMagneticFlux,
+  };
+  
   const {
     register,
     handleSubmit,
@@ -73,7 +100,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   } = useForm<EditSuggestionData>({
     resolver: zodResolver(editSuggestionSchema),
     defaultValues: {
-      ...currentData,
+      ...cleanedInitialData,
       editReason: '',
     },
   });
