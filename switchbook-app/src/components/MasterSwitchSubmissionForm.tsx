@@ -65,10 +65,13 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
     watch,
   } = useForm<MasterSwitchSubmissionData>({
     resolver: zodResolver(masterSwitchSubmissionSchema),
+    mode: 'onBlur', // Show errors when field loses focus
   });
 
   // Clean data before submission
   const handleFormSubmit = (data: MasterSwitchSubmissionData) => {
+    console.log('Form handleFormSubmit called with data:', data);
+    console.log('Form submitted with data:', data);
     // Convert NaN values to undefined for optional number fields
     const cleanedData = {
       ...data,
@@ -97,7 +100,32 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form 
+      onSubmit={handleSubmit(handleFormSubmit, (errors) => {
+        console.error('Form validation errors:', errors);
+        // Scroll to top to show error summary
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Show an alert with the first error
+        const firstError = Object.values(errors)[0] as any;
+        if (firstError && firstError.message) {
+          alert(`Please fix the following error: ${firstError.message}`);
+        }
+      })}
+      className="space-y-6"
+    >
+      {/* Validation Error Summary */}
+      {Object.keys(errors).length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">Please fix the following errors:</h3>
+          <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
+            {errors.name && <li>Switch name is required</li>}
+            {errors.manufacturer && <li>Manufacturer is required</li>}
+            {errors.submissionNotes && <li>Submission notes must be at least 10 characters</li>}
+            {errors.imageUrl && <li>Image URL must be a valid URL</li>}
+          </ul>
+        </div>
+      )}
+      
       {/* Basic Information */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Basic Information</h2>
@@ -109,7 +137,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             <input
               {...register('name')}
               type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              className={`w-full rounded-md border ${errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500`}
               placeholder="e.g., Cherry MX Red"
             />
             {errors.name && (
@@ -455,8 +483,8 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             </label>
             <input
               {...register('imageUrl')}
-              type="url"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              type="text"
+              className={`w-full rounded-md border ${errors.imageUrl ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500`}
               placeholder="https://example.com/switch-image.jpg"
             />
             {errors.imageUrl && (
@@ -479,7 +507,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
           <textarea
             {...register('submissionNotes')}
             rows={4}
-            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+            className={`w-full rounded-md border ${errors.submissionNotes ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500`}
             placeholder="Please provide details about this switch, its significance, and any sources for the specifications you've provided..."
           />
           {errors.submissionNotes && (
@@ -500,6 +528,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
         <button
           type="submit"
           disabled={isSubmitting}
+          onClick={() => console.log('Submit button clicked')}
           className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Submitting...' : 'Submit for Review'}
