@@ -11,8 +11,8 @@ const masterSwitchSubmissionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
   chineseName: z.string().optional(),
   manufacturer: z.string().min(1, 'Manufacturer is required'),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional(),
-  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().or(z.literal('')),
+  technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().or(z.literal('')),
   compatibility: z.string().optional(),
   
   // Force specifications
@@ -82,7 +82,9 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       bottomOut: isNaN(data.bottomOut as number) ? undefined : data.bottomOut,
       initialMagneticFlux: isNaN(data.initialMagneticFlux as number) ? undefined : data.initialMagneticFlux,
       bottomOutMagneticFlux: isNaN(data.bottomOutMagneticFlux as number) ? undefined : data.bottomOutMagneticFlux,
-      // Clean imageUrl - convert empty string to undefined
+      // Clean string fields - convert empty strings to undefined
+      type: data.type === '' ? undefined : data.type,
+      technology: data.technology === '' ? undefined : data.technology,
       imageUrl: data.imageUrl && data.imageUrl.trim() !== '' ? data.imageUrl.trim() : undefined,
     };
     
@@ -103,6 +105,10 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
     <form 
       onSubmit={handleSubmit(handleFormSubmit, (errors) => {
         console.error('Form validation errors:', errors);
+        // Log specific field errors
+        Object.entries(errors).forEach(([field, error]) => {
+          console.error(`Field '${field}' error:`, error);
+        });
         // Scroll to top to show error summary
         window.scrollTo({ top: 0, behavior: 'smooth' });
         // Show an alert with the first error
@@ -118,9 +124,11 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">Please fix the following errors:</h3>
           <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
-            {errors.name && <li>Switch name is required</li>}
-            {errors.manufacturer && <li>Manufacturer is required</li>}
-            {errors.submissionNotes && <li>Submission notes must be at least 10 characters</li>}
+            {Object.entries(errors).map(([field, error]) => (
+              <li key={field}>
+                <strong>{field}:</strong> {(error as any)?.message || 'Invalid value'}
+              </li>
+            ))}
             {errors.imageUrl && <li>Image URL must be a valid URL</li>}
           </ul>
         </div>
