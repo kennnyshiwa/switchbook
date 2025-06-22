@@ -5,38 +5,59 @@ import { z } from 'zod'
 import { MasterSwitchStatus } from '@prisma/client'
 import { sendAdminEditSuggestionEmail } from '@/lib/email'
 
-// Helper to handle empty strings
-const optionalString = () => z.union([z.string(), z.literal('')]).optional().nullable().transform(val => val === '' ? null : val)
+// Helper for optional string fields
+const optionalString = z.preprocess((val) => {
+  if (val === null || val === undefined || val === '') return null;
+  return String(val);
+}, z.string().nullable().optional());
 
-// Schema for edit suggestion
+// Schema for edit suggestion - using preprocessors to handle various input types
 const editSuggestionSchema = z.object({
-  name: z.string().min(1),
-  chineseName: optionalString(),
-  manufacturer: z.string().min(1),
+  name: z.preprocess((val) => {
+    if (val === null || val === undefined) return '';
+    return String(val);
+  }, z.string().min(1, 'Name is required')),
+  chineseName: optionalString,
+  manufacturer: z.preprocess((val) => {
+    if (val === null || val === undefined) return '';
+    return String(val);
+  }, z.string().min(1, 'Manufacturer is required')),
   type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().nullable(),
   technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().nullable(),
-  magnetOrientation: optionalString(),
-  magnetPosition: optionalString(),
-  magnetPolarity: optionalString(),
+  magnetOrientation: optionalString,
+  magnetPosition: optionalString,
+  magnetPolarity: optionalString,
   initialForce: z.number().optional().nullable(),
   initialMagneticFlux: z.number().optional().nullable(),
   bottomOutMagneticFlux: z.number().optional().nullable(),
-  pcbThickness: optionalString(),
-  compatibility: optionalString(),
-  springWeight: optionalString(),
-  springLength: optionalString(),
+  pcbThickness: optionalString,
+  compatibility: optionalString,
+  springWeight: optionalString,
+  springLength: optionalString,
   actuationForce: z.number().optional().nullable(),
   bottomOutForce: z.number().optional().nullable(),
   preTravel: z.number().optional().nullable(),
   bottomOut: z.number().optional().nullable(),
-  notes: optionalString(),
-  imageUrl: z.union([z.string().url(), z.literal(''), z.null()]).optional().transform(val => val === '' ? null : val),
-  topHousing: optionalString(),
-  bottomHousing: optionalString(),
-  stem: optionalString(),
-  frankenTop: optionalString(),
-  frankenBottom: optionalString(),
-  frankenStem: optionalString(),
+  notes: optionalString,
+  imageUrl: z.preprocess((val) => {
+    if (val === null || val === undefined || val === '') return null;
+    if (typeof val === 'string' && val.trim() !== '') {
+      // Validate URL format
+      try {
+        new URL(val);
+        return val;
+      } catch {
+        throw new Error('Invalid URL format');
+      }
+    }
+    return null;
+  }, z.string().nullable().optional()),
+  topHousing: optionalString,
+  bottomHousing: optionalString,
+  stem: optionalString,
+  frankenTop: optionalString,
+  frankenBottom: optionalString,
+  frankenStem: optionalString,
   editReason: z.string().min(10),
   changedFields: z.array(z.string()).min(1),
 })
@@ -53,7 +74,23 @@ export async function POST(
 
     const { id } = await params
     const body = await req.json()
-    const validated = editSuggestionSchema.parse(body)
+    
+    // Debug logging
+    console.log('Received edit suggestion body:', JSON.stringify(body, null, 2))
+    
+    let validated;
+    try {
+      validated = editSuggestionSchema.parse(body);
+    } catch (error) {
+      console.error('Validation error:', error);
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: error.errors },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
 
     // Check if master switch exists and is approved
     const masterSwitch = await prisma.masterSwitch.findUnique({
