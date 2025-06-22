@@ -20,10 +20,28 @@ interface UserSubmission {
   };
 }
 
+interface EditSuggestion {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
+  editedAt: string;
+  masterSwitch: {
+    id: string;
+    name: string;
+    manufacturer: string;
+    type?: string;
+  };
+  approvedBy?: {
+    username: string;
+  };
+}
+
 export default function UserSubmissionsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [submissions, setSubmissions] = useState<UserSubmission[]>([]);
+  const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
+  const [activeTab, setActiveTab] = useState<'switches' | 'edits'>('switches');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,7 +60,8 @@ export default function UserSubmissionsPage() {
       const response = await fetch('/api/user/submissions');
       if (response.ok) {
         const data = await response.json();
-        setSubmissions(data);
+        setSubmissions(data.switchSubmissions || []);
+        setEditSuggestions(data.editSuggestions || []);
       }
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
@@ -64,9 +83,9 @@ export default function UserSubmissionsPage() {
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">My Master Switch Submissions</h1>
+            <h1 className="text-3xl font-bold">My Submissions</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Track the status of your submitted switches
+              Track the status of your submitted switches and edit suggestions
             </p>
           </div>
           <div className="flex gap-4">
@@ -89,31 +108,59 @@ export default function UserSubmissionsPage() {
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-2xl font-bold">{submissions.length}</div>
+          <div className="text-2xl font-bold">{submissions.length + editSuggestions.length}</div>
           <div className="text-sm text-gray-500">Total Submissions</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-yellow-600">
-            {submissions.filter(s => s.status === 'PENDING').length}
+            {submissions.filter(s => s.status === 'PENDING').length + 
+             editSuggestions.filter(e => e.status === 'PENDING').length}
           </div>
           <div className="text-sm text-gray-500">Pending Review</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-green-600">
-            {submissions.filter(s => s.status === 'APPROVED').length}
+            {submissions.filter(s => s.status === 'APPROVED').length +
+             editSuggestions.filter(e => e.status === 'APPROVED').length}
           </div>
           <div className="text-sm text-gray-500">Approved</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-red-600">
-            {submissions.filter(s => s.status === 'REJECTED').length}
+            {submissions.filter(s => s.status === 'REJECTED').length +
+             editSuggestions.filter(e => e.status === 'REJECTED').length}
           </div>
           <div className="text-sm text-gray-500">Rejected</div>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setActiveTab('switches')}
+          className={`pb-2 px-1 font-medium transition-colors ${
+            activeTab === 'switches'
+              ? 'text-purple-600 border-b-2 border-purple-600'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+          }`}
+        >
+          Switch Submissions ({submissions.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('edits')}
+          className={`pb-2 px-1 font-medium transition-colors ${
+            activeTab === 'edits'
+              ? 'text-purple-600 border-b-2 border-purple-600'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+          }`}
+        >
+          Edit Suggestions ({editSuggestions.length})
+        </button>
+      </div>
+
       {/* Submissions List */}
-      {submissions.length === 0 ? (
+      {activeTab === 'switches' ? (
+        submissions.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <p className="text-gray-500 mb-4">You haven&apos;t submitted any master switches yet.</p>
           <Link
@@ -213,6 +260,92 @@ export default function UserSubmissionsPage() {
             </div>
           ))}
         </div>
+      )
+      ) : (
+        // Edit Suggestions Tab
+        editSuggestions.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+            <p className="text-gray-500 mb-4">You haven&apos;t suggested any edits yet.</p>
+            <p className="text-sm text-gray-400">
+              Browse approved switches and suggest improvements to help maintain accurate data.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {editSuggestions.map((edit) => (
+              <div
+                key={edit.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-semibold">
+                        Edit for: {edit.masterSwitch.name}
+                      </h3>
+                      <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        edit.status === 'PENDING'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                          : edit.status === 'APPROVED'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+                      }`}>
+                        {edit.status}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      <div>
+                        <span className="font-medium">Manufacturer:</span> {edit.masterSwitch.manufacturer}
+                      </div>
+                      {edit.masterSwitch.type && (
+                        <div>
+                          <span className="font-medium">Type:</span> {edit.masterSwitch.type}
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-medium">Submitted:</span>{' '}
+                        {formatDistanceToNow(new Date(edit.editedAt), { addSuffix: true })}
+                      </div>
+                      {edit.status !== 'PENDING' && edit.approvedBy && (
+                        <div>
+                          <span className="font-medium">
+                            {edit.status === 'APPROVED' ? 'Approved' : 'Rejected'}:
+                          </span>{' '}
+                          by {edit.approvedBy.username}
+                        </div>
+                      )}
+                    </div>
+
+                    {edit.status === 'REJECTED' && edit.rejectionReason && (
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 mb-3">
+                        <p className="text-sm text-red-700 dark:text-red-300">
+                          <span className="font-medium">Rejection reason:</span> {edit.rejectionReason}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-4">
+                      <Link
+                        href={`/switches/${edit.masterSwitch.id}/history`}
+                        className="text-blue-600 hover:underline text-sm"
+                      >
+                        View Edit History →
+                      </Link>
+                      
+                      <Link
+                        href={`/switches/${edit.masterSwitch.id}`}
+                        className="text-gray-600 hover:underline text-sm"
+                      >
+                        View Switch →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );
