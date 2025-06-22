@@ -39,7 +39,7 @@ const submissionSchema = z.object({
   
   // Additional info
   notes: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.union([z.string().url(), z.null()]).optional(),
   
   // Submission details
   submissionNotes: z.string().min(10),
