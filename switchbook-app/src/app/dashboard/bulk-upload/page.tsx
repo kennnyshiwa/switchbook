@@ -741,7 +741,10 @@ export default function BulkUploadPage() {
       '45g', // Spring Weight
       '11.5mm', // Spring Length
       '45', // Actuation Force (g)
+      '', // Tactile Force (g)
       '60', // Bottom Out Force (g)
+      'false', // Progressive Spring
+      'false', // Double Stage
       '2.0', // Pre-travel (mm)
       '4.0', // Bottom Out (mm)
       'Nylon', // Top Housing
@@ -1135,7 +1138,7 @@ export default function BulkUploadPage() {
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
               <li><strong>Required field:</strong> Switch Name</li>
-              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Polarity, Initial Force, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Forces, Travel distances, Housing materials, Notes, etc.</li>
+              <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Polarity, Initial Force, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Spring Length, Progressive Spring, Double Stage, Forces (Actuation, Tactile, Bottom Out), Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>
             </ol>
@@ -1157,7 +1160,9 @@ export default function BulkUploadPage() {
                 <li>• Compatibility is a free text field (e.g., &quot;MX-style&quot;, &quot;Cherry MX&quot;, &quot;3-pin&quot;, &quot;5-pin&quot;)</li>
                 <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
                 <li>• Franken Top, Franken Bottom, Franken Stem are free text fields for custom switch modifications</li>
-                <li>• Forces should be numeric values in grams</li>
+                <li>• Forces should be numeric values in grams (Actuation, Bottom Out, and Tactile for tactile switches)</li>
+                <li>• Tactile Force is only applicable for TACTILE and SILENT_TACTILE switch types</li>
+                <li>• Progressive Spring and Double Stage should be &quot;true&quot;/&quot;false&quot;, &quot;yes&quot;/&quot;no&quot;, or &quot;1&quot;/&quot;0&quot;</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
               </ul>
             </div>
