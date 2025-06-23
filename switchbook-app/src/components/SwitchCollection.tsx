@@ -212,12 +212,17 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     
     // Get unique numeric values for ranges
     const actuationForces = [...new Set(switches.map(s => s.actuationForce).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const tactileForces = [...new Set(switches.map(s => s.tactileForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOutForces = [...new Set(switches.map(s => s.bottomOutForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const preTravels = [...new Set(switches.map(s => s.preTravel).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOuts = [...new Set(switches.map(s => s.bottomOut).filter(Boolean) as number[])].sort((a, b) => a - b)
     const initialForces = [...new Set(switches.map(s => s.initialForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const initialMagneticFluxes = [...new Set(switches.map(s => s.initialMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOutMagneticFluxes = [...new Set(switches.map(s => s.bottomOutMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
+    
+    // Get unique boolean values
+    const progressiveSprings = [...new Set(switches.map(s => s.progressiveSpring).filter(b => b !== null && b !== undefined) as boolean[])]
+    const doubleStages = [...new Set(switches.map(s => s.doubleStage).filter(b => b !== null && b !== undefined) as boolean[])]
 
     return {
       manufacturers,
@@ -234,12 +239,15 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       pcbThicknesses,
       compatibilities,
       actuationForces,
+      tactileForces,
       bottomOutForces,
       preTravels,
       bottomOuts,
       initialForces,
       initialMagneticFluxes,
-      bottomOutMagneticFluxes
+      bottomOutMagneticFluxes,
+      progressiveSprings,
+      doubleStages
     }
   }, [switches])
 
@@ -323,6 +331,12 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       if (activeFilters.actuationForceMax !== undefined) {
         filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce <= activeFilters.actuationForceMax!)
       }
+      if (activeFilters.tactileForceMin !== undefined) {
+        filtered = filtered.filter(s => s.tactileForce !== null && s.tactileForce >= activeFilters.tactileForceMin!)
+      }
+      if (activeFilters.tactileForceMax !== undefined) {
+        filtered = filtered.filter(s => s.tactileForce !== null && s.tactileForce <= activeFilters.tactileForceMax!)
+      }
       if (activeFilters.bottomOutForceMin !== undefined) {
         filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce >= activeFilters.bottomOutForceMin!)
       }
@@ -358,6 +372,14 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       }
       if (activeFilters.bottomOutMagneticFluxMax !== undefined) {
         filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux <= activeFilters.bottomOutMagneticFluxMax!)
+      }
+
+      // Apply boolean filters
+      if (activeFilters.progressiveSpring !== undefined) {
+        filtered = filtered.filter(s => s.progressiveSpring === activeFilters.progressiveSpring)
+      }
+      if (activeFilters.doubleStage !== undefined) {
+        filtered = filtered.filter(s => s.doubleStage === activeFilters.doubleStage)
       }
 
       // Apply force curves filter (async)

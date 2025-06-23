@@ -32,12 +32,15 @@ export interface FilterOptions {
   pcbThicknesses: string[]
   compatibilities: string[]
   actuationForces: number[]
+  tactileForces: number[]
   bottomOutForces: number[]
   preTravels: number[]
   bottomOuts: number[]
   initialForces: number[]
   initialMagneticFluxes: number[]
   bottomOutMagneticFluxes: number[]
+  progressiveSprings: boolean[]
+  doubleStages: boolean[]
 }
 
 export interface ActiveFilters {
@@ -56,8 +59,12 @@ export interface ActiveFilters {
   compatibility?: string
   actuationForceMin?: number
   actuationForceMax?: number
+  tactileForceMin?: number
+  tactileForceMax?: number
   bottomOutForceMin?: number
   bottomOutForceMax?: number
+  progressiveSpring?: boolean
+  doubleStage?: boolean
   preTravelMin?: number
   preTravelMax?: number
   bottomOutMin?: number
@@ -109,7 +116,7 @@ export default function CollectionControls({
     let processedValue: string | boolean | undefined = value === '' ? undefined : value
     
     // Handle boolean fields
-    if (field === 'hasForceCurves') {
+    if (field === 'hasForceCurves' || field === 'progressiveSpring' || field === 'doubleStage') {
       processedValue = value === '' ? undefined : value === 'true'
     }
     
@@ -384,6 +391,36 @@ export default function CollectionControls({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Progressive Spring
+              </label>
+              <select
+                value={activeFilters.progressiveSpring === undefined ? '' : activeFilters.progressiveSpring ? 'true' : 'false'}
+                onChange={(e) => handleFilterChange('progressiveSpring', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Double Stage
+              </label>
+              <select
+                value={activeFilters.doubleStage === undefined ? '' : activeFilters.doubleStage ? 'true' : 'false'}
+                onChange={(e) => handleFilterChange('doubleStage', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Magnet Orientation
               </label>
               <select
@@ -493,6 +530,30 @@ export default function CollectionControls({
                 />
               </div>
             </div>
+
+            {(activeFilters.type === 'TACTILE' || activeFilters.type === 'SILENT_TACTILE') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tactile Force (g)
+                </label>
+                <div className="flex gap-1">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={activeFilters.tactileForceMin || ''}
+                    onChange={(e) => handleNumericRangeChange('tactileForce', 'min', e.target.value)}
+                    className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={activeFilters.tactileForceMax || ''}
+                    onChange={(e) => handleNumericRangeChange('tactileForce', 'max', e.target.value)}
+                    className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

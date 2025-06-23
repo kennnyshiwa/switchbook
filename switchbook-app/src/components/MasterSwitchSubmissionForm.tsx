@@ -18,6 +18,7 @@ const masterSwitchSubmissionSchema = z.object({
   // Force specifications
   initialForce: z.number().min(0).max(1000).optional().or(z.nan()),
   actuationForce: z.number().min(0).max(1000).optional().or(z.nan()),
+  tactileForce: z.number().min(0).max(1000).optional().or(z.nan()),
   bottomOutForce: z.number().min(0).max(1000).optional().or(z.nan()),
   preTravel: z.number().min(0).max(10).optional().or(z.nan()),
   bottomOut: z.number().min(0).max(10).optional().or(z.nan()),
@@ -25,6 +26,8 @@ const masterSwitchSubmissionSchema = z.object({
   // Spring specifications
   springWeight: z.string().optional(),
   springLength: z.string().optional(),
+  progressiveSpring: z.boolean().optional(),
+  doubleStage: z.boolean().optional(),
   
   // Materials
   topHousing: z.string().optional(),
@@ -77,6 +80,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       ...data,
       initialForce: isNaN(data.initialForce as number) ? undefined : data.initialForce,
       actuationForce: isNaN(data.actuationForce as number) ? undefined : data.actuationForce,
+      tactileForce: isNaN(data.tactileForce as number) ? undefined : data.tactileForce,
       bottomOutForce: isNaN(data.bottomOutForce as number) ? undefined : data.bottomOutForce,
       preTravel: isNaN(data.preTravel as number) ? undefined : data.preTravel,
       bottomOut: isNaN(data.bottomOut as number) ? undefined : data.bottomOut,
@@ -93,6 +97,8 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
 
   const manufacturerValue = watch('manufacturer');
   const technologyValue = watch('technology');
+  const typeValue = watch('type');
+  const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE';
 
   // Show magnetic fields when magnetic technology is selected
   if (technologyValue === 'MAGNETIC' && !showMagneticFields) {
@@ -261,6 +267,23 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             />
           </div>
 
+          {showTactileForce && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Tactile Force (g)
+              </label>
+              <input
+                {...register('tactileForce', { valueAsNumber: true })}
+                type="number"
+                step="0.1"
+                min="0"
+                max="1000"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="55"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Bottom Out Force (g)
@@ -328,6 +351,30 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="14mm"
             />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="flex items-center">
+            <input
+              {...register('progressiveSpring')}
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Progressive Spring
+            </label>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              {...register('doubleStage')}
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Double Stage
+            </label>
           </div>
         </div>
       </div>

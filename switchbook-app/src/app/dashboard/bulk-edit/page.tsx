@@ -23,7 +23,10 @@ interface EditableSwitchData {
   springWeight?: string
   springLength?: string
   actuationForce?: number
+  tactileForce?: number
   bottomOutForce?: number
+  progressiveSpring?: boolean
+  doubleStage?: boolean
   preTravel?: number
   bottomOut?: number
   notes?: string
@@ -463,6 +466,7 @@ const SwitchEditRow = memo(({
         )
 
       case 'actuationForce':
+      case 'tactileForce':
       case 'bottomOutForce':
         return (
           <td key={columnId} className="px-3 py-4 whitespace-nowrap">
@@ -489,6 +493,19 @@ const SwitchEditRow = memo(({
               min="0"
               max="10"
               step="0.01"
+            />
+          </td>
+        )
+
+      case 'progressiveSpring':
+      case 'doubleStage':
+        return (
+          <td key={columnId} className="px-3 py-4 whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={localValues[field] || false}
+              onChange={(e) => handleChange(field, e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
             />
           </td>
         )
@@ -567,7 +584,10 @@ const defaultColumns: ColumnConfig[] = [
   { id: 'springWeight', label: 'Spring Weight', field: 'springWeight', minWidth: 'min-w-[80px]' },
   { id: 'springLength', label: 'Spring Length', field: 'springLength', minWidth: 'min-w-[80px]' },
   { id: 'actuationForce', label: 'Actuation Force (g)', field: 'actuationForce', minWidth: 'min-w-[80px]' },
+  { id: 'tactileForce', label: 'Tactile Force (g)', field: 'tactileForce', minWidth: 'min-w-[80px]' },
   { id: 'bottomOutForce', label: 'Bottom Out Force (g)', field: 'bottomOutForce', minWidth: 'min-w-[80px]' },
+  { id: 'progressiveSpring', label: 'Progressive Spring', field: 'progressiveSpring', minWidth: 'min-w-[120px]' },
+  { id: 'doubleStage', label: 'Double Stage', field: 'doubleStage', minWidth: 'min-w-[100px]' },
   { id: 'preTravel', label: 'Pre-travel (mm)', field: 'preTravel', minWidth: 'min-w-[80px]' },
   { id: 'bottomOut', label: 'Bottom Out (mm)', field: 'bottomOut', minWidth: 'min-w-[80px]' },
   { id: 'topHousing', label: 'Top Housing', field: 'topHousing', minWidth: 'min-w-[80px]' },

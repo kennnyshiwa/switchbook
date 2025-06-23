@@ -40,12 +40,16 @@ model Switch {
   type                  SwitchType?
   springWeight          String?
   springLength          String?
+  progressiveSpring     Boolean           @default(false)
+  doubleStage           Boolean           @default(false)
   actuationForce        Float?
+  tactileForce          Float?
   bottomOutForce        Float?
   preTravel             Float?
   bottomOut             Float?
   manufacturer          String?
   notes                 String?
+  imageUrl              String?
   topHousing            String?
   bottomHousing         String?
   stem                  String?
@@ -184,7 +188,10 @@ model MasterSwitch {
   compatibility          String?
   springWeight           String?
   springLength           String?
+  progressiveSpring      Boolean            @default(false)
+  doubleStage            Boolean            @default(false)
   actuationForce         Float?
+  tactileForce           Float?
   bottomOutForce         Float?
   preTravel              Float?
   bottomOut              Float?

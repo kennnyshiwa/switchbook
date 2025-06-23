@@ -24,8 +24,12 @@ const querySchema = z.object({
   pcbThickness: z.string().optional(),
   actuationForceMin: z.string().optional().transform(val => val ? Number(val) : undefined),
   actuationForceMax: z.string().optional().transform(val => val ? Number(val) : undefined),
+  tactileForceMin: z.string().optional().transform(val => val ? Number(val) : undefined),
+  tactileForceMax: z.string().optional().transform(val => val ? Number(val) : undefined),
   bottomOutForceMin: z.string().optional().transform(val => val ? Number(val) : undefined),
   bottomOutForceMax: z.string().optional().transform(val => val ? Number(val) : undefined),
+  progressiveSpring: z.string().optional(),
+  doubleStage: z.string().optional(),
   preTravelMin: z.string().optional().transform(val => val ? Number(val) : undefined),
   preTravelMax: z.string().optional().transform(val => val ? Number(val) : undefined),
   bottomOutMin: z.string().optional().transform(val => val ? Number(val) : undefined),
@@ -70,8 +74,12 @@ export async function GET(request: Request) {
       pcbThickness,
       actuationForceMin,
       actuationForceMax,
+      tactileForceMin,
+      tactileForceMax,
       bottomOutForceMin,
       bottomOutForceMax,
+      progressiveSpring,
+      doubleStage,
       preTravelMin,
       preTravelMax,
       bottomOutMin,
@@ -116,12 +124,20 @@ export async function GET(request: Request) {
           ...(actuationForceMax !== undefined && { lte: actuationForceMax }),
         }
       }),
+      ...((tactileForceMin !== undefined || tactileForceMax !== undefined) && {
+        tactileForce: {
+          ...(tactileForceMin !== undefined && { gte: tactileForceMin }),
+          ...(tactileForceMax !== undefined && { lte: tactileForceMax }),
+        }
+      }),
       ...((bottomOutForceMin !== undefined || bottomOutForceMax !== undefined) && {
         bottomOutForce: {
           ...(bottomOutForceMin !== undefined && { gte: bottomOutForceMin }),
           ...(bottomOutForceMax !== undefined && { lte: bottomOutForceMax }),
         }
       }),
+      ...(progressiveSpring && { progressiveSpring: progressiveSpring === 'true' }),
+      ...(doubleStage && { doubleStage: doubleStage === 'true' }),
       ...((preTravelMin !== undefined || preTravelMax !== undefined) && {
         preTravel: {
           ...(preTravelMin !== undefined && { gte: preTravelMin }),

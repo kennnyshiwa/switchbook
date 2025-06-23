@@ -17,7 +17,10 @@ interface SwitchData {
   springWeight?: string | null;
   springLength?: string | null;
   actuationForce?: number | null;
+  tactileForce?: number | null;
   bottomOutForce?: number | null;
+  progressiveSpring?: boolean | null;
+  doubleStage?: boolean | null;
   preTravel?: number | null;
   bottomOut?: number | null;
   notes?: string | null;
@@ -49,7 +52,10 @@ export function transformSwitchData(data: SwitchData) {
     springWeight: data.springWeight || null,
     springLength: data.springLength || null,
     actuationForce: data.actuationForce || null,
+    tactileForce: data.tactileForce || null,
     bottomOutForce: data.bottomOutForce || null,
+    progressiveSpring: data.progressiveSpring || false,
+    doubleStage: data.doubleStage || false,
     preTravel: data.preTravel || null,
     bottomOut: data.bottomOut || null,
     notes: data.notes || null,
