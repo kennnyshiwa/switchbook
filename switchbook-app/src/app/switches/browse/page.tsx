@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
 import debounce from 'lodash/debounce'
 import AnimatedCounter from '@/components/AnimatedCounter'
+import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
 
 interface MasterSwitch {
   id: string
@@ -62,6 +63,8 @@ export default function BrowseMasterSwitchesPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [addingSwitch, setAddingSwitch] = useState<string | null>(null)
   const [deletingSwitch, setDeletingSwitch] = useState<string | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [linkDialogSwitch, setLinkDialogSwitch] = useState<{ id: string; name: string } | null>(null)
   
   // Filters - UI state (immediate updates)
   const [search, setSearch] = useState('')
@@ -171,6 +174,18 @@ export default function BrowseMasterSwitchesPage() {
     }, 400), // Standard debounce for other filters
     []
   )
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown && !(event.target as Element).closest('.dropdown-container')) {
+        setOpenDropdown(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [openDropdown])
 
   // Update debounced search value
   useEffect(() => {
@@ -1174,12 +1189,60 @@ export default function BrowseMasterSwitchesPage() {
                         </button>
                       )}
                       
-                      <button
-                        onClick={() => router.push(`/switches/${switchItem.id}`)}
-                        className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
-                      >
-                        View Details →
-                      </button>
+                      <div className="relative dropdown-container">
+                        <button
+                          onClick={() => setOpenDropdown(openDropdown === switchItem.id ? null : switchItem.id)}
+                          className="flex items-center gap-1 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+                        >
+                          Actions
+                          <svg className={`w-4 h-4 transition-transform ${openDropdown === switchItem.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        
+                        {openDropdown === switchItem.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                            <Link
+                              href={`/switches/${switchItem.id}`}
+                              className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-md"
+                              onClick={() => setOpenDropdown(null)}
+                            >
+                              View Details
+                            </Link>
+                            
+                            {!switchItem.inCollection && (
+                              <button
+                                onClick={() => {
+                                  addToCollection(switchItem.id)
+                                  setOpenDropdown(null)
+                                }}
+                                disabled={addingSwitch === switchItem.id}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                              >
+                                {addingSwitch === switchItem.id ? 'Adding...' : 'Add to Collection'}
+                              </button>
+                            )}
+                            
+                            <Link
+                              href={`/switches/${switchItem.id}/suggest-edit`}
+                              className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              onClick={() => setOpenDropdown(null)}
+                            >
+                              Suggest Edit
+                            </Link>
+                            
+                            <button
+                              onClick={() => {
+                                setLinkDialogSwitch({ id: switchItem.id, name: switchItem.name })
+                                setOpenDropdown(null)
+                              }}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-md"
+                            >
+                              Link to Collection
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     </div>
                   </div>
@@ -1224,6 +1287,20 @@ export default function BrowseMasterSwitchesPage() {
           )}
         </div>
       </div>
+      
+      {/* Link to Collection Dialog */}
+      {linkDialogSwitch && (
+        <LinkToCollectionDialog
+          masterSwitchId={linkDialogSwitch.id}
+          masterSwitchName={linkDialogSwitch.name}
+          onClose={() => setLinkDialogSwitch(null)}
+          onSuccess={() => {
+            setLinkDialogSwitch(null)
+            // Refresh the page to update the switch status
+            router.refresh()
+          }}
+        />
+      )}
     </div>
   )
 }
