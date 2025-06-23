@@ -54,11 +54,31 @@ export async function GET(
       )
     }
 
-    // Increment view count
-    await prisma.masterSwitch.update({
-      where: { id: id },
-      data: { viewCount: { increment: 1 } }
+    // Track unique view - only increment if user hasn't viewed before
+    const existingView = await prisma.masterSwitchView.findUnique({
+      where: {
+        masterSwitchId_userId: {
+          masterSwitchId: id,
+          userId: session.user.id
+        }
+      }
     })
+
+    if (!existingView) {
+      // Create view record and increment count in a transaction
+      await prisma.$transaction([
+        prisma.masterSwitchView.create({
+          data: {
+            masterSwitchId: id,
+            userId: session.user.id
+          }
+        }),
+        prisma.masterSwitch.update({
+          where: { id: id },
+          data: { viewCount: { increment: 1 } }
+        })
+      ])
+    }
 
     // Check if user has this in their collection
     const userSwitch = await prisma.switch.findFirst({

@@ -45,45 +45,78 @@ export async function POST(
       )
     }
 
-    // Create the switch in user's collection
-    const newSwitch = await prisma.switch.create({
-      data: {
-        // Copy all fields from master switch
-        name: masterSwitch.name,
-        chineseName: masterSwitch.chineseName,
-        type: masterSwitch.type,
-        technology: masterSwitch.technology,
-        magnetOrientation: masterSwitch.magnetOrientation,
-        magnetPosition: masterSwitch.magnetPosition,
-        magnetPolarity: masterSwitch.magnetPolarity,
-        initialForce: masterSwitch.initialForce,
-        initialMagneticFlux: masterSwitch.initialMagneticFlux,
-        bottomOutMagneticFlux: masterSwitch.bottomOutMagneticFlux,
-        pcbThickness: masterSwitch.pcbThickness,
-        compatibility: masterSwitch.compatibility,
-        springWeight: masterSwitch.springWeight,
-        springLength: masterSwitch.springLength,
-        actuationForce: masterSwitch.actuationForce,
-        bottomOutForce: masterSwitch.bottomOutForce,
-        preTravel: masterSwitch.preTravel,
-        bottomOut: masterSwitch.bottomOut,
-        manufacturer: masterSwitch.manufacturer,
-        notes: masterSwitch.notes,
-        topHousing: masterSwitch.topHousing,
-        bottomHousing: masterSwitch.bottomHousing,
-        stem: masterSwitch.stem,
-        frankenTop: masterSwitch.frankenTop,
-        frankenBottom: masterSwitch.frankenBottom,
-        frankenStem: masterSwitch.frankenStem,
-        
-        // Set master switch reference
-        masterSwitchId: masterSwitch.id,
-        masterSwitchVersion: masterSwitch.version,
-        isModified: false,
-        
-        // Set user reference
-        userId: session.user.id
+    // Track view if not already viewed
+    const existingView = await prisma.masterSwitchView.findUnique({
+      where: {
+        masterSwitchId_userId: {
+          masterSwitchId: id,
+          userId: session.user.id
+        }
       }
+    })
+
+    // Use transaction to create switch and track view
+    const [newSwitch] = await prisma.$transaction(async (tx) => {
+      // Create the switch in user's collection
+      const switch_ = await tx.switch.create({
+        data: {
+          // Copy all fields from master switch
+          name: masterSwitch.name,
+          chineseName: masterSwitch.chineseName,
+          type: masterSwitch.type,
+          technology: masterSwitch.technology,
+          magnetOrientation: masterSwitch.magnetOrientation,
+          magnetPosition: masterSwitch.magnetPosition,
+          magnetPolarity: masterSwitch.magnetPolarity,
+          initialForce: masterSwitch.initialForce,
+          initialMagneticFlux: masterSwitch.initialMagneticFlux,
+          bottomOutMagneticFlux: masterSwitch.bottomOutMagneticFlux,
+          pcbThickness: masterSwitch.pcbThickness,
+          compatibility: masterSwitch.compatibility,
+          springWeight: masterSwitch.springWeight,
+          springLength: masterSwitch.springLength,
+          actuationForce: masterSwitch.actuationForce,
+          tactileForce: masterSwitch.tactileForce,
+          bottomOutForce: masterSwitch.bottomOutForce,
+          progressiveSpring: masterSwitch.progressiveSpring,
+          doubleStage: masterSwitch.doubleStage,
+          preTravel: masterSwitch.preTravel,
+          bottomOut: masterSwitch.bottomOut,
+          manufacturer: masterSwitch.manufacturer,
+          notes: masterSwitch.notes,
+          topHousing: masterSwitch.topHousing,
+          bottomHousing: masterSwitch.bottomHousing,
+          stem: masterSwitch.stem,
+          frankenTop: masterSwitch.frankenTop,
+          frankenBottom: masterSwitch.frankenBottom,
+          frankenStem: masterSwitch.frankenStem,
+          
+          // Set master switch reference
+          masterSwitchId: masterSwitch.id,
+          masterSwitchVersion: masterSwitch.version,
+          isModified: false,
+          
+          // Set user reference
+          userId: session.user.id
+        }
+      })
+
+      // Track view if not already viewed
+      if (!existingView) {
+        await tx.masterSwitchView.create({
+          data: {
+            masterSwitchId: id,
+            userId: session.user.id
+          }
+        })
+        
+        await tx.masterSwitch.update({
+          where: { id: id },
+          data: { viewCount: { increment: 1 } }
+        })
+      }
+
+      return [switch_]
     })
 
     // If master switch has an imageUrl, create a linked image for the user's switch

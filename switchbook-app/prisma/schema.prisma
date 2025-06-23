@@ -28,6 +28,7 @@ model User {
   submittedMasterSwitches MasterSwitch[]          @relation("SubmittedBy")
   approvedEdits           MasterSwitchEdit[]      @relation("ApprovedEditBy")
   masterSwitchEdits       MasterSwitchEdit[]      @relation("EditedBy")
+  masterSwitchViews       MasterSwitchView[]
   notifications           Notification[]
   passwordResetTokens     PasswordResetToken[]
   switches                Switch[]
@@ -221,6 +222,7 @@ model MasterSwitch {
   edits                  MasterSwitchEdit[]
   userSwitches           Switch[]
   images                 SwitchImage[]
+  views                  MasterSwitchView[]
 
   @@index([name, manufacturer])
   @@index([status])
@@ -245,6 +247,19 @@ model MasterSwitchEdit {
   @@index([masterSwitchId])
   @@index([editedById])
   @@index([status])
+}
+
+model MasterSwitchView {
+  id             String       @id @default(cuid())
+  masterSwitchId String
+  userId         String
+  viewedAt       DateTime     @default(now())
+  masterSwitch   MasterSwitch @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([masterSwitchId, userId])
+  @@index([masterSwitchId])
+  @@index([userId])
 }
 
 model Notification {
