@@ -1165,7 +1165,7 @@ export default function BulkEditPage() {
           <div className="relative" style={{ height: 'calc(100vh - 400px)' }}>
             <div className="absolute inset-0 overflow-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
+                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-20">
                   <tr>
                     {table.getFlatHeaders().map(header => {
                       const isNameColumn = header.id === 'name'
@@ -1174,7 +1174,7 @@ export default function BulkEditPage() {
                           key={header.id}
                           className={`${
                             isNameColumn 
-                              ? 'sticky left-0 z-20 bg-gray-50 dark:bg-gray-700' 
+                              ? 'sticky left-0 z-30 bg-gray-50 dark:bg-gray-700' 
                               : 'bg-gray-50 dark:bg-gray-700'
                           } px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap`}
                           style={{ 
@@ -1204,17 +1204,25 @@ export default function BulkEditPage() {
                   >
                     {row.getVisibleCells().map(cell => {
                       const isNameColumn = cell.column.id === 'name'
+                      const isModified = modifiedSwitches.has(row.original.id)
+                      const isInvalid = invalidSwitches.has(row.original.id)
+                      
                       return (
                         <td
                           key={cell.id}
                           className={`${
                             isNameColumn 
-                              ? 'sticky left-0 z-10 bg-inherit' 
+                              ? `sticky left-0 z-10 ${
+                                  isModified 
+                                    ? 'bg-blue-50 dark:bg-blue-900/20' 
+                                    : isInvalid
+                                    ? 'bg-red-50 dark:bg-red-900/20'
+                                    : 'bg-white dark:bg-gray-800'
+                                }` 
                               : ''
                           } px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100`}
                           style={{ 
-                            minWidth: cell.column.getSize(),
-                            ...(isNameColumn ? { position: 'sticky', left: 0 } : {})
+                            minWidth: cell.column.getSize()
                           }}
                         >
                           {flexRender(
