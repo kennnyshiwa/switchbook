@@ -567,6 +567,47 @@ export async function sendEditSuggestionRejectionEmail(
   }
 }
 
+// Add user to Mailgun mailing list
+export async function addUserToMailingList(email: string, name: string = '') {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const mailingListAddress = process.env.MAILGUN_MAILING_LIST
+  
+  if (!mailingListAddress) {
+    console.warn('MAILGUN_MAILING_LIST not configured, skipping mailing list addition')
+    return { success: true, skipped: true }
+  }
+
+  try {
+    // Add member to mailing list
+    await client.lists.members.createMember(mailingListAddress, {
+      address: email,
+      name: name,
+      subscribed: true,
+      vars: {
+        joined_date: new Date().toISOString(),
+        source: 'registration'
+      }
+    })
+    
+    console.log(`Successfully added ${email} to mailing list`)
+    return { success: true }
+  } catch (error: any) {
+    // If member already exists, that's okay
+    if (error.status === 400 && error.message?.includes('already exists')) {
+      console.log(`User ${email} already in mailing list`)
+      return { success: true, alreadyExists: true }
+    }
+    
+    console.error('Failed to add user to mailing list:', error)
+    return { success: false, error: 'Failed to add to mailing list' }
+  }
+}
+
 export async function sendNewManufacturerNotification(
   manufacturerName: string, 
   submittedBy: string,

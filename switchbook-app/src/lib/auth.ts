@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { UserRole } from "@prisma/client"
+import { addUserToMailingList } from "@/lib/email"
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -123,7 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           suffix++
         }
 
-        await prisma.user.create({
+        const newUser = await prisma.user.create({
           data: {
             email: user.email!,
             username: finalUsername,
@@ -144,6 +145,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               },
             },
           },
+        })
+        
+        // Add new Discord user to mailing list (non-blocking)
+        addUserToMailingList(newUser.email, newUser.username).catch(error => {
+          console.error("Failed to add Discord user to mailing list:", error)
         })
       }
       return true
