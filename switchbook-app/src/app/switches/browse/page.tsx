@@ -60,6 +60,7 @@ export default function BrowseMasterSwitchesPage() {
   const [loading, setLoading] = useState(true)
   const [isSearching, setIsSearching] = useState(false)
   const [addingSwitch, setAddingSwitch] = useState<string | null>(null)
+  const [deletingSwitch, setDeletingSwitch] = useState<string | null>(null)
   
   // Filters - UI state (immediate updates)
   const [search, setSearch] = useState('')
@@ -338,6 +339,35 @@ export default function BrowseMasterSwitchesPage() {
       alert('Failed to add switch to collection')
     } finally {
       setAddingSwitch(null)
+    }
+  }
+
+  const deleteSwitch = async (switchId: string) => {
+    if (!confirm('Are you sure you want to delete this master switch? This action cannot be undone.')) {
+      return
+    }
+
+    setDeletingSwitch(switchId)
+    try {
+      const response = await fetch(`/api/admin/master-switches/${switchId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Remove the switch from the list
+        setSwitches(prev => prev.filter(s => s.id !== switchId))
+        // Update pagination count
+        setPagination(prev => prev ? { ...prev, total: prev.total - 1 } : null)
+      } else {
+        alert(data.error || 'Failed to delete switch')
+      }
+    } catch (error) {
+      console.error('Failed to delete switch:', error)
+      alert('Failed to delete switch')
+    } finally {
+      setDeletingSwitch(null)
     }
   }
 
@@ -971,14 +1001,37 @@ export default function BrowseMasterSwitchesPage() {
                     )}
                     
                     <div className="p-4 flex flex-col flex-grow max-h-[400px]">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex-shrink-0">
-                        {switchItem.name}
-                        {switchItem.chineseName && (
-                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                            {switchItem.chineseName}
-                          </span>
+                      <div className="flex items-start justify-between mb-2 flex-shrink-0">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1">
+                          {switchItem.name}
+                          {switchItem.chineseName && (
+                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                              {switchItem.chineseName}
+                            </span>
+                          )}
+                        </h3>
+                        {session?.user?.role === 'ADMIN' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteSwitch(switchItem.id)
+                            }}
+                            disabled={deletingSwitch === switchItem.id}
+                            className="ml-2 p-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete master switch"
+                          >
+                            {deletingSwitch === switchItem.id ? (
+                              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            )}
+                          </button>
                         )}
-                      </h3>
+                      </div>
 
                       <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4 overflow-y-auto flex-grow">
                       {/* Basic Info */}

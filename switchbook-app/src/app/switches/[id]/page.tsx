@@ -63,6 +63,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
   const [switchData, setSwitchData] = useState<MasterSwitchDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [showSubmittedMessage, setShowSubmittedMessage] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
 
@@ -120,6 +121,34 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
       alert('Failed to add switch to collection')
     } finally {
       setAdding(false)
+    }
+  }
+
+  const deleteSwitch = async () => {
+    if (!switchData) return
+    
+    if (!confirm('Are you sure you want to delete this master switch? This action cannot be undone.')) {
+      return
+    }
+
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/admin/master-switches/${switchData.id}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        router.push('/switches/browse')
+      } else {
+        alert(data.error || 'Failed to delete switch')
+      }
+    } catch (error) {
+      console.error('Failed to delete switch:', error)
+      alert('Failed to delete switch')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -249,6 +278,30 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                     View History
                   </Link>
                 </>
+              )}
+              
+              {session?.user?.role === 'ADMIN' && (
+                <button
+                  onClick={deleteSwitch}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {deleting ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Delete</span>
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>
