@@ -83,7 +83,7 @@ export default function UserSubmissionsPage() {
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">My Submissions</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Submissions</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               Track the status of your submitted switches and edit suggestions
             </p>
@@ -97,7 +97,7 @@ export default function UserSubmissionsPage() {
             </Link>
             <Link
               href="/dashboard"
-              className="text-blue-600 hover:text-blue-700"
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             >
               ← Back to Dashboard
             </Link>
@@ -108,29 +108,29 @@ export default function UserSubmissionsPage() {
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-2xl font-bold">{submissions.length + editSuggestions.length}</div>
-          <div className="text-sm text-gray-500">Total Submissions</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{submissions.length + editSuggestions.length}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Total Submissions</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-yellow-600">
             {submissions.filter(s => s.status === 'PENDING').length + 
              editSuggestions.filter(e => e.status === 'PENDING').length}
           </div>
-          <div className="text-sm text-gray-500">Pending Review</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Pending Review</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-green-600">
             {submissions.filter(s => s.status === 'APPROVED').length +
              editSuggestions.filter(e => e.status === 'APPROVED').length}
           </div>
-          <div className="text-sm text-gray-500">Approved</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Approved</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-red-600">
             {submissions.filter(s => s.status === 'REJECTED').length +
              editSuggestions.filter(e => e.status === 'REJECTED').length}
           </div>
-          <div className="text-sm text-gray-500">Rejected</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Rejected</div>
         </div>
       </div>
 
@@ -162,7 +162,7 @@ export default function UserSubmissionsPage() {
       {activeTab === 'switches' ? (
         submissions.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500 mb-4">You haven&apos;t submitted any master switches yet.</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">You haven&apos;t submitted any master switches yet.</p>
           <Link
             href="/switches/submit"
             className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
@@ -183,7 +183,7 @@ export default function UserSubmissionsPage() {
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-semibold">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                       {submission.name}
                     </h3>
                     <span className={`px-3 py-1 text-sm font-medium rounded-full ${
@@ -232,7 +232,7 @@ export default function UserSubmissionsPage() {
                   <div className="flex items-center gap-4">
                     <Link
                       href={`/switches/${submission.id}`}
-                      className="text-blue-600 hover:underline text-sm"
+                      className="text-blue-600 hover:underline text-sm dark:text-blue-400"
                     >
                       View Details →
                     </Link>
@@ -240,7 +240,7 @@ export default function UserSubmissionsPage() {
                     {submission.status === 'APPROVED' && (
                       <Link
                         href={`/switches/${submission.id}/suggest-edit`}
-                        className="text-purple-600 hover:underline text-sm"
+                        className="text-purple-600 hover:underline text-sm dark:text-purple-400"
                       >
                         Suggest Edit →
                       </Link>
@@ -249,7 +249,7 @@ export default function UserSubmissionsPage() {
                     {submission.status === 'REJECTED' && (
                       <Link
                         href={`/switches/submit?prefill=${submission.id}`}
-                        className="text-gray-600 hover:underline text-sm"
+                        className="text-gray-600 hover:underline text-sm dark:text-gray-400"
                       >
                         Resubmit with Changes →
                       </Link>
@@ -265,7 +265,7 @@ export default function UserSubmissionsPage() {
         // Edit Suggestions Tab
         editSuggestions.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500 mb-4">You haven&apos;t suggested any edits yet.</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">You haven&apos;t suggested any edits yet.</p>
             <p className="text-sm text-gray-400">
               Browse approved switches and suggest improvements to help maintain accurate data.
             </p>
@@ -280,7 +280,7 @@ export default function UserSubmissionsPage() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                         Edit for: {edit.masterSwitch.name}
                       </h3>
                       <span className={`px-3 py-1 text-sm font-medium rounded-full ${
@@ -328,14 +328,14 @@ export default function UserSubmissionsPage() {
                     <div className="flex items-center gap-4">
                       <Link
                         href={`/switches/${edit.masterSwitch.id}/history`}
-                        className="text-blue-600 hover:underline text-sm"
+                        className="text-blue-600 hover:underline text-sm dark:text-blue-400"
                       >
                         View Edit History →
                       </Link>
                       
                       <Link
                         href={`/switches/${edit.masterSwitch.id}`}
-                        className="text-gray-600 hover:underline text-sm"
+                        className="text-gray-600 hover:underline text-sm dark:text-gray-400"
                       >
                         View Switch →
                       </Link>
