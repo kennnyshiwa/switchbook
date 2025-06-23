@@ -284,7 +284,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                 <button
                   onClick={deleteSwitch}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-2"
                 >
                   {deleting ? (
                     <>
