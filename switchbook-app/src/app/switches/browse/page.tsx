@@ -992,7 +992,7 @@ export default function BrowseMasterSwitchesPage() {
         </div>
 
         {/* Results */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow relative">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow relative overflow-visible">
           {/* Loading overlay */}
           {isSearching && (
             <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 z-10 flex items-center justify-center rounded-lg">
@@ -1011,15 +1011,15 @@ export default function BrowseMasterSwitchesPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 overflow-visible">
                 {switches.map((switchItem) => (
                   <div
                     key={switchItem.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-lg transition-shadow flex flex-col relative"
                   >
                     {/* Image Section */}
                     {switchItem.imageUrl && (
-                      <div className="relative h-48 bg-gray-100 dark:bg-gray-900 flex-shrink-0">
+                      <div className="relative h-48 bg-gray-100 dark:bg-gray-900 flex-shrink-0 overflow-hidden rounded-t-lg">
                         <img
                           src={switchItem.imageUrl}
                           alt={switchItem.name}
@@ -1201,7 +1201,7 @@ export default function BrowseMasterSwitchesPage() {
                         </button>
                         
                         {openDropdown === switchItem.id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                          <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
                             <Link
                               href={`/switches/${switchItem.id}`}
                               className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-md"
