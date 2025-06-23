@@ -21,6 +21,7 @@ export default async function SettingsPage() {
       shareableId: true,
       showForceCurves: true,
       emailNotifications: true,
+      emailMarketing: true,
       password: true,
       accounts: {
         select: {

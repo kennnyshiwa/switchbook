@@ -20,6 +20,7 @@ interface AccountSettingsProps {
     shareableId: string
     showForceCurves: boolean
     emailNotifications: boolean
+    emailMarketing: boolean
     password: string | null
     accounts: Array<{
       provider: string
@@ -35,6 +36,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showForceCurves, setShowForceCurves] = useState(user.showForceCurves)
   const [emailNotifications, setEmailNotifications] = useState(user.emailNotifications)
+  const [emailMarketing, setEmailMarketing] = useState(user.emailMarketing)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false)
@@ -64,6 +66,8 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
           setShowForceCurves(value)
         } else if (setting === 'emailNotifications') {
           setEmailNotifications(value)
+        } else if (setting === 'emailMarketing') {
+          setEmailMarketing(value)
         }
       } else {
         alert('Failed to update setting. Please try again.')
@@ -72,6 +76,8 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
           setShowForceCurves(!value)
         } else if (setting === 'emailNotifications') {
           setEmailNotifications(!value)
+        } else if (setting === 'emailMarketing') {
+          setEmailMarketing(!value)
         }
       }
     } catch (error) {
@@ -82,6 +88,8 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
         setShowForceCurves(!value)
       } else if (setting === 'emailNotifications') {
         setEmailNotifications(!value)
+      } else if (setting === 'emailMarketing') {
+        setEmailMarketing(!value)
       }
     } finally {
       setIsUpdating(false)
@@ -328,6 +336,35 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
                   aria-hidden="true"
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                     emailNotifications ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Email Marketing</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Receive promotional emails, newsletters, and updates about new features. You can unsubscribe at any time.
+              </p>
+            </div>
+            <div className="flex items-center ml-4">
+              <button
+                type="button"
+                onClick={() => handleSettingsUpdate('emailMarketing', !emailMarketing)}
+                disabled={isUpdating}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 disabled:opacity-50 ${
+                  emailMarketing ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+                role="switch"
+                aria-checked={emailMarketing}
+                title={emailMarketing ? 'Disable email marketing' : 'Enable email marketing'}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    emailMarketing ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>

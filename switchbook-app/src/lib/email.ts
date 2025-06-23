@@ -608,6 +608,39 @@ export async function addUserToMailingList(email: string, name: string = '') {
   }
 }
 
+// Remove user from Mailgun mailing list
+export async function removeUserFromMailingList(email: string) {
+  const client = getMailgunClient()
+  
+  if (!client) {
+    return { success: false, error: 'Email service not configured' }
+  }
+
+  const mailingListAddress = process.env.MAILGUN_MAILING_LIST
+  
+  if (!mailingListAddress) {
+    console.warn('MAILGUN_MAILING_LIST not configured, skipping mailing list removal')
+    return { success: true, skipped: true }
+  }
+
+  try {
+    // Delete member from mailing list
+    await client.lists.members.destroyMember(mailingListAddress, email)
+    
+    console.log(`Successfully removed ${email} from mailing list`)
+    return { success: true }
+  } catch (error: any) {
+    // If member doesn't exist, that's okay
+    if (error.status === 404) {
+      console.log(`User ${email} not found in mailing list`)
+      return { success: true, notFound: true }
+    }
+    
+    console.error('Failed to remove user from mailing list:', error)
+    return { success: false, error: 'Failed to remove from mailing list' }
+  }
+}
+
 export async function sendNewManufacturerNotification(
   manufacturerName: string, 
   submittedBy: string,
