@@ -401,6 +401,9 @@ export default function AdminMasterSwitchesPage() {
                       {submission.originalSubmissionData.actuationForce && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Actuation Force:</span> {submission.originalSubmissionData.actuationForce}g</p>
                       )}
+                      {submission.originalSubmissionData.tactileForce && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Tactile Force:</span> {submission.originalSubmissionData.tactileForce}g</p>
+                      )}
                       {submission.originalSubmissionData.bottomOutForce && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Bottom Out Force:</span> {submission.originalSubmissionData.bottomOutForce}g</p>
                       )}
@@ -432,6 +435,12 @@ export default function AdminMasterSwitchesPage() {
                       )}
                       {submission.originalSubmissionData.springLength && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Spring Length:</span> {submission.originalSubmissionData.springLength}</p>
+                      )}
+                      {submission.originalSubmissionData.progressiveSpring && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Progressive Spring:</span> Yes</p>
+                      )}
+                      {submission.originalSubmissionData.doubleStage && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Double Stage:</span> Yes</p>
                       )}
                     </div>
                     

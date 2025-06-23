@@ -16,6 +16,7 @@ const submissionSchema = z.object({
   // Force specifications
   initialForce: z.number().optional().nullable(),
   actuationForce: z.number().optional().nullable(),
+  tactileForce: z.number().optional().nullable(),
   bottomOutForce: z.number().optional().nullable(),
   preTravel: z.number().optional().nullable(),
   bottomOut: z.number().optional().nullable(),
@@ -23,6 +24,8 @@ const submissionSchema = z.object({
   // Spring specifications
   springWeight: z.string().optional().nullable(),
   springLength: z.string().optional().nullable(),
+  progressiveSpring: z.boolean().optional().nullable(),
+  doubleStage: z.boolean().optional().nullable(),
   
   // Materials
   topHousing: z.string().optional().nullable(),
@@ -174,11 +177,14 @@ export async function POST(req: NextRequest) {
         compatibility: validated.compatibility || null,
         initialForce: validated.initialForce || null,
         actuationForce: validated.actuationForce || null,
+        tactileForce: validated.tactileForce || null,
         bottomOutForce: validated.bottomOutForce || null,
         preTravel: validated.preTravel || null,
         bottomOut: validated.bottomOut || null,
         springWeight: validated.springWeight || null,
         springLength: validated.springLength || null,
+        progressiveSpring: validated.progressiveSpring || false,
+        doubleStage: validated.doubleStage || false,
         topHousing: validated.topHousing || null,
         bottomHousing: validated.bottomHousing || null,
         stem: validated.stem || null,

@@ -309,7 +309,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             </div>
 
             {/* Force Specifications */}
-            {(switchData.actuationForce || switchData.bottomOutForce || switchData.initialForce) && (
+            {(switchData.actuationForce || switchData.tactileForce || switchData.bottomOutForce || switchData.initialForce) && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Force Specifications
@@ -325,6 +325,12 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Actuation Force</dt>
                       <dd className="text-sm text-gray-900 dark:text-white">{switchData.actuationForce}g</dd>
+                    </div>
+                  )}
+                  {switchData.tactileForce && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Tactile Force</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.tactileForce}g</dd>
                     </div>
                   )}
                   {switchData.bottomOutForce && (
@@ -390,7 +396,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             )}
 
             {/* Spring */}
-            {(switchData.springWeight || switchData.springLength) && (
+            {(switchData.springWeight || switchData.springLength || switchData.progressiveSpring || switchData.doubleStage) && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Spring
@@ -406,6 +412,18 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Spring Length</dt>
                       <dd className="text-sm text-gray-900 dark:text-white">{switchData.springLength}</dd>
+                    </div>
+                  )}
+                  {switchData.progressiveSpring && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Progressive Spring</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">Yes</dd>
+                    </div>
+                  )}
+                  {switchData.doubleStage && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Double Stage</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">Yes</dd>
                     </div>
                   )}
                 </dl>
