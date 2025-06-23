@@ -24,7 +24,10 @@ interface MasterSwitchDetail {
   compatibility?: string
   springWeight?: string
   springLength?: string
+  progressiveSpring?: boolean
+  doubleStage?: boolean
   actuationForce?: number
+  tactileForce?: number
   bottomOutForce?: number
   preTravel?: number
   bottomOut?: number
