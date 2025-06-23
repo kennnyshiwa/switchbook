@@ -22,7 +22,10 @@ interface ParsedSwitch {
   springWeight?: string
   springLength?: string
   actuationForce?: number
+  tactileForce?: number
   bottomOutForce?: number
+  progressiveSpring?: boolean
+  doubleStage?: boolean
   preTravel?: number
   bottomOut?: number
   notes?: string
@@ -488,12 +491,41 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="number"
+          value={localValues.tactileForce || ''}
+          onChange={(e) => handleChange('tactileForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+          min="0"
+          max="1000"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
           value={localValues.bottomOutForce || ''}
           onChange={(e) => handleChange('bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
           min="0"
           max="1000"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="checkbox"
+          checked={localValues.progressiveSpring || false}
+          onChange={(e) => handleChange('progressiveSpring', e.target.checked)}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="checkbox"
+          checked={localValues.doubleStage || false}
+          onChange={(e) => handleChange('doubleStage', e.target.checked)}
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
@@ -658,7 +690,10 @@ export default function BulkUploadPage() {
     { key: 'springWeight', label: 'Spring Weight', required: false },
     { key: 'springLength', label: 'Spring Length', required: false },
     { key: 'actuationForce', label: 'Actuation Force (g)', required: false },
+    { key: 'tactileForce', label: 'Tactile Force (g)', required: false },
     { key: 'bottomOutForce', label: 'Bottom Out Force (g)', required: false },
+    { key: 'progressiveSpring', label: 'Progressive Spring', required: false },
+    { key: 'doubleStage', label: 'Double Stage', required: false },
     { key: 'preTravel', label: 'Pre-travel (mm)', required: false },
     { key: 'bottomOut', label: 'Bottom Out (mm)', required: false },
     { key: 'topHousing', label: 'Top Housing', required: false },
@@ -832,11 +867,15 @@ export default function BulkUploadPage() {
         if (field && row[parseInt(columnIndex)]) {
           const value = row[parseInt(columnIndex)].replace(/^"|"$/g, '') // Remove quotes
           
-          if (['actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux'].includes(field)) {
+          if (['actuationForce', 'tactileForce', 'bottomOutForce', 'preTravel', 'bottomOut', 'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux'].includes(field)) {
             const numValue = parseFloat(value)
             if (!isNaN(numValue)) {
               (switchData as any)[field] = numValue
             }
+          } else if (['progressiveSpring', 'doubleStage'].includes(field)) {
+            // Handle boolean fields
+            const lowerValue = value.toLowerCase().trim()
+            ;(switchData as any)[field] = lowerValue === 'true' || lowerValue === 'yes' || lowerValue === '1' || lowerValue === 'y'
           } else if (field === 'type') {
             // Normalize switch type to uppercase and handle variations
             const normalizedType = value.toUpperCase().replace(/[\s_-]/g, '_')
@@ -1320,7 +1359,16 @@ export default function BulkUploadPage() {
                     Actuation Force (g)
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Tactile Force (g)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Bottom Out Force (g)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Progressive Spring
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Double Stage
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Pre-travel (mm)
@@ -1348,9 +1396,6 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Notes
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Image URL
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date Obtained

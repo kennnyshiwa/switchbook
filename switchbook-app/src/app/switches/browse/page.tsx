@@ -16,7 +16,10 @@ interface MasterSwitch {
   technology?: SwitchTechnology
   manufacturer?: string
   actuationForce?: number
+  tactileForce?: number
   bottomOutForce?: number
+  progressiveSpring?: boolean
+  doubleStage?: boolean
   preTravel?: number
   bottomOut?: number
   springWeight?: string
@@ -69,6 +72,8 @@ export default function BrowseMasterSwitchesPage() {
   const [compatibility, setCompatibility] = useState('')
   const [actuationForceMin, setActuationForceMin] = useState('')
   const [actuationForceMax, setActuationForceMax] = useState('')
+  const [tactileForceMin, setTactileForceMin] = useState('')
+  const [tactileForceMax, setTactileForceMax] = useState('')
   const [bottomOutForceMin, setBottomOutForceMin] = useState('')
   const [bottomOutForceMax, setBottomOutForceMax] = useState('')
   const [preTravelMin, setPreTravelMin] = useState('')
@@ -93,6 +98,8 @@ export default function BrowseMasterSwitchesPage() {
   const [debouncedCompatibility, setDebouncedCompatibility] = useState('')
   const [debouncedActuationForceMin, setDebouncedActuationForceMin] = useState('')
   const [debouncedActuationForceMax, setDebouncedActuationForceMax] = useState('')
+  const [debouncedTactileForceMin, setDebouncedTactileForceMin] = useState('')
+  const [debouncedTactileForceMax, setDebouncedTactileForceMax] = useState('')
   const [debouncedBottomOutForceMin, setDebouncedBottomOutForceMin] = useState('')
   const [debouncedBottomOutForceMax, setDebouncedBottomOutForceMax] = useState('')
   const [debouncedPreTravelMin, setDebouncedPreTravelMin] = useState('')
@@ -113,6 +120,8 @@ export default function BrowseMasterSwitchesPage() {
   const [magnetPosition, setMagnetPosition] = useState('')
   const [magnetPolarity, setMagnetPolarity] = useState('')
   const [pcbThickness, setPcbThickness] = useState('')
+  const [progressiveSpring, setProgressiveSpring] = useState<string>('')
+  const [doubleStage, setDoubleStage] = useState<string>('')
   const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>('name')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
@@ -140,6 +149,8 @@ export default function BrowseMasterSwitchesPage() {
           case 'compatibility': setDebouncedCompatibility(value); break;
           case 'actuationForceMin': setDebouncedActuationForceMin(value); break;
           case 'actuationForceMax': setDebouncedActuationForceMax(value); break;
+          case 'tactileForceMin': setDebouncedTactileForceMin(value); break;
+          case 'tactileForceMax': setDebouncedTactileForceMax(value); break;
           case 'bottomOutForceMin': setDebouncedBottomOutForceMin(value); break;
           case 'bottomOutForceMax': setDebouncedBottomOutForceMax(value); break;
           case 'preTravelMin': setDebouncedPreTravelMin(value); break;
@@ -176,6 +187,8 @@ export default function BrowseMasterSwitchesPage() {
       compatibility,
       actuationForceMin,
       actuationForceMax,
+      tactileForceMin,
+      tactileForceMax,
       bottomOutForceMin,
       bottomOutForceMax,
       preTravelMin,
@@ -189,7 +202,7 @@ export default function BrowseMasterSwitchesPage() {
       bottomOutMagneticFluxMin,
       bottomOutMagneticFluxMax,
     });
-  }, [manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedFilterUpdate])
+  }, [manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, tactileForceMin, tactileForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedFilterUpdate])
 
   // Fetch master switches
   useEffect(() => {
@@ -224,8 +237,12 @@ export default function BrowseMasterSwitchesPage() {
           ...(magnetPosition && { magnetPosition }),
           ...(magnetPolarity && { magnetPolarity }),
           ...(pcbThickness && { pcbThickness }),
+          ...(progressiveSpring && { progressiveSpring }),
+          ...(doubleStage && { doubleStage }),
           ...(debouncedActuationForceMin && { actuationForceMin: debouncedActuationForceMin }),
           ...(debouncedActuationForceMax && { actuationForceMax: debouncedActuationForceMax }),
+          ...(debouncedTactileForceMin && { tactileForceMin: debouncedTactileForceMin }),
+          ...(debouncedTactileForceMax && { tactileForceMax: debouncedTactileForceMax }),
           ...(debouncedBottomOutForceMin && { bottomOutForceMin: debouncedBottomOutForceMin }),
           ...(debouncedBottomOutForceMax && { bottomOutForceMax: debouncedBottomOutForceMax }),
           ...(debouncedPreTravelMin && { preTravelMin: debouncedPreTravelMin }),
@@ -257,7 +274,7 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     fetchSwitches()
-  }, [session, status, router, page, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, debouncedActuationForceMin, debouncedActuationForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
+  }, [session, status, router, page, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, progressiveSpring, doubleStage, debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin, debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
 
   const clearAllFilters = () => {
     setSearch('')
@@ -276,8 +293,12 @@ export default function BrowseMasterSwitchesPage() {
     setPcbThickness('')
     setActuationForceMin('')
     setActuationForceMax('')
+    setTactileForceMin('')
+    setTactileForceMax('')
     setBottomOutForceMin('')
     setBottomOutForceMax('')
+    setProgressiveSpring('')
+    setDoubleStage('')
     setPreTravelMin('')
     setPreTravelMax('')
     setBottomOutMin('')
@@ -291,7 +312,7 @@ export default function BrowseMasterSwitchesPage() {
     // Page reset will be handled by debounced update
   }
 
-  const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || actuationForceMin || actuationForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
+  const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || progressiveSpring || doubleStage || actuationForceMin || actuationForceMax || tactileForceMin || tactileForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -596,6 +617,42 @@ export default function BrowseMasterSwitchesPage() {
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Progressive Spring
+                    </label>
+                    <select
+                      value={progressiveSpring}
+                      onChange={(e) => {
+                        setProgressiveSpring(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    >
+                      <option value="">Any</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Double Stage
+                    </label>
+                    <select
+                      value={doubleStage}
+                      onChange={(e) => {
+                        setDoubleStage(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    >
+                      <option value="">Any</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* Force Ranges */}
@@ -646,6 +703,30 @@ export default function BrowseMasterSwitchesPage() {
                       />
                     </div>
                   </div>
+                  {(type === 'TACTILE' || type === 'SILENT_TACTILE') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Tactile Force Range
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={tactileForceMin}
+                          onChange={(e) => setTactileForceMin(e.target.value)}
+                          placeholder="Min"
+                          className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                        />
+                        <span className="self-center text-gray-500">-</span>
+                        <input
+                          type="number"
+                          value={tactileForceMax}
+                          onChange={(e) => setTactileForceMax(e.target.value)}
+                          placeholder="Max"
+                          className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Bottom Out Force Range
@@ -916,6 +997,9 @@ export default function BrowseMasterSwitchesPage() {
                         {switchItem.actuationForce && (
                           <p><span className="font-medium">Actuation:</span> {switchItem.actuationForce}g</p>
                         )}
+                        {switchItem.tactileForce && (
+                          <p><span className="font-medium">Tactile:</span> {switchItem.tactileForce}g</p>
+                        )}
                         {switchItem.bottomOutForce && (
                           <p><span className="font-medium">Bottom Out:</span> {switchItem.bottomOutForce}g</p>
                         )}
@@ -935,13 +1019,19 @@ export default function BrowseMasterSwitchesPage() {
                       </div>
                       
                       {/* Spring Specifications */}
-                      {(switchItem.springWeight || switchItem.springLength) && (
+                      {(switchItem.springWeight || switchItem.springLength || switchItem.progressiveSpring || switchItem.doubleStage) && (
                         <div className="pt-1">
                           {switchItem.springWeight && (
                             <p><span className="font-medium">Spring:</span> {switchItem.springWeight}</p>
                           )}
                           {switchItem.springLength && (
                             <p><span className="font-medium">Spring Length:</span> {switchItem.springLength}</p>
+                          )}
+                          {switchItem.progressiveSpring && (
+                            <p><span className="font-medium">Progressive Spring:</span> Yes</p>
+                          )}
+                          {switchItem.doubleStage && (
+                            <p><span className="font-medium">Double Stage:</span> Yes</p>
                           )}
                         </div>
                       )}

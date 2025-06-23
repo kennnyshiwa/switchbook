@@ -18,6 +18,7 @@ const editSuggestionSchema = z.object({
   // Force specifications
   initialForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
   actuationForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
+  tactileForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
   bottomOutForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
   preTravel: z.number().min(0).max(10).optional().nullable().or(z.nan()),
   bottomOut: z.number().min(0).max(10).optional().nullable().or(z.nan()),
@@ -25,6 +26,8 @@ const editSuggestionSchema = z.object({
   // Spring specifications
   springWeight: z.string().optional().nullable().or(z.literal('')),
   springLength: z.string().optional().nullable().or(z.literal('')),
+  progressiveSpring: z.boolean().optional().nullable(),
+  doubleStage: z.boolean().optional().nullable(),
   
   // Materials
   topHousing: z.string().optional().nullable().or(z.literal('')),
@@ -83,7 +86,10 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     // Keep numbers as is (they can be null/undefined)
     initialForce: currentData.initialForce,
     actuationForce: currentData.actuationForce,
+    tactileForce: currentData.tactileForce,
     bottomOutForce: currentData.bottomOutForce,
+    progressiveSpring: currentData.progressiveSpring || false,
+    doubleStage: currentData.doubleStage || false,
     preTravel: currentData.preTravel,
     bottomOut: currentData.bottomOut,
     initialMagneticFlux: currentData.initialMagneticFlux,
@@ -107,6 +113,8 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
 
   const manufacturerValue = watch('manufacturer');
   const technologyValue = watch('technology');
+  const typeValue = watch('type');
+  const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE';
 
   // Show magnetic fields when magnetic technology is selected
   if (technologyValue === 'MAGNETIC' && !showMagneticFields) {
@@ -145,6 +153,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
       ...data,
       initialForce: isNaN(data.initialForce as number) ? undefined : data.initialForce,
       actuationForce: isNaN(data.actuationForce as number) ? undefined : data.actuationForce,
+      tactileForce: isNaN(data.tactileForce as number) ? undefined : data.tactileForce,
       bottomOutForce: isNaN(data.bottomOutForce as number) ? undefined : data.bottomOutForce,
       preTravel: isNaN(data.preTravel as number) ? undefined : data.preTravel,
       bottomOut: isNaN(data.bottomOut as number) ? undefined : data.bottomOut,
@@ -329,6 +338,27 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             />
           </div>
 
+          {showTactileForce && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Tactile Force (g)
+              </label>
+              <input
+                {...register('tactileForce', { valueAsNumber: true })}
+                onChange={(e) => {
+                  register('tactileForce', { valueAsNumber: true }).onChange(e);
+                  handleFieldChange('tactileForce', e.target.valueAsNumber);
+                }}
+                type="number"
+                step="0.1"
+                min="0"
+                max="1000"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="55"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Bottom Out Force (g)
@@ -416,6 +446,38 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="14mm"
             />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="flex items-center">
+            <input
+              {...register('progressiveSpring')}
+              onChange={(e) => {
+                register('progressiveSpring').onChange(e);
+                handleFieldChange('progressiveSpring', e.target.checked);
+              }}
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Progressive Spring
+            </label>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              {...register('doubleStage')}
+              onChange={(e) => {
+                register('doubleStage').onChange(e);
+                handleFieldChange('doubleStage', e.target.checked);
+              }}
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Double Stage
+            </label>
           </div>
         </div>
       </div>

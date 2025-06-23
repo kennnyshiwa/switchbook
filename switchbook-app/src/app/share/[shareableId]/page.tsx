@@ -77,12 +77,15 @@ export default function SharePage() {
       pcbThicknesses: [],
       compatibilities: [],
       actuationForces: [],
+      tactileForces: [],
       bottomOutForces: [],
       preTravels: [],
       bottomOuts: [],
       initialForces: [],
       initialMagneticFluxes: [],
-      bottomOutMagneticFluxes: []
+      bottomOutMagneticFluxes: [],
+      progressiveSprings: [],
+      doubleStages: []
     }
 
     const switches = user.switches
@@ -102,12 +105,17 @@ export default function SharePage() {
     
     // Get unique numeric values for ranges
     const actuationForces = [...new Set(switches.map(s => s.actuationForce).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const tactileForces = [...new Set(switches.map(s => s.tactileForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOutForces = [...new Set(switches.map(s => s.bottomOutForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const preTravels = [...new Set(switches.map(s => s.preTravel).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOuts = [...new Set(switches.map(s => s.bottomOut).filter(Boolean) as number[])].sort((a, b) => a - b)
     const initialForces = [...new Set(switches.map(s => s.initialForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const initialMagneticFluxes = [...new Set(switches.map(s => s.initialMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOutMagneticFluxes = [...new Set(switches.map(s => s.bottomOutMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
+    
+    // Get unique boolean values
+    const progressiveSprings = [...new Set(switches.map(s => s.progressiveSpring).filter(b => b !== null && b !== undefined) as boolean[])]
+    const doubleStages = [...new Set(switches.map(s => s.doubleStage).filter(b => b !== null && b !== undefined) as boolean[])]
 
     return {
       manufacturers,
@@ -124,12 +132,15 @@ export default function SharePage() {
       pcbThicknesses,
       compatibilities,
       actuationForces,
+      tactileForces,
       bottomOutForces,
       preTravels,
       bottomOuts,
       initialForces,
       initialMagneticFluxes,
-      bottomOutMagneticFluxes
+      bottomOutMagneticFluxes,
+      progressiveSprings,
+      doubleStages
     }
   }, [user])
 

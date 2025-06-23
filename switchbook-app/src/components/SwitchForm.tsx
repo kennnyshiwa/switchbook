@@ -20,7 +20,9 @@ interface SwitchFormProps {
 export default function SwitchForm({ register, errors, setValue, watch, showFrankenswitch = false, isLinkedToMaster = false }: SwitchFormProps) {
   const manufacturerValue = watch('manufacturer')
   const technologyValue = watch('technology')
+  const typeValue = watch('type')
   const showMagneticFields = technologyValue === 'MAGNETIC'
+  const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE'
   
   return (
     <>
@@ -142,6 +144,22 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
             )}
           </div>
 
+          {showTactileForce && (
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Tactile Force (g)</label>
+              <input
+                {...register('tactileForce', { valueAsNumber: true })}
+                type="number"
+                step="0.1"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                placeholder="55"
+              />
+              {errors.tactileForce && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.tactileForce.message}</p>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Bottom Out Force (g)</label>
             <input
@@ -208,6 +226,30 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
             {errors.springLength && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.springLength.message}</p>
             )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center">
+            <input
+              {...register('progressiveSpring')}
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Progressive Spring
+            </label>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              {...register('doubleStage')}
+              type="checkbox"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-400 border-gray-300 dark:border-gray-600 rounded"
+            />
+            <label className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+              Double Stage
+            </label>
           </div>
         </div>
       </div>
