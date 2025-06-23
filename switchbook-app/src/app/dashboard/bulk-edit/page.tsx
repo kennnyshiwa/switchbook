@@ -1184,8 +1184,8 @@ export default function BulkEditPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
             <div className="flex-1 overflow-x-auto overflow-y-auto">
               <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
-                  <tr>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-gray-50 dark:bg-gray-700">
                     {visibleColumnIds.map((columnId, index) => {
                       const column = defaultColumns.find(col => col.id === columnId)
                       if (!column) return null
@@ -1203,11 +1203,12 @@ export default function BulkEditPage() {
                           className={`px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${column.minWidth} ${
                             draggedColumn === columnId ? 'opacity-50 transform scale-95' : ''
                           } ${column.isRequired && !isNameColumn ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${
-                            isNameColumn ? 'sticky left-0 z-30 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600 shadow-sm' : 'cursor-move hover:bg-gray-100 dark:hover:bg-gray-600'
+                            isNameColumn ? 'sticky left-0 z-20 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600' : 'cursor-move hover:bg-gray-100 dark:hover:bg-gray-600'
                           } transition-all duration-150`}
                           style={isNameColumn ? { 
                             position: 'sticky', 
-                            left: 0
+                            left: 0,
+                            top: 'auto'
                           } : undefined}
                           title={isNameColumn ? "Name column is always visible" : "Drag to reorder columns"}
                         >
