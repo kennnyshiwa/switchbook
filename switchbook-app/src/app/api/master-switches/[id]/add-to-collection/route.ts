@@ -45,13 +45,19 @@ export async function POST(
       )
     }
 
-    // Track view if not already viewed
-    const existingView = await prisma.masterSwitchView.findUnique({
+    // Track view - only increment if last view was more than 30 seconds ago
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000)
+    
+    const recentView = await prisma.masterSwitchView.findFirst({
       where: {
-        masterSwitchId_userId: {
-          masterSwitchId: id,
-          userId: session.user.id
+        masterSwitchId: id,
+        userId: session.user.id,
+        viewedAt: {
+          gte: thirtySecondsAgo
         }
+      },
+      orderBy: {
+        viewedAt: 'desc'
       }
     })
 
@@ -101,8 +107,8 @@ export async function POST(
         }
       })
 
-      // Track view if not already viewed
-      if (!existingView) {
+      // Track view if last view was more than 30 seconds ago
+      if (!recentView) {
         await tx.masterSwitchView.create({
           data: {
             masterSwitchId: id,
