@@ -1136,35 +1136,35 @@ export default function BulkEditPage() {
         )}
 
         {/* Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  {table.getFlatHeaders().map(header => {
-                    const isNameColumn = header.id === 'name'
-                    return (
-                      <th
-                        key={header.id}
-                        className={`${
-                          isNameColumn 
-                            ? 'sticky left-0 z-20 bg-gray-50 dark:bg-gray-700' 
-                            : ''
-                        } px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap`}
-                        style={{ 
-                          minWidth: header.column.getSize(),
-                          ...(isNameColumn ? { position: 'sticky', left: 0, top: 0 } : {})
-                        }}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="relative" style={{ height: 'calc(100vh - 400px)' }}>
+            <div className="absolute inset-0 overflow-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
+                  <tr>
+                    {table.getFlatHeaders().map(header => {
+                      const isNameColumn = header.id === 'name'
+                      return (
+                        <th
+                          key={header.id}
+                          className={`${
+                            isNameColumn 
+                              ? 'sticky left-0 z-20 bg-gray-50 dark:bg-gray-700' 
+                              : 'bg-gray-50 dark:bg-gray-700'
+                          } px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap`}
+                          style={{ 
+                            minWidth: header.column.getSize()
+                          }}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {table.getRowModel().rows.map(row => (
                   <tr 
@@ -1205,6 +1205,7 @@ export default function BulkEditPage() {
             </table>
           </div>
         </div>
+      </div>
 
         {/* Instructions */}
         <div className="mt-6 text-sm text-gray-600 dark:text-gray-400">
