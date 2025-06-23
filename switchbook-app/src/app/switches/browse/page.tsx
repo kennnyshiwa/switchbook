@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
 import debounce from 'lodash/debounce'
+import AnimatedCounter from '@/components/AnimatedCounter'
 
 interface MasterSwitch {
   id: string
@@ -404,6 +405,18 @@ export default function BrowseMasterSwitchesPage() {
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Discover and add switches from our community-curated database
               </p>
+              {pagination && (
+                <div className="mt-2 flex items-center gap-2">
+                  <AnimatedCounter 
+                    end={pagination.total} 
+                    duration={1500}
+                    className="text-2xl font-bold text-blue-600 dark:text-blue-400"
+                  />
+                  <span className="text-gray-600 dark:text-gray-400">
+                    approved switches in our database
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4">
               <Link
