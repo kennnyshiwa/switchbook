@@ -240,7 +240,8 @@ const SwitchEditRow = memo(({
       case 'name':
         return (
           <td 
-            key={columnId} 
+            key={columnId}
+            data-column="name"
             className={`px-3 py-4 ${isNameColumn ? 'sticky left-0 z-10 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600' : ''}`}
             style={isNameColumn ? { position: 'sticky', left: 0 } : undefined}
           >
@@ -617,6 +618,74 @@ export default function BulkEditPage() {
   const [isSearching, setIsSearching] = useState<boolean>(false)
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+  const nameHeaderRef = useRef<HTMLTableCellElement>(null)
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+
+  // Handle sticky positioning for name column header
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!nameHeaderRef.current || !tableContainerRef.current) return
+      
+      const container = tableContainerRef.current
+      const nameHeader = nameHeaderRef.current
+      const originalHeader = nameHeader.cloneNode(true) as HTMLElement
+      
+      // Get the table element
+      const table = container.querySelector('table')
+      if (!table) return
+      
+      // Get thead element
+      const thead = table.querySelector('thead')
+      if (!thead) return
+      
+      // Calculate positions
+      const containerRect = container.getBoundingClientRect()
+      const theadRect = thead.getBoundingClientRect()
+      const nameHeaderRect = nameHeader.getBoundingClientRect()
+      
+      // Clone the header to maintain dimensions
+      if (!nameHeader.dataset.cloned) {
+        const placeholder = document.createElement('th')
+        placeholder.style.width = `${nameHeaderRect.width}px`
+        placeholder.style.height = `${nameHeaderRect.height}px`
+        placeholder.style.visibility = 'hidden'
+        nameHeader.parentNode?.insertBefore(placeholder, nameHeader.nextSibling)
+        nameHeader.dataset.cloned = 'true'
+      }
+      
+      // Apply positioning
+      nameHeader.style.position = 'fixed'
+      nameHeader.style.top = `${Math.max(containerRect.top, theadRect.top)}px`
+      nameHeader.style.left = `${containerRect.left}px`
+      nameHeader.style.width = `${nameHeaderRect.width}px`
+      nameHeader.style.height = `${nameHeaderRect.height}px`
+      nameHeader.style.zIndex = '50'
+    }
+    
+    const container = tableContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll)
+      // Initial positioning
+      setTimeout(handleScroll, 100)
+      
+      // Also handle window resize
+      window.addEventListener('resize', handleScroll)
+      
+      return () => {
+        container.removeEventListener('scroll', handleScroll)
+        window.removeEventListener('resize', handleScroll)
+        // Clean up cloned elements
+        if (nameHeaderRef.current) {
+          nameHeaderRef.current.style.position = ''
+          nameHeaderRef.current.style.top = ''
+          nameHeaderRef.current.style.left = ''
+          nameHeaderRef.current.style.width = ''
+          nameHeaderRef.current.style.height = ''
+          delete nameHeaderRef.current.dataset.cloned
+        }
+      }
+    }
+  }, [switches.length, visibleColumns])
 
   // Fetch user's switches on component mount
   useEffect(() => {
@@ -1182,7 +1251,7 @@ export default function BulkEditPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
-            <div className="flex-1 overflow-x-auto overflow-y-auto relative">
+            <div ref={tableContainerRef} className="flex-1 overflow-x-auto overflow-y-auto relative">
               <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                   <tr>
@@ -1195,6 +1264,7 @@ export default function BulkEditPage() {
                       return (
                         <th
                           key={columnId}
+                          ref={isNameColumn ? nameHeaderRef : undefined}
                           draggable={!isNameColumn}
                           onDragStart={!isNameColumn ? (e) => handleDragStart(e, columnId) : undefined}
                           onDragOver={!isNameColumn ? handleDragOver : undefined}
