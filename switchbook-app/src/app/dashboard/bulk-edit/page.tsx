@@ -263,7 +263,27 @@ export default function BulkEditPage() {
     const modified = new Set<string>()
     switches.forEach((s, index) => {
       const original = originalData[index]
-      if (original && JSON.stringify(s) !== JSON.stringify(original)) {
+      if (!original) return
+      
+      // Compare each field individually to avoid false positives
+      const isModified = Object.keys(s).some(key => {
+        const sValue = s[key as keyof EditableSwitchData]
+        const oValue = original[key as keyof EditableSwitchData]
+        
+        // Skip validation fields that aren't part of the actual data
+        if (key === 'manufacturerValid' || key === 'manufacturerSuggestions') {
+          return false
+        }
+        
+        // Handle undefined vs empty string
+        if ((sValue === undefined || sValue === '') && (oValue === undefined || oValue === '')) {
+          return false
+        }
+        
+        return sValue !== oValue
+      })
+      
+      if (isModified) {
         modified.add(s.id)
       }
     })
@@ -309,7 +329,12 @@ export default function BulkEditPage() {
           dateObtained: sw.dateObtained ? new Date(sw.dateObtained).toISOString().split('T')[0] : undefined,
         }))
         setSwitches(editableData)
-        setOriginalData(JSON.parse(JSON.stringify(editableData)))
+        // Store original data without validation fields
+        const originalDataCopy = editableData.map(item => {
+          const { manufacturerValid, manufacturerSuggestions, ...dataWithoutValidation } = item
+          return dataWithoutValidation
+        })
+        setOriginalData(JSON.parse(JSON.stringify(originalDataCopy)))
         
         // Set default column order
         const defaultOrder = [
