@@ -147,7 +147,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         })
         
-        // Add new Discord user to mailing list (non-blocking)
+        // Add new Discord user to mailing list (emailMarketing defaults to true for new users)
         addUserToMailingList(newUser.email, newUser.username).catch(error => {
           console.error("Failed to add Discord user to mailing list:", error)
         })

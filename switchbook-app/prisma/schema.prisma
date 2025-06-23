@@ -19,6 +19,7 @@ model User {
   emailVerified           DateTime?
   showForceCurves         Boolean                 @default(true)
   emailNotifications      Boolean                 @default(true)
+  emailMarketing          Boolean                 @default(true)
   accounts                Account[]
   dismissedNotifications  DismissedNotification[]
   forceCurveFeedback      ForceCurveFeedback[]

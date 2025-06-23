@@ -63,7 +63,7 @@ async function registerHandler(request: NextRequest) {
       console.error("Failed to send verification email:", emailResult.error)
     }
     
-    // Add user to mailing list (non-blocking, don't fail registration if this fails)
+    // Add user to mailing list if emailMarketing is enabled (default is true for new users)
     addUserToMailingList(user.email, user.username).catch(error => {
       console.error("Failed to add user to mailing list:", error)
     })
