@@ -1203,9 +1203,12 @@ export default function BulkEditPage() {
                           className={`px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${column.minWidth} ${
                             draggedColumn === columnId ? 'opacity-50 transform scale-95' : ''
                           } ${column.isRequired && !isNameColumn ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${
-                            isNameColumn ? 'sticky left-0 z-30 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600' : 'cursor-move hover:bg-gray-100 dark:hover:bg-gray-600'
+                            isNameColumn ? 'sticky left-0 z-30 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600 shadow-sm' : 'cursor-move hover:bg-gray-100 dark:hover:bg-gray-600'
                           } transition-all duration-150`}
-                          style={isNameColumn ? { position: 'sticky', left: 0, top: 0 } : undefined}
+                          style={isNameColumn ? { 
+                            position: 'sticky', 
+                            left: 0
+                          } : undefined}
                           title={isNameColumn ? "Name column is always visible" : "Drag to reorder columns"}
                         >
                           <div className="flex items-center space-x-1">
