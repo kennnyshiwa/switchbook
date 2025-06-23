@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { signIn } from 'next-auth/react'
 import { loginSchema } from '@/lib/validation'
+import AnimatedCounter from '@/components/AnimatedCounter'
 
 type LoginFormData = z.infer<typeof loginSchema>
 
@@ -18,6 +19,7 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [totalSwitches, setTotalSwitches] = useState<number | null>(null)
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
@@ -27,6 +29,22 @@ function LoginContent() {
       setSuccess('Registration successful! Please check your email to verify your account.')
     }
   }, [searchParams])
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/public/stats')
+        if (response.ok) {
+          const data = await response.json()
+          setTotalSwitches(data.totalSwitches)
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error)
+      }
+    }
+    
+    fetchStats()
+  }, [])
 
   const {
     register,
@@ -84,6 +102,18 @@ function LoginContent() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             Sign in to Switchbook
           </h2>
+          {totalSwitches !== null && (
+            <div className="mt-3 text-center flex items-center justify-center gap-2">
+              <AnimatedCounter 
+                end={totalSwitches} 
+                duration={2000}
+                className="text-2xl font-bold text-blue-600 dark:text-blue-400"
+              />
+              <span className="text-gray-600 dark:text-gray-400">
+                switches catalogued
+              </span>
+            </div>
+          )}
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Or{' '}
             <Link
