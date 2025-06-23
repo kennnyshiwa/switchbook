@@ -257,9 +257,9 @@ model MasterSwitchView {
   masterSwitch   MasterSwitch @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([masterSwitchId, userId])
   @@index([masterSwitchId])
   @@index([userId])
+  @@index([viewedAt])
 }
 
 model Notification {
