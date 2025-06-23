@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { registerSchema } from "@/lib/validation"
-import { sendVerificationEmail } from "@/lib/email"
+import { sendVerificationEmail, addUserToMailingList } from "@/lib/email"
 import { z } from "zod"
 import { withRateLimit } from "@/lib/with-rate-limit"
 import { authRateLimit } from "@/lib/rate-limit"
@@ -62,6 +62,11 @@ async function registerHandler(request: NextRequest) {
       // User created but email failed - log error but don't fail registration
       console.error("Failed to send verification email:", emailResult.error)
     }
+    
+    // Add user to mailing list (non-blocking, don't fail registration if this fails)
+    addUserToMailingList(user.email, user.username).catch(error => {
+      console.error("Failed to add user to mailing list:", error)
+    })
     
     return NextResponse.json({
       message: isFirstUser 
