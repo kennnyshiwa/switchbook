@@ -588,10 +588,10 @@ export async function addUserToMailingList(email: string, name: string = '') {
       address: email,
       name: name,
       subscribed: true,
-      vars: {
+      vars: JSON.stringify({
         joined_date: new Date().toISOString(),
         source: 'registration'
-      }
+      })
     })
     
     console.log(`Successfully added ${email} to mailing list`)
