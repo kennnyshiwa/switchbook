@@ -74,6 +74,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 Actuation Force
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Tactile Force
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Bottom Out Force
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -105,6 +108,12 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Spring Length
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Progressive Spring
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Double Stage
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Materials
@@ -195,6 +204,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                   {switchItem.actuationForce ? `${switchItem.actuationForce}g` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                  {switchItem.tactileForce ? `${switchItem.tactileForce}g` : '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.bottomOutForce ? `${switchItem.bottomOutForce}g` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
@@ -226,6 +238,12 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {formatWithUnit(switchItem.springLength, 'mm')}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                  {switchItem.progressiveSpring ? '✓' : '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                  {switchItem.doubleStage ? '✓' : '-'}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
                   <div className="space-y-1">

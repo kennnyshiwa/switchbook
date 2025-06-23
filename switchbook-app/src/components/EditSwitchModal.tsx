@@ -171,6 +171,9 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         const syncData = await syncResponse.json()
         setSyncStatus(syncData)
       }
+      
+      // Close the modal after successful update
+      onClose()
     } catch (error) {
       setError('Failed to update switch. Please try again.')
     } finally {
