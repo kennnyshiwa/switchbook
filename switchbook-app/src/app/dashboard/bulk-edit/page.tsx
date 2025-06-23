@@ -241,7 +241,6 @@ const SwitchEditRow = memo(({
         return (
           <td 
             key={columnId}
-            data-column="name"
             className={`px-3 py-4 ${isNameColumn ? 'sticky left-0 z-10 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600' : ''}`}
             style={isNameColumn ? { position: 'sticky', left: 0 } : undefined}
           >
@@ -618,74 +617,6 @@ export default function BulkEditPage() {
   const [isSearching, setIsSearching] = useState<boolean>(false)
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
-  const nameHeaderRef = useRef<HTMLTableCellElement>(null)
-  const tableContainerRef = useRef<HTMLDivElement>(null)
-
-  // Handle sticky positioning for name column header
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!nameHeaderRef.current || !tableContainerRef.current) return
-      
-      const container = tableContainerRef.current
-      const nameHeader = nameHeaderRef.current
-      const originalHeader = nameHeader.cloneNode(true) as HTMLElement
-      
-      // Get the table element
-      const table = container.querySelector('table')
-      if (!table) return
-      
-      // Get thead element
-      const thead = table.querySelector('thead')
-      if (!thead) return
-      
-      // Calculate positions
-      const containerRect = container.getBoundingClientRect()
-      const theadRect = thead.getBoundingClientRect()
-      const nameHeaderRect = nameHeader.getBoundingClientRect()
-      
-      // Clone the header to maintain dimensions
-      if (!nameHeader.dataset.cloned) {
-        const placeholder = document.createElement('th')
-        placeholder.style.width = `${nameHeaderRect.width}px`
-        placeholder.style.height = `${nameHeaderRect.height}px`
-        placeholder.style.visibility = 'hidden'
-        nameHeader.parentNode?.insertBefore(placeholder, nameHeader.nextSibling)
-        nameHeader.dataset.cloned = 'true'
-      }
-      
-      // Apply positioning
-      nameHeader.style.position = 'fixed'
-      nameHeader.style.top = `${Math.max(containerRect.top, theadRect.top)}px`
-      nameHeader.style.left = `${containerRect.left}px`
-      nameHeader.style.width = `${nameHeaderRect.width}px`
-      nameHeader.style.height = `${nameHeaderRect.height}px`
-      nameHeader.style.zIndex = '50'
-    }
-    
-    const container = tableContainerRef.current
-    if (container) {
-      container.addEventListener('scroll', handleScroll)
-      // Initial positioning
-      setTimeout(handleScroll, 100)
-      
-      // Also handle window resize
-      window.addEventListener('resize', handleScroll)
-      
-      return () => {
-        container.removeEventListener('scroll', handleScroll)
-        window.removeEventListener('resize', handleScroll)
-        // Clean up cloned elements
-        if (nameHeaderRef.current) {
-          nameHeaderRef.current.style.position = ''
-          nameHeaderRef.current.style.top = ''
-          nameHeaderRef.current.style.left = ''
-          nameHeaderRef.current.style.width = ''
-          nameHeaderRef.current.style.height = ''
-          delete nameHeaderRef.current.dataset.cloned
-        }
-      }
-    }
-  }, [switches.length, visibleColumns])
 
   // Fetch user's switches on component mount
   useEffect(() => {
@@ -1251,10 +1182,10 @@ export default function BulkEditPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
-            <div ref={tableContainerRef} className="flex-1 overflow-x-auto overflow-y-auto relative">
+            <div className="flex-1 overflow-x-auto overflow-y-auto relative">
               <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
-                  <tr>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-gray-50 dark:bg-gray-700">
                     {visibleColumnIds.map((columnId, index) => {
                       const column = defaultColumns.find(col => col.id === columnId)
                       if (!column) return null
@@ -1264,34 +1195,37 @@ export default function BulkEditPage() {
                       return (
                         <th
                           key={columnId}
-                          ref={isNameColumn ? nameHeaderRef : undefined}
                           draggable={!isNameColumn}
                           onDragStart={!isNameColumn ? (e) => handleDragStart(e, columnId) : undefined}
                           onDragOver={!isNameColumn ? handleDragOver : undefined}
                           onDrop={!isNameColumn ? (e) => handleDrop(e, columnId) : undefined}
                           onDragEnd={!isNameColumn ? handleDragEnd : undefined}
-                          className={`px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${column.minWidth} ${
+                          className={`text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${column.minWidth} ${
                             draggedColumn === columnId ? 'opacity-50 transform scale-95' : ''
                           } ${column.isRequired && !isNameColumn ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${
-                            !isNameColumn ? 'cursor-move hover:bg-gray-100 dark:hover:bg-gray-600' : ''
+                            !isNameColumn ? 'px-3 py-3 cursor-move hover:bg-gray-100 dark:hover:bg-gray-600' : ''
                           } transition-all duration-150 ${
-                            isNameColumn ? 'sticky left-0 z-20 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600' : ''
+                            isNameColumn ? 'sticky left-0 z-20' : ''
                           }`}
                           title={isNameColumn ? "Name column is always visible" : "Drag to reorder columns"}
                         >
-                          <div className="flex items-center space-x-1">
-                            <span>{column.label}</span>
-                            {!isNameColumn && (
+                          {isNameColumn ? (
+                            <div className="px-3 py-3 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600">
+                              <div className="flex items-center space-x-1">
+                                <span>{column.label}</span>
+                                <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12l5 5L20 7" />
+                                </svg>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-1">
+                              <span>{column.label}</span>
                               <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                               </svg>
-                            )}
-                            {isNameColumn && (
-                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12l5 5L20 7" />
-                              </svg>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </th>
                       )
                     })}
