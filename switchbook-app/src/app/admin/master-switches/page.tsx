@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { linkify } from '@/utils/linkify';
 
 interface MasterSwitchSubmission {
   id: string;
@@ -472,7 +473,7 @@ export default function AdminMasterSwitchesPage() {
                       {submission.originalSubmissionData.notes && (
                         <div className="text-gray-900 dark:text-white">
                           <span className="font-medium">Notes:</span>
-                          <p className="mt-1 text-gray-600 dark:text-gray-400">{submission.originalSubmissionData.notes}</p>
+                          <p className="mt-1 text-gray-600 dark:text-gray-400">{linkify(submission.originalSubmissionData.notes)}</p>
                         </div>
                       )}
                       {submission.originalSubmissionData.submissionNotes && (

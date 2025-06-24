@@ -9,6 +9,7 @@ import { SwitchType, SwitchTechnology } from '@prisma/client'
 import debounce from 'lodash/debounce'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
+import { linkify } from '@/utils/linkify'
 
 interface MasterSwitch {
   id: string
@@ -1164,7 +1165,7 @@ export default function BrowseMasterSwitchesPage() {
                       {/* Notes */}
                       {switchItem.notes && (
                         <div className="pt-1">
-                          <p className="text-xs italic">{switchItem.notes}</p>
+                          <p className="text-xs italic">{linkify(switchItem.notes)}</p>
                         </div>
                       )}
                       
