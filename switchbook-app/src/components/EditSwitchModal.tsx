@@ -192,6 +192,11 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
 
     try {
       const currentData = watch()
+      
+      // Find the first externally linked image if available
+      const linkedImage = localImages.find(img => img.type === 'LINKED')
+      const imageUrl = linkedImage ? linkedImage.url : null
+      
       const submissionData = {
         name: currentData.name,
         chineseName: currentData.chineseName || null,
@@ -221,7 +226,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         notes: currentData.notes || null,
         submissionNotes: submissionNotes,
         confirmNotDuplicate: confirmNotDuplicate,
-        sourceSwitchId: switchItem.id  // Include the source switch ID
+        sourceSwitchId: switchItem.id,  // Include the source switch ID
+        imageUrl: imageUrl  // Include the external image URL if available
       }
 
       const response = await fetch('/api/master-switches/submit', {
