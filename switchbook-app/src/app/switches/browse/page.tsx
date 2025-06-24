@@ -48,20 +48,14 @@ interface MasterSwitch {
   }
 }
 
-interface Pagination {
-  total: number
-  pages: number
-  current: number
-  limit: number
-}
 
 export default function BrowseMasterSwitchesPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [switches, setSwitches] = useState<MasterSwitch[]>([])
-  const [pagination, setPagination] = useState<Pagination | null>(null)
+  const [filteredSwitches, setFilteredSwitches] = useState<MasterSwitch[]>([])
   const [loading, setLoading] = useState(true)
-  const [isSearching, setIsSearching] = useState(false)
+  const [totalCount, setTotalCount] = useState(0)
   const [addingSwitch, setAddingSwitch] = useState<string | null>(null)
   const [deletingSwitch, setDeletingSwitch] = useState<string | null>(null)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -130,14 +124,12 @@ export default function BrowseMasterSwitchesPage() {
   const [doubleStage, setDoubleStage] = useState<string>('')
   const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>('name')
   const [order, setOrder] = useState<'asc' | 'desc'>('asc')
-  const [page, setPage] = useState(1)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   // Create debounced setters for search (faster) and other filters (slower)
   const debouncedSearchUpdate = useMemo(
     () => debounce((value: string) => {
       setDebouncedSearch(value);
-      setPage(1);
     }, 200), // Faster debounce for search
     []
   )
@@ -171,7 +163,6 @@ export default function BrowseMasterSwitchesPage() {
           case 'bottomOutMagneticFluxMax': setDebouncedBottomOutMagneticFluxMax(value); break;
         }
       });
-      setPage(1); // Reset to first page when filters change
     }, 400), // Standard debounce for other filters
     []
   )
@@ -222,7 +213,7 @@ export default function BrowseMasterSwitchesPage() {
     });
   }, [manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, tactileForceMin, tactileForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedFilterUpdate])
 
-  // Fetch master switches
+  // Fetch all master switches on mount
   useEffect(() => {
     if (status === 'loading') return
     if (!session) {
@@ -230,69 +221,32 @@ export default function BrowseMasterSwitchesPage() {
       return
     }
 
-    const fetchSwitches = async () => {
-      // Only show loading spinner on initial load
-      if (switches.length === 0) {
-        setLoading(true)
-      } else {
-        setIsSearching(true)
-      }
+    const fetchAllSwitches = async () => {
+      setLoading(true)
       try {
+        // Load all switches without pagination
         const params = new URLSearchParams({
-          page: page.toString(),
-          limit: '50',
-          ...(debouncedSearch && { search: debouncedSearch }),
-          ...(debouncedManufacturer && { manufacturer: debouncedManufacturer }),
-          ...(type && { type }),
-          ...(technology && { technology }),
-          ...(debouncedTopHousing && { topHousing: debouncedTopHousing }),
-          ...(debouncedBottomHousing && { bottomHousing: debouncedBottomHousing }),
-          ...(debouncedStem && { stem: debouncedStem }),
-          ...(debouncedSpringWeight && { springWeight: debouncedSpringWeight }),
-          ...(debouncedSpringLength && { springLength: debouncedSpringLength }),
-          ...(debouncedCompatibility && { compatibility: debouncedCompatibility }),
-          ...(magnetOrientation && { magnetOrientation }),
-          ...(magnetPosition && { magnetPosition }),
-          ...(magnetPolarity && { magnetPolarity }),
-          ...(pcbThickness && { pcbThickness }),
-          ...(progressiveSpring && { progressiveSpring }),
-          ...(doubleStage && { doubleStage }),
-          ...(debouncedActuationForceMin && { actuationForceMin: debouncedActuationForceMin }),
-          ...(debouncedActuationForceMax && { actuationForceMax: debouncedActuationForceMax }),
-          ...(debouncedTactileForceMin && { tactileForceMin: debouncedTactileForceMin }),
-          ...(debouncedTactileForceMax && { tactileForceMax: debouncedTactileForceMax }),
-          ...(debouncedBottomOutForceMin && { bottomOutForceMin: debouncedBottomOutForceMin }),
-          ...(debouncedBottomOutForceMax && { bottomOutForceMax: debouncedBottomOutForceMax }),
-          ...(debouncedPreTravelMin && { preTravelMin: debouncedPreTravelMin }),
-          ...(debouncedPreTravelMax && { preTravelMax: debouncedPreTravelMax }),
-          ...(debouncedBottomOutMin && { bottomOutMin: debouncedBottomOutMin }),
-          ...(debouncedBottomOutMax && { bottomOutMax: debouncedBottomOutMax }),
-          ...(debouncedInitialForceMin && { initialForceMin: debouncedInitialForceMin }),
-          ...(debouncedInitialForceMax && { initialForceMax: debouncedInitialForceMax }),
-          ...(debouncedInitialMagneticFluxMin && { initialMagneticFluxMin: debouncedInitialMagneticFluxMin }),
-          ...(debouncedInitialMagneticFluxMax && { initialMagneticFluxMax: debouncedInitialMagneticFluxMax }),
-          ...(debouncedBottomOutMagneticFluxMin && { bottomOutMagneticFluxMin: debouncedBottomOutMagneticFluxMin }),
-          ...(debouncedBottomOutMagneticFluxMax && { bottomOutMagneticFluxMax: debouncedBottomOutMagneticFluxMax }),
-          sort,
-          order,
+          limit: '10000', // High limit to get all switches
+          sort: 'name',
+          order: 'asc',
         })
 
         const response = await fetch(`/api/master-switches?${params}`)
         if (response.ok) {
           const data = await response.json()
           setSwitches(data.switches)
-          setPagination(data.pagination)
+          setFilteredSwitches(data.switches)
+          setTotalCount(data.pagination.total)
         }
       } catch (error) {
         console.error('Failed to fetch master switches:', error)
       } finally {
         setLoading(false)
-        setIsSearching(false)
       }
     }
 
-    fetchSwitches()
-  }, [session, status, router, page, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, progressiveSpring, doubleStage, debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin, debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
+    fetchAllSwitches()
+  }, [session, status, router])
 
   const clearAllFilters = () => {
     setSearch('')
@@ -327,10 +281,162 @@ export default function BrowseMasterSwitchesPage() {
     setInitialMagneticFluxMax('')
     setBottomOutMagneticFluxMin('')
     setBottomOutMagneticFluxMax('')
-    // Page reset will be handled by debounced update
   }
 
   const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || progressiveSpring || doubleStage || actuationForceMin || actuationForceMax || tactileForceMin || tactileForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
+
+  // Client-side filtering and sorting
+  useEffect(() => {
+    let filtered = [...switches]
+
+    // Apply search filter
+    if (debouncedSearch) {
+      const search = debouncedSearch.toLowerCase()
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(search) ||
+        (s.chineseName?.toLowerCase().includes(search) ?? false) ||
+        (s.manufacturer?.toLowerCase().includes(search) ?? false) ||
+        (s.notes?.toLowerCase().includes(search) ?? false)
+      )
+    }
+
+    // Apply filters
+    if (debouncedManufacturer) {
+      filtered = filtered.filter(s => s.manufacturer?.toLowerCase().includes(debouncedManufacturer.toLowerCase()))
+    }
+    if (type) {
+      filtered = filtered.filter(s => s.type === type)
+    }
+    if (technology) {
+      filtered = filtered.filter(s => s.technology === technology)
+    }
+    if (debouncedTopHousing) {
+      filtered = filtered.filter(s => s.topHousing?.toLowerCase().includes(debouncedTopHousing.toLowerCase()))
+    }
+    if (debouncedBottomHousing) {
+      filtered = filtered.filter(s => s.bottomHousing?.toLowerCase().includes(debouncedBottomHousing.toLowerCase()))
+    }
+    if (debouncedStem) {
+      filtered = filtered.filter(s => s.stem?.toLowerCase().includes(debouncedStem.toLowerCase()))
+    }
+    if (debouncedSpringWeight) {
+      filtered = filtered.filter(s => s.springWeight?.toLowerCase().includes(debouncedSpringWeight.toLowerCase()))
+    }
+    if (debouncedSpringLength) {
+      filtered = filtered.filter(s => s.springLength?.toLowerCase().includes(debouncedSpringLength.toLowerCase()))
+    }
+    if (debouncedCompatibility) {
+      filtered = filtered.filter(s => s.compatibility?.toLowerCase().includes(debouncedCompatibility.toLowerCase()))
+    }
+
+    // Magnetic filters
+    if (magnetOrientation) {
+      filtered = filtered.filter(s => s.magnetOrientation === magnetOrientation)
+    }
+    if (magnetPosition) {
+      filtered = filtered.filter(s => s.magnetPosition === magnetPosition)
+    }
+    if (magnetPolarity) {
+      filtered = filtered.filter(s => s.magnetPolarity === magnetPolarity)
+    }
+    if (pcbThickness) {
+      filtered = filtered.filter(s => s.pcbThickness === pcbThickness)
+    }
+
+    // Boolean filters
+    if (progressiveSpring) {
+      filtered = filtered.filter(s => s.progressiveSpring === (progressiveSpring === 'true'))
+    }
+    if (doubleStage) {
+      filtered = filtered.filter(s => s.doubleStage === (doubleStage === 'true'))
+    }
+
+    // Force ranges
+    if (debouncedActuationForceMin) {
+      const min = Number(debouncedActuationForceMin)
+      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce !== undefined && s.actuationForce >= min)
+    }
+    if (debouncedActuationForceMax) {
+      const max = Number(debouncedActuationForceMax)
+      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce !== undefined && s.actuationForce <= max)
+    }
+    if (debouncedTactileForceMin) {
+      const min = Number(debouncedTactileForceMin)
+      filtered = filtered.filter(s => s.tactileForce !== null && s.tactileForce !== undefined && s.tactileForce >= min)
+    }
+    if (debouncedTactileForceMax) {
+      const max = Number(debouncedTactileForceMax)
+      filtered = filtered.filter(s => s.tactileForce !== null && s.tactileForce !== undefined && s.tactileForce <= max)
+    }
+    if (debouncedBottomOutForceMin) {
+      const min = Number(debouncedBottomOutForceMin)
+      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce !== undefined && s.bottomOutForce >= min)
+    }
+    if (debouncedBottomOutForceMax) {
+      const max = Number(debouncedBottomOutForceMax)
+      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce !== undefined && s.bottomOutForce <= max)
+    }
+
+    // Travel ranges
+    if (debouncedPreTravelMin) {
+      const min = Number(debouncedPreTravelMin)
+      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel !== undefined && s.preTravel >= min)
+    }
+    if (debouncedPreTravelMax) {
+      const max = Number(debouncedPreTravelMax)
+      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel !== undefined && s.preTravel <= max)
+    }
+    if (debouncedBottomOutMin) {
+      const min = Number(debouncedBottomOutMin)
+      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut !== undefined && s.bottomOut >= min)
+    }
+    if (debouncedBottomOutMax) {
+      const max = Number(debouncedBottomOutMax)
+      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut !== undefined && s.bottomOut <= max)
+    }
+
+    // Magnetic flux ranges
+    if (debouncedInitialForceMin) {
+      const min = Number(debouncedInitialForceMin)
+      filtered = filtered.filter(s => s.initialForce !== null && s.initialForce !== undefined && s.initialForce >= min)
+    }
+    if (debouncedInitialForceMax) {
+      const max = Number(debouncedInitialForceMax)
+      filtered = filtered.filter(s => s.initialForce !== null && s.initialForce !== undefined && s.initialForce <= max)
+    }
+    if (debouncedInitialMagneticFluxMin) {
+      const min = Number(debouncedInitialMagneticFluxMin)
+      filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux !== undefined && s.initialMagneticFlux >= min)
+    }
+    if (debouncedInitialMagneticFluxMax) {
+      const max = Number(debouncedInitialMagneticFluxMax)
+      filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux !== undefined && s.initialMagneticFlux <= max)
+    }
+    if (debouncedBottomOutMagneticFluxMin) {
+      const min = Number(debouncedBottomOutMagneticFluxMin)
+      filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux !== undefined && s.bottomOutMagneticFlux >= min)
+    }
+    if (debouncedBottomOutMagneticFluxMax) {
+      const max = Number(debouncedBottomOutMagneticFluxMax)
+      filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux !== undefined && s.bottomOutMagneticFlux <= max)
+    }
+
+    // Apply sorting
+    const sorted = [...filtered]
+    switch (sort) {
+      case 'name':
+        sorted.sort((a, b) => order === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name))
+        break
+      case 'viewCount':
+        sorted.sort((a, b) => order === 'asc' ? (a.userCount - b.userCount) : (b.userCount - a.userCount))
+        break
+      case 'createdAt':
+        sorted.sort((a, b) => order === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)) // Fallback to name since we don't have createdAt
+        break
+    }
+
+    setFilteredSwitches(sorted)
+  }, [switches, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, progressiveSpring, doubleStage, debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin, debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -343,6 +449,9 @@ export default function BrowseMasterSwitchesPage() {
         const data = await response.json()
         // Update the switch in the list to show it's now in collection
         setSwitches(prev => prev.map(s => 
+          s.id === switchId ? { ...s, inCollection: true } : s
+        ))
+        setFilteredSwitches(prev => prev.map(s => 
           s.id === switchId ? { ...s, inCollection: true } : s
         ))
         // Optionally redirect to the switch in their collection
@@ -375,8 +484,9 @@ export default function BrowseMasterSwitchesPage() {
       if (response.ok) {
         // Remove the switch from the list
         setSwitches(prev => prev.filter(s => s.id !== switchId))
-        // Update pagination count
-        setPagination(prev => prev ? { ...prev, total: prev.total - 1 } : null)
+        setFilteredSwitches(prev => prev.filter(s => s.id !== switchId))
+        // Update total count
+        setTotalCount(prev => prev - 1)
       } else {
         alert(data.error || 'Failed to delete switch')
       }
@@ -406,33 +516,27 @@ export default function BrowseMasterSwitchesPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Browse Master Switches
-                {isSearching && (
-                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Updating results...
-                  </span>
-                )}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Discover and add switches from our community-curated database
               </p>
-              {pagination && (
-                <div className="mt-2 flex items-center gap-2">
-                  <AnimatedCounter 
-                    end={pagination.total} 
-                    duration={1500}
-                    className="text-2xl font-bold text-blue-600 dark:text-blue-400"
-                  />
-                  <span className="text-gray-600 dark:text-gray-400">
-                    approved switches in our database
+              <div className="mt-2 flex items-center gap-2">
+                <AnimatedCounter 
+                  end={totalCount} 
+                  duration={1500}
+                  className="text-2xl font-bold text-blue-600 dark:text-blue-400"
+                />
+                <span className="text-gray-600 dark:text-gray-400">
+                  approved switches in our database
+                </span>
+                {hasActiveFilters && (
+                  <span className="text-gray-500 dark:text-gray-400">
+                    ({filteredSwitches.length} matching filters)
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <Link
@@ -502,10 +606,7 @@ export default function BrowseMasterSwitchesPage() {
               </label>
               <select
                 value={type}
-                onChange={(e) => {
-                  setType(e.target.value)
-                  setPage(1) // Keep immediate page reset for dropdowns
-                }}
+                onChange={(e) => setType(e.target.value)}
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
                 <option value="">All Types</option>
@@ -523,10 +624,7 @@ export default function BrowseMasterSwitchesPage() {
               </label>
               <select
                 value={technology}
-                onChange={(e) => {
-                  setTechnology(e.target.value)
-                  setPage(1) // Keep immediate page reset for dropdowns
-                }}
+                onChange={(e) => setTechnology(e.target.value)}
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
                 <option value="">All Technologies</option>
@@ -576,7 +674,6 @@ export default function BrowseMasterSwitchesPage() {
                     const [newSort, newOrder] = e.target.value.split('-') as [typeof sort, typeof order]
                     setSort(newSort)
                     setOrder(newOrder)
-                    setPage(1) // Keep immediate page reset for sort changes
                   }}
                   className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                 >
@@ -683,10 +780,7 @@ export default function BrowseMasterSwitchesPage() {
                     </label>
                     <select
                       value={progressiveSpring}
-                      onChange={(e) => {
-                        setProgressiveSpring(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setProgressiveSpring(e.target.value)}
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">Any</option>
@@ -700,10 +794,7 @@ export default function BrowseMasterSwitchesPage() {
                     </label>
                     <select
                       value={doubleStage}
-                      onChange={(e) => {
-                        setDoubleStage(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setDoubleStage(e.target.value)}
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">Any</option>
@@ -876,10 +967,7 @@ export default function BrowseMasterSwitchesPage() {
                     </label>
                     <select
                       value={magnetOrientation}
-                      onChange={(e) => {
-                        setMagnetOrientation(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setMagnetOrientation(e.target.value)}
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Orientations</option>
@@ -893,10 +981,7 @@ export default function BrowseMasterSwitchesPage() {
                     </label>
                     <select
                       value={magnetPosition}
-                      onChange={(e) => {
-                        setMagnetPosition(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setMagnetPosition(e.target.value)}
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Positions</option>
@@ -910,10 +995,7 @@ export default function BrowseMasterSwitchesPage() {
                     </label>
                     <select
                       value={magnetPolarity}
-                      onChange={(e) => {
-                        setMagnetPolarity(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setMagnetPolarity(e.target.value)}
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Polarities</option>
@@ -927,10 +1009,7 @@ export default function BrowseMasterSwitchesPage() {
                     </label>
                     <select
                       value={pcbThickness}
-                      onChange={(e) => {
-                        setPcbThickness(e.target.value)
-                        setPage(1)
-                      }}
+                      onChange={(e) => setPcbThickness(e.target.value)}
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Thicknesses</option>
@@ -994,17 +1073,7 @@ export default function BrowseMasterSwitchesPage() {
 
         {/* Results */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow relative overflow-visible">
-          {/* Loading overlay */}
-          {isSearching && (
-            <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 z-10 flex items-center justify-center rounded-lg">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Searching...</p>
-              </div>
-            </div>
-          )}
-          
-          {switches.length === 0 && !isSearching ? (
+          {filteredSwitches.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400">
                 No switches found matching your criteria
@@ -1013,7 +1082,7 @@ export default function BrowseMasterSwitchesPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 overflow-visible">
-                {switches.map((switchItem) => (
+                {filteredSwitches.map((switchItem) => (
                   <div
                     key={switchItem.id}
                     className="border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-lg transition-shadow flex flex-col relative"
@@ -1250,40 +1319,6 @@ export default function BrowseMasterSwitchesPage() {
                 ))}
               </div>
 
-              {/* Pagination */}
-              {pagination && pagination.pages > 1 && (
-                <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-700 dark:text-gray-300">
-                      Showing {((pagination.current - 1) * pagination.limit) + 1} to{' '}
-                      {Math.min(pagination.current * pagination.limit, pagination.total)} of{' '}
-                      {pagination.total} switches
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setPage(page - 1)}
-                        disabled={page === 1}
-                        className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Previous
-                      </button>
-                      
-                      <span className="px-3 py-1">
-                        Page {pagination.current} of {pagination.pages}
-                      </span>
-                      
-                      <button
-                        onClick={() => setPage(page + 1)}
-                        disabled={page === pagination.pages}
-                        className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
