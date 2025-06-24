@@ -201,11 +201,14 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         compatibility: currentData.compatibility || null,
         initialForce: currentData.initialForce || null,
         actuationForce: currentData.actuationForce || null,
+        tactileForce: currentData.tactileForce || null,
         bottomOutForce: currentData.bottomOutForce || null,
         preTravel: currentData.preTravel || null,
         bottomOut: currentData.bottomOut || null,
         springWeight: currentData.springWeight || null,
         springLength: currentData.springLength || null,
+        progressiveSpring: currentData.progressiveSpring || null,
+        doubleStage: currentData.doubleStage || null,
         topHousing: currentData.topHousing || null,
         bottomHousing: currentData.bottomHousing || null,
         stem: currentData.stem || null,
@@ -217,7 +220,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         pcbThickness: currentData.pcbThickness || null,
         notes: currentData.notes || null,
         submissionNotes: submissionNotes,
-        confirmNotDuplicate: confirmNotDuplicate
+        confirmNotDuplicate: confirmNotDuplicate,
+        sourceSwitchId: switchItem.id  // Include the source switch ID
       }
 
       const response = await fetch('/api/master-switches/submit', {
@@ -246,7 +250,32 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       setSubmissionNotes('')
       setSimilarSwitches([])
       setConfirmNotDuplicate(false)
-      alert('Switch submitted successfully! It will be reviewed by an admin before being added to the master database.')
+      
+      // If the switch was linked, update the local state to reflect this
+      if (data.linkedSwitch) {
+        // Update the switch data to show it's now linked
+        const updatedSwitch = {
+          ...switchItem,
+          masterSwitchId: data.id,
+          masterSwitchVersion: 1,
+          isModified: false,
+          modifiedFields: null
+        }
+        onSwitchUpdated(updatedSwitch)
+        
+        // Refresh sync status
+        const syncResponse = await fetch(`/api/switches/${switchItem.id}/sync-master`)
+        if (syncResponse.ok) {
+          const syncData = await syncResponse.json()
+          setSyncStatus(syncData)
+        }
+      }
+      
+      const message = data.linkedSwitch 
+        ? 'Switch submitted successfully! It will be reviewed by an admin before being added to the master database. Your switch has been automatically linked to the submission.'
+        : 'Switch submitted successfully! It will be reviewed by an admin before being added to the master database.'
+      
+      alert(message)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to submit to master database. Please try again.')
     } finally {
