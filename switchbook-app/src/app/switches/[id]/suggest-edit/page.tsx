@@ -117,12 +117,12 @@ export default function SuggestEditPage({ params }: { params: Promise<{ id: stri
       <div className="max-w-4xl mx-auto">
         <Link
           href={`/switches/${id}`}
-          className="inline-flex items-center text-purple-600 hover:text-purple-700 mb-6"
+          className="inline-flex items-center text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 mb-6"
         >
           ← Back to Switch Details
         </Link>
 
-        <h1 className="text-3xl font-bold mb-2">Suggest Edit for {switchData.name}</h1>
+        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Suggest Edit for {switchData.name}</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-4">
           Help improve our database by suggesting corrections or additional information for this switch.
         </p>
