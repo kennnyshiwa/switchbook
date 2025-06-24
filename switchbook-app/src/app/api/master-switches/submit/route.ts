@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { sendAdminNewSubmissionEmail } from '@/lib/email'
 
@@ -46,6 +47,12 @@ const submissionSchema = z.object({
   
   // Submission details
   submissionNotes: z.string().min(10),
+  
+  // Source switch ID if submitting from collection
+  sourceSwitchId: z.string().optional(),
+  
+  // For duplicate checking
+  confirmNotDuplicate: z.boolean().optional()
 })
 
 // Helper function to calculate similarity between two strings
@@ -235,10 +242,40 @@ export async function POST(req: NextRequest) {
       console.error('Failed to send admin notification emails:', error)
     })
 
+    // If a source switch ID was provided, link it to the new master switch
+    if (validated.sourceSwitchId) {
+      try {
+        // Verify the switch belongs to the current user
+        const userSwitch = await prisma.switch.findFirst({
+          where: {
+            id: validated.sourceSwitchId,
+            userId: session.user.id
+          }
+        })
+
+        if (userSwitch && !userSwitch.masterSwitchId) {
+          // Link the user's switch to the newly created master switch
+          await prisma.switch.update({
+            where: { id: validated.sourceSwitchId },
+            data: {
+              masterSwitchId: masterSwitch.id,
+              masterSwitchVersion: 1,
+              isModified: false,
+              modifiedFields: Prisma.JsonNull
+            }
+          })
+        }
+      } catch (linkError) {
+        console.error('Failed to link source switch to master switch:', linkError)
+        // Don't fail the submission if linking fails
+      }
+    }
+
     return NextResponse.json({
       id: masterSwitch.id,
       message: 'Master switch submitted successfully and is pending review',
-      status: masterSwitch.status
+      status: masterSwitch.status,
+      linkedSwitch: validated.sourceSwitchId || null
     })
 
   } catch (error) {
