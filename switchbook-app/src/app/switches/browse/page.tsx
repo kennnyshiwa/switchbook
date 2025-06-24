@@ -1098,7 +1098,7 @@ export default function BrowseMasterSwitchesPage() {
                       </div>
                     )}
                     
-                    <div className="p-4 flex flex-col flex-grow max-h-[400px]">
+                    <div className="p-4 flex flex-col flex-grow">
                       <div className="flex items-start justify-between mb-2 flex-shrink-0">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1">
                           {switchItem.name}
@@ -1131,7 +1131,7 @@ export default function BrowseMasterSwitchesPage() {
                         )}
                       </div>
 
-                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4 overflow-y-auto flex-grow">
+                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4 flex-grow">
                       {/* Basic Info */}
                       {switchItem.manufacturer && (
                         <p><span className="font-medium">Manufacturer:</span> {switchItem.manufacturer}</p>
@@ -1230,18 +1230,6 @@ export default function BrowseMasterSwitchesPage() {
                       {switchItem.compatibility && (
                         <p><span className="font-medium">Compatibility:</span> {switchItem.compatibility}</p>
                       )}
-                      
-                      {/* Notes */}
-                      {switchItem.notes && (
-                        <div className="pt-1">
-                          <p className="text-xs italic">{linkify(switchItem.notes)}</p>
-                        </div>
-                      )}
-                      
-                      {/* User Count */}
-                      <p className="text-xs text-gray-500 dark:text-gray-400 pt-1">
-                        Used by {switchItem.userCount} {switchItem.userCount === 1 ? 'person' : 'people'}
-                      </p>
                     </div>
 
                     <div className="flex items-center justify-between flex-shrink-0 pt-2 border-t border-gray-200 dark:border-gray-700">
