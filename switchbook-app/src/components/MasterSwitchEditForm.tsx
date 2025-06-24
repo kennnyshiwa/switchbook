@@ -691,7 +691,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             {errors.imageUrl && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
             )}
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
               Provide a URL to an image of the switch. Uploads are not available for master switches.
             </p>
           </div>
