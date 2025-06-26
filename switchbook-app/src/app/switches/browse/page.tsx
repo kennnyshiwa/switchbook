@@ -9,7 +9,7 @@ import { SwitchType, SwitchTechnology } from '@prisma/client'
 import debounce from 'lodash/debounce'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
-import { linkify } from '@/utils/linkify'
+import MasterSwitchDetailsPopup from '@/components/MasterSwitchDetailsPopup'
 
 interface MasterSwitch {
   id: string
@@ -58,8 +58,8 @@ export default function BrowseMasterSwitchesPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [addingSwitch, setAddingSwitch] = useState<string | null>(null)
   const [deletingSwitch, setDeletingSwitch] = useState<string | null>(null)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [linkDialogSwitch, setLinkDialogSwitch] = useState<{ id: string; name: string } | null>(null)
+  const [selectedSwitch, setSelectedSwitch] = useState<MasterSwitch | null>(null)
   
   // Filters - UI state (immediate updates)
   const [search, setSearch] = useState('')
@@ -167,17 +167,6 @@ export default function BrowseMasterSwitchesPage() {
     []
   )
 
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (openDropdown && !(event.target as Element).closest('.dropdown-container')) {
-        setOpenDropdown(null)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [openDropdown])
 
   // Update debounced search value
   useEffect(() => {
@@ -1081,232 +1070,51 @@ export default function BrowseMasterSwitchesPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 overflow-visible">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6">
                 {filteredSwitches.map((switchItem) => (
                   <div
                     key={switchItem.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-lg transition-shadow flex flex-col relative"
+                    onClick={() => setSelectedSwitch(switchItem)}
+                    className="group cursor-pointer"
                   >
-                    {/* Image Section */}
-                    {switchItem.imageUrl && (
-                      <div className="relative h-48 bg-gray-100 dark:bg-gray-900 flex-shrink-0 overflow-hidden rounded-t-lg">
+                    <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-2 border-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200">
+                      {switchItem.imageUrl ? (
                         <img
                           src={switchItem.imageUrl}
                           alt={switchItem.name}
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
                         />
-                      </div>
-                    )}
-                    
-                    <div className="p-4 flex flex-col flex-grow">
-                      <div className="flex items-start justify-between mb-2 flex-shrink-0">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1">
-                          {switchItem.name}
-                          {switchItem.chineseName && (
-                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                              {switchItem.chineseName}
-                            </span>
-                          )}
-                        </h3>
-                        {session?.user?.role === 'ADMIN' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              deleteSwitch(switchItem.id)
-                            }}
-                            disabled={deletingSwitch === switchItem.id}
-                            className="ml-2 p-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Delete master switch"
-                          >
-                            {deletingSwitch === switchItem.id ? (
-                              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                            ) : (
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            )}
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-4 flex-grow">
-                      {/* Basic Info */}
-                      {switchItem.manufacturer && (
-                        <p><span className="font-medium">Manufacturer:</span> {switchItem.manufacturer}</p>
-                      )}
-                      {switchItem.type && (
-                        <p><span className="font-medium">Type:</span> {switchItem.type.replace('_', ' ')}</p>
-                      )}
-                      {switchItem.technology && (
-                        <p><span className="font-medium">Technology:</span> {switchItem.technology.replace('_', ' ')}</p>
-                      )}
-                      
-                      {/* Force Specifications */}
-                      <div className="pt-1">
-                        {switchItem.actuationForce && (
-                          <p><span className="font-medium">Actuation:</span> {switchItem.actuationForce}g</p>
-                        )}
-                        {switchItem.tactileForce && (
-                          <p><span className="font-medium">Tactile:</span> {switchItem.tactileForce}g</p>
-                        )}
-                        {switchItem.bottomOutForce && (
-                          <p><span className="font-medium">Bottom Out:</span> {switchItem.bottomOutForce}g</p>
-                        )}
-                        {switchItem.initialForce && (
-                          <p><span className="font-medium">Initial Force:</span> {switchItem.initialForce}g</p>
-                        )}
-                      </div>
-                      
-                      {/* Travel Distances */}
-                      <div className="pt-1">
-                        {switchItem.preTravel && (
-                          <p><span className="font-medium">Pre Travel:</span> {switchItem.preTravel}mm</p>
-                        )}
-                        {switchItem.bottomOut && (
-                          <p><span className="font-medium">Total Travel:</span> {switchItem.bottomOut}mm</p>
-                        )}
-                      </div>
-                      
-                      {/* Spring Specifications */}
-                      {(switchItem.springWeight || switchItem.springLength || switchItem.progressiveSpring || switchItem.doubleStage) && (
-                        <div className="pt-1">
-                          {switchItem.springWeight && (
-                            <p><span className="font-medium">Spring:</span> {switchItem.springWeight}</p>
-                          )}
-                          {switchItem.springLength && (
-                            <p><span className="font-medium">Spring Length:</span> {switchItem.springLength}</p>
-                          )}
-                          {switchItem.progressiveSpring && (
-                            <p><span className="font-medium">Progressive Spring:</span> Yes</p>
-                          )}
-                          {switchItem.doubleStage && (
-                            <p><span className="font-medium">Double Stage:</span> Yes</p>
-                          )}
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <svg className="w-16 h-16 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
                         </div>
-                      )}
-                      
-                      {/* Materials */}
-                      {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
-                        <div className="pt-1">
-                          {switchItem.topHousing && (
-                            <p><span className="font-medium">Top Housing:</span> {switchItem.topHousing}</p>
-                          )}
-                          {switchItem.bottomHousing && (
-                            <p><span className="font-medium">Bottom Housing:</span> {switchItem.bottomHousing}</p>
-                          )}
-                          {switchItem.stem && (
-                            <p><span className="font-medium">Stem:</span> {switchItem.stem}</p>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Magnetic Properties (for magnetic switches) */}
-                      {switchItem.technology === 'MAGNETIC' && (
-                        <div className="pt-1">
-                          {switchItem.magnetOrientation && (
-                            <p><span className="font-medium">Magnet Orientation:</span> {switchItem.magnetOrientation}</p>
-                          )}
-                          {switchItem.magnetPosition && (
-                            <p><span className="font-medium">Magnet Position:</span> {switchItem.magnetPosition}</p>
-                          )}
-                          {switchItem.magnetPolarity && (
-                            <p><span className="font-medium">Magnet Polarity:</span> {switchItem.magnetPolarity}</p>
-                          )}
-                          {switchItem.initialMagneticFlux && (
-                            <p><span className="font-medium">Initial Flux:</span> {switchItem.initialMagneticFlux}</p>
-                          )}
-                          {switchItem.bottomOutMagneticFlux && (
-                            <p><span className="font-medium">Bottom Out Flux:</span> {switchItem.bottomOutMagneticFlux}</p>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Additional Info */}
-                      {switchItem.pcbThickness && (
-                        <p><span className="font-medium">PCB Thickness:</span> {switchItem.pcbThickness}</p>
-                      )}
-                      {switchItem.compatibility && (
-                        <p><span className="font-medium">Compatibility:</span> {switchItem.compatibility}</p>
                       )}
                     </div>
-
-                    <div className="flex items-center justify-between flex-shrink-0 pt-2 border-t border-gray-200 dark:border-gray-700">
-                      {switchItem.inCollection ? (
-                        <span className="text-green-600 dark:text-green-400 text-sm">
-                          ✓ In your collection
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => addToCollection(switchItem.id)}
-                          disabled={addingSwitch === switchItem.id}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                        >
-                          {addingSwitch === switchItem.id ? 'Adding...' : 'Add to Collection'}
-                        </button>
-                      )}
-                      
-                      <div className="relative dropdown-container">
-                        <button
-                          onClick={() => setOpenDropdown(openDropdown === switchItem.id ? null : switchItem.id)}
-                          className="flex items-center gap-1 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
-                        >
-                          Actions
-                          <svg className={`w-4 h-4 transition-transform ${openDropdown === switchItem.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                        
-                        {openDropdown === switchItem.id && (
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-                            <Link
-                              href={`/switches/${switchItem.id}`}
-                              className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-md"
-                              onClick={() => setOpenDropdown(null)}
-                            >
-                              View Details
-                            </Link>
-                            
-                            {!switchItem.inCollection && (
-                              <button
-                                onClick={() => {
-                                  addToCollection(switchItem.id)
-                                  setOpenDropdown(null)
-                                }}
-                                disabled={addingSwitch === switchItem.id}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-                              >
-                                {addingSwitch === switchItem.id ? 'Adding...' : 'Add to Collection'}
-                              </button>
-                            )}
-                            
-                            <Link
-                              href={`/switches/${switchItem.id}/suggest-edit`}
-                              className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              onClick={() => setOpenDropdown(null)}
-                            >
-                              Suggest Edit
-                            </Link>
-                            
-                            <button
-                              onClick={() => {
-                                setLinkDialogSwitch({ id: switchItem.id, name: switchItem.name })
-                                setOpenDropdown(null)
-                              }}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-md"
-                            >
-                              Link to Collection
-                            </button>
+                    
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {switchItem.name}
+                        </h3>
+                        {switchItem.inCollection && (
+                          <div className="bg-green-500 text-white p-0.5 rounded-full">
+                            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
                           </div>
                         )}
                       </div>
-                    </div>
+                      {switchItem.manufacturer && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {switchItem.manufacturer}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-
             </>
           )}
         </div>
@@ -1323,6 +1131,20 @@ export default function BrowseMasterSwitchesPage() {
             // Refresh the page to update the switch status
             router.refresh()
           }}
+        />
+      )}
+      
+      {/* Switch Details Popup */}
+      {selectedSwitch && (
+        <MasterSwitchDetailsPopup
+          switchItem={selectedSwitch}
+          onClose={() => setSelectedSwitch(null)}
+          onAddToCollection={addToCollection}
+          onDeleteSwitch={session?.user?.role === 'ADMIN' ? deleteSwitch : undefined}
+          onOpenLinkDialog={setLinkDialogSwitch}
+          isAddingSwitch={addingSwitch === selectedSwitch.id}
+          isDeletingSwitch={deletingSwitch === selectedSwitch.id}
+          isAdmin={session?.user?.role === 'ADMIN'}
         />
       )}
     </div>
