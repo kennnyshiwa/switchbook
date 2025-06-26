@@ -17,6 +17,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+    updateAge: 24 * 60 * 60, // Update session every 24 hours
   },
   debug: process.env.NODE_ENV === "development",
   trustHost: true,
@@ -35,8 +37,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         try {
           const { username, password } = loginSchema.parse(credentials)
           
-          const user = await prisma.user.findUnique({
-            where: { username },
+          // Make username lookup case-insensitive
+          const user = await prisma.user.findFirst({
+            where: { 
+              username: {
+                equals: username,
+                mode: 'insensitive'
+              }
+            },
           })
 
           if (!user || !user.password) {
@@ -114,8 +122,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         let suffix = 1
         
         const checkUsername = async (usernameToCheck: string) => {
-          return await prisma.user.findUnique({ 
-            where: { username: usernameToCheck } 
+          return await prisma.user.findFirst({ 
+            where: { 
+              username: {
+                equals: usernameToCheck,
+                mode: 'insensitive'
+              }
+            } 
           })
         }
         
@@ -158,6 +171,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.iat = Math.floor(Date.now() / 1000) // Issued at time
+        token.exp = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // Expires in 7 days
       }
       
       // For OAuth sign-ins, fetch user data

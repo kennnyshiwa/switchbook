@@ -14,12 +14,17 @@ async function registerHandler(request: NextRequest) {
     // Validate input
     const validatedData = registerSchema.parse(body)
     
-    // Check if user already exists
+    // Check if user already exists (case-insensitive username check)
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
           { email: validatedData.email },
-          { username: validatedData.username }
+          { 
+            username: {
+              equals: validatedData.username,
+              mode: 'insensitive'
+            }
+          }
         ]
       }
     })
