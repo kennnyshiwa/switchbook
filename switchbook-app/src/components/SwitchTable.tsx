@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, memo } from 'react'
-import { Switch } from '@prisma/client'
+import { Switch, ClickType } from '@prisma/client'
 import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
@@ -114,6 +114,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Double Stage
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Click Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Materials
@@ -244,6 +247,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.doubleStage ? '✓' : '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                  {switchItem.clickType ? switchItem.clickType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) : '-'}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
                   <div className="space-y-1">

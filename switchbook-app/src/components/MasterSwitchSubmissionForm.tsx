@@ -28,6 +28,7 @@ const masterSwitchSubmissionSchema = z.object({
   springLength: z.string().optional(),
   progressiveSpring: z.boolean().optional(),
   doubleStage: z.boolean().optional(),
+  clickType: z.enum(['CLICK_LEAF', 'CLICK_BAR', 'CLICK_JACKET']).optional().or(z.literal('')),
   
   // Materials
   topHousing: z.string().optional(),
@@ -89,6 +90,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       // Clean string fields - convert empty strings to undefined
       type: data.type === '' ? undefined : data.type,
       technology: data.technology === '' ? undefined : data.technology,
+      clickType: data.clickType === '' ? undefined : data.clickType,
       imageUrl: data.imageUrl && data.imageUrl.trim() !== '' ? data.imageUrl.trim() : undefined,
     };
     
@@ -99,6 +101,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
   const technologyValue = watch('technology');
   const typeValue = watch('type');
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE';
+  const showClickType = typeValue === 'CLICKY';
 
   // Show magnetic fields when magnetic technology is selected
   if (technologyValue === 'MAGNETIC' && !showMagneticFields) {
@@ -377,6 +380,23 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             </label>
           </div>
         </div>
+        
+        {showClickType && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Click Type
+            </label>
+            <select
+              {...register('clickType')}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2"
+            >
+              <option value="">Select click type</option>
+              <option value="CLICK_LEAF">Click Leaf</option>
+              <option value="CLICK_BAR">Click Bar</option>
+              <option value="CLICK_JACKET">Click Jacket</option>
+            </select>
+          </div>
+        )}
       </div>
 
 

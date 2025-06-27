@@ -1,4 +1,4 @@
-import { SwitchType, SwitchTechnology } from '@prisma/client';
+import { SwitchType, SwitchTechnology, ClickType } from '@prisma/client';
 
 interface SwitchData {
   name: string;
@@ -31,6 +31,7 @@ interface SwitchData {
   frankenTop?: string | null;
   frankenBottom?: string | null;
   frankenStem?: string | null;
+  clickType?: ClickType | null | '';
   dateObtained?: string | null;
 }
 
@@ -66,6 +67,7 @@ export function transformSwitchData(data: SwitchData) {
     frankenTop: data.frankenTop || null,
     frankenBottom: data.frankenBottom || null,
     frankenStem: data.frankenStem || null,
+    clickType: data.clickType === '' ? null : (data.clickType || null),
     dateObtained: data.dateObtained ? new Date(data.dateObtained) : null,
   };
 }

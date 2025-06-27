@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, memo } from 'react'
-import { Switch } from '@prisma/client'
+import { Switch, ClickType } from '@prisma/client'
 import Image from 'next/image'
 import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
@@ -172,7 +172,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             </p>
           )}
 
-          {(switchItem.initialForce || switchItem.actuationForce || switchItem.tactileForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut || switchItem.springWeight || switchItem.springLength || switchItem.progressiveSpring || switchItem.doubleStage) && (
+          {(switchItem.initialForce || switchItem.actuationForce || switchItem.tactileForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut || switchItem.springWeight || switchItem.springLength || switchItem.progressiveSpring || switchItem.doubleStage || switchItem.clickType) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Specs</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -224,6 +224,11 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
                 {switchItem.doubleStage && (
                   <p className="text-sm text-gray-600 dark:text-gray-300 col-span-2">
                     <span className="font-medium">✓ Double Stage</span>
+                  </p>
+                )}
+                {switchItem.clickType && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Click Type:</span> {switchItem.clickType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                   </p>
                 )}
               </div>

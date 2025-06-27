@@ -28,6 +28,7 @@ const editSuggestionSchema = z.object({
   springLength: z.string().optional().nullable().or(z.literal('')),
   progressiveSpring: z.boolean().optional().nullable(),
   doubleStage: z.boolean().optional().nullable(),
+  clickType: z.enum(['CLICK_LEAF', 'CLICK_BAR', 'CLICK_JACKET']).optional().nullable(),
   
   // Materials
   topHousing: z.string().optional().nullable().or(z.literal('')),
@@ -90,6 +91,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     bottomOutForce: currentData.bottomOutForce,
     progressiveSpring: currentData.progressiveSpring || false,
     doubleStage: currentData.doubleStage || false,
+    clickType: currentData.clickType || null,
     preTravel: currentData.preTravel,
     bottomOut: currentData.bottomOut,
     initialMagneticFlux: currentData.initialMagneticFlux,
@@ -115,6 +117,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   const technologyValue = watch('technology');
   const typeValue = watch('type');
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE';
+  const showClickType = typeValue === 'CLICKY';
 
   // Show magnetic fields when magnetic technology is selected
   if (technologyValue === 'MAGNETIC' && !showMagneticFields) {
@@ -480,6 +483,27 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             </label>
           </div>
         </div>
+        
+        {showClickType && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Click Type
+            </label>
+            <select
+              {...register('clickType')}
+              onChange={(e) => {
+                register('clickType').onChange(e);
+                handleFieldChange('clickType', e.target.value || null);
+              }}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2"
+            >
+              <option value="">Select click type</option>
+              <option value="CLICK_LEAF">Click Leaf</option>
+              <option value="CLICK_BAR">Click Bar</option>
+              <option value="CLICK_JACKET">Click Jacket</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Materials */}

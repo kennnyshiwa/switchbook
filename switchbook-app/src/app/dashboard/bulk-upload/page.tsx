@@ -26,6 +26,7 @@ interface ParsedSwitch {
   bottomOutForce?: number
   progressiveSpring?: boolean
   doubleStage?: boolean
+  clickType?: string
   preTravel?: number
   bottomOut?: number
   notes?: string
@@ -529,6 +530,19 @@ const SwitchTableRow = memo(({
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
+        <select
+          value={localValues.clickType || ''}
+          onChange={(e) => handleChange('clickType', e.target.value || undefined)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite || localValues.type !== 'CLICKY'}
+        >
+          <option value="">No click type</option>
+          <option value="CLICK_LEAF">Click Leaf</option>
+          <option value="CLICK_BAR">Click Bar</option>
+          <option value="CLICK_JACKET">Click Jacket</option>
+        </select>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="number"
           value={localValues.preTravel || ''}
@@ -694,6 +708,7 @@ export default function BulkUploadPage() {
     { key: 'bottomOutForce', label: 'Bottom Out Force (g)', required: false },
     { key: 'progressiveSpring', label: 'Progressive Spring', required: false },
     { key: 'doubleStage', label: 'Double Stage', required: false },
+    { key: 'clickType', label: 'Click Type', required: false },
     { key: 'preTravel', label: 'Pre-travel (mm)', required: false },
     { key: 'bottomOut', label: 'Bottom Out (mm)', required: false },
     { key: 'topHousing', label: 'Top Housing', required: false },
@@ -745,6 +760,7 @@ export default function BulkUploadPage() {
       '60', // Bottom Out Force (g)
       'false', // Progressive Spring
       'false', // Double Stage
+      '', // Click Type
       '2.0', // Pre-travel (mm)
       '4.0', // Bottom Out (mm)
       'Nylon', // Top Housing
@@ -940,6 +956,21 @@ export default function BulkUploadPage() {
               // If not empty but not recognized, keep original value
               (switchData as any)[field] = value
             }
+          } else if (field === 'clickType') {
+            // Normalize click type to uppercase
+            const normalizedClickType = value.toUpperCase().replace(/[\s-]/g, '_')
+            const clickTypeMapping = {
+              'CLICK_LEAF': 'CLICK_LEAF',
+              'CLICKLEAF': 'CLICK_LEAF',
+              'LEAF': 'CLICK_LEAF',
+              'CLICK_BAR': 'CLICK_BAR',
+              'CLICKBAR': 'CLICK_BAR',
+              'BAR': 'CLICK_BAR',
+              'CLICK_JACKET': 'CLICK_JACKET',
+              'CLICKJACKET': 'CLICK_JACKET',
+              'JACKET': 'CLICK_JACKET',
+            } as const
+            (switchData as any)[field] = clickTypeMapping[normalizedClickType as keyof typeof clickTypeMapping] || normalizedClickType
           } else if (field === 'springWeight' || field === 'springLength') {
             // Clean up spring weight and length values to avoid duplicate units
             (switchData as any)[field] = cleanUnitValue(value)
@@ -1162,6 +1193,7 @@ export default function BulkUploadPage() {
                 <li>• Franken Top, Franken Bottom, Franken Stem are free text fields for custom switch modifications</li>
                 <li>• Forces should be numeric values in grams (Actuation, Bottom Out, and Tactile for tactile switches)</li>
                 <li>• Tactile Force is only applicable for TACTILE and SILENT_TACTILE switch types</li>
+                <li>• Click Type is only applicable for CLICKY switches and must be: CLICK_LEAF, CLICK_BAR, or CLICK_JACKET (case-insensitive)</li>
                 <li>• Progressive Spring and Double Stage should be &quot;true&quot;/&quot;false&quot;, &quot;yes&quot;/&quot;no&quot;, or &quot;1&quot;/&quot;0&quot;</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
               </ul>
@@ -1374,6 +1406,9 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Double Stage
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Click Type
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Pre-travel (mm)

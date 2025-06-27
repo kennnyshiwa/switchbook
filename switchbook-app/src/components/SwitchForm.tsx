@@ -23,6 +23,7 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
   const typeValue = watch('type')
   const showMagneticFields = technologyValue === 'MAGNETIC'
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE'
+  const showClickType = typeValue === 'CLICKY'
   
   return (
     <>
@@ -156,6 +157,24 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
               />
               {errors.tactileForce && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.tactileForce.message}</p>
+              )}
+            </div>
+          )}
+
+          {showClickType && (
+            <div>
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Click Type</label>
+              <select
+                {...register('clickType')}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2"
+              >
+                <option value="">Select click type</option>
+                <option value="CLICK_LEAF">Click Leaf</option>
+                <option value="CLICK_BAR">Click Bar</option>
+                <option value="CLICK_JACKET">Click Jacket</option>
+              </select>
+              {errors.clickType && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.clickType.message}</p>
               )}
             </div>
           )}

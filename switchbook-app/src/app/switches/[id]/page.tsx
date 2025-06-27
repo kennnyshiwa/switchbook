@@ -26,6 +26,7 @@ interface MasterSwitchDetail {
   springLength?: string
   progressiveSpring?: boolean
   doubleStage?: boolean
+  clickType?: string
   actuationForce?: number
   tactileForce?: number
   bottomOutForce?: number
@@ -452,7 +453,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             )}
 
             {/* Spring */}
-            {(switchData.springWeight || switchData.springLength || switchData.progressiveSpring || switchData.doubleStage) && (
+            {(switchData.springWeight || switchData.springLength || switchData.progressiveSpring || switchData.doubleStage || (switchData.type === 'CLICKY' && switchData.clickType)) && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Spring
@@ -480,6 +481,12 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Double Stage</dt>
                       <dd className="text-sm text-gray-900 dark:text-white">Yes</dd>
+                    </div>
+                  )}
+                  {switchData.type === 'CLICKY' && switchData.clickType && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Click Type</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.clickType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}</dd>
                     </div>
                   )}
                 </dl>

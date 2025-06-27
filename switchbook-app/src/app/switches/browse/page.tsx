@@ -23,6 +23,7 @@ interface MasterSwitch {
   bottomOutForce?: number
   progressiveSpring?: boolean
   doubleStage?: boolean
+  clickType?: string
   preTravel?: number
   bottomOut?: number
   springWeight?: string
