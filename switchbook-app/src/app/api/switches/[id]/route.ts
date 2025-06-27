@@ -73,7 +73,8 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
         'topHousing', 'bottomHousing', 'stem',
         'magnetOrientation', 'magnetPosition', 'magnetPolarity',
         'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
-        'pcbThickness', 'compatibility'
+        'pcbThickness', 'compatibility', 'tactileForce',
+        'progressiveSpring', 'doubleStage', 'clickType'
       ];
       
       for (const field of fieldsToCheck) {

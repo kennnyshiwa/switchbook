@@ -66,6 +66,10 @@ export async function POST(
         topHousing: userSwitch.masterSwitch.topHousing,
         bottomHousing: userSwitch.masterSwitch.bottomHousing,
         stem: userSwitch.masterSwitch.stem,
+        tactileForce: userSwitch.masterSwitch.tactileForce,
+        progressiveSpring: userSwitch.masterSwitch.progressiveSpring,
+        doubleStage: userSwitch.masterSwitch.doubleStage,
+        clickType: userSwitch.masterSwitch.clickType,
         // Reset tracking fields
         isModified: false,
         modifiedFields: [],
@@ -168,6 +172,10 @@ export async function GET(
             bottomOutMagneticFlux: true,
             pcbThickness: true,
             compatibility: true,
+            tactileForce: true,
+            progressiveSpring: true,
+            doubleStage: true,
+            clickType: true,
             version: true,
             lastModifiedAt: true,
           }
@@ -204,7 +212,8 @@ export async function GET(
         'topHousing', 'bottomHousing', 'stem',
         'magnetOrientation', 'magnetPosition', 'magnetPolarity',
         'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
-        'pcbThickness', 'compatibility'
+        'pcbThickness', 'compatibility', 'tactileForce',
+        'progressiveSpring', 'doubleStage', 'clickType'
       ]
 
       for (const field of fieldsToCheck) {

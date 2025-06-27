@@ -56,6 +56,10 @@ export async function POST(req: NextRequest) {
         topHousing: userSwitch.masterSwitch.topHousing,
         bottomHousing: userSwitch.masterSwitch.bottomHousing,
         stem: userSwitch.masterSwitch.stem,
+        tactileForce: userSwitch.masterSwitch.tactileForce,
+        progressiveSpring: userSwitch.masterSwitch.progressiveSpring,
+        doubleStage: userSwitch.masterSwitch.doubleStage,
+        clickType: userSwitch.masterSwitch.clickType,
         masterSwitchVersion: userSwitch.masterSwitch.version,
         isModified: false,
         modifiedFields: null
