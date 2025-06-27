@@ -47,6 +47,7 @@ export const switchSchema = z.object({
   frankenTop: z.string().max(100).optional().or(z.literal("")),
   frankenBottom: z.string().max(100).optional().or(z.literal("")),
   frankenStem: z.string().max(100).optional().or(z.literal("")),
+  clickType: z.enum(["CLICK_LEAF", "CLICK_BAR", "CLICK_JACKET"]).optional().or(z.literal("")),
   dateObtained: z.string().optional().or(z.literal("")),
 })
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react'
-import { Switch } from '@prisma/client'
+import { Switch, ClickType } from '@prisma/client'
 import Link from 'next/link'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 import {
@@ -35,6 +35,7 @@ interface EditableSwitchData {
   bottomOutForce?: number
   progressiveSpring?: boolean
   doubleStage?: boolean
+  clickType?: string
   preTravel?: number
   bottomOut?: number
   notes?: string
@@ -258,6 +259,11 @@ export default function BulkEditPage() {
     return switches.some(s => s.type === 'TACTILE' || s.type === 'SILENT_TACTILE')
   }, [switches])
 
+  // Check if we should show click type
+  const showClickType = useMemo(() => {
+    return switches.some(s => s.type === 'CLICKY')
+  }, [switches])
+
   // Track modified switches
   const modifiedSwitches = useMemo(() => {
     const modified = new Set<string>()
@@ -317,6 +323,7 @@ export default function BulkEditPage() {
           bottomOutForce: sw.bottomOutForce || undefined,
           progressiveSpring: sw.progressiveSpring || undefined,
           doubleStage: sw.doubleStage || undefined,
+          clickType: sw.clickType || undefined,
           preTravel: sw.preTravel || undefined,
           bottomOut: sw.bottomOut || undefined,
           notes: sw.notes || undefined,
@@ -352,6 +359,7 @@ export default function BulkEditPage() {
           'springLength',
           'progressiveSpring',
           'doubleStage',
+          'clickType',
           'topHousing',
           'bottomHousing',
           'stem',
@@ -380,6 +388,7 @@ export default function BulkEditPage() {
         defaultVisibility.frankenTop = false
         defaultVisibility.frankenBottom = false
         defaultVisibility.frankenStem = false
+        defaultVisibility.clickType = false
         defaultVisibility.magnetOrientation = false
         defaultVisibility.magnetPosition = false
         defaultVisibility.magnetPolarity = false
@@ -763,6 +772,35 @@ export default function BulkEditPage() {
           />
         ),
       },
+    )
+
+    // Add click type column if needed
+    if (showClickType) {
+      cols.push({
+        id: 'clickType',
+        accessorKey: 'clickType',
+        header: 'Click Type',
+        size: 120,
+        cell: ({ row }) => {
+          const isVisible = row.original.type === 'CLICKY'
+          return isVisible ? (
+            <select
+              value={row.original.clickType || ''}
+              onChange={(e) => updateSwitch(row.original.id, 'clickType', e.target.value || undefined)}
+              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              <option value="">-</option>
+              <option value="CLICK_LEAF">Click Leaf</option>
+              <option value="CLICK_BAR">Click Bar</option>
+              <option value="CLICK_JACKET">Click Jacket</option>
+            </select>
+          ) : null
+        },
+      })
+    }
+
+    // Add remaining columns
+    cols.push(
       {
         id: 'topHousing',
         accessorKey: 'topHousing',
@@ -1033,7 +1071,7 @@ export default function BulkEditPage() {
     )
 
     return cols
-  }, [updateSwitch, manufacturers, handleManufacturerSubmitted, submittedManufacturers, invalidSwitches, showMagneticFields, showTactileForce])
+  }, [updateSwitch, manufacturers, handleManufacturerSubmitted, submittedManufacturers, invalidSwitches, showMagneticFields, showTactileForce, showClickType])
 
   // Create table instance
   const table = useReactTable({

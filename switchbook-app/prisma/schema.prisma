@@ -78,6 +78,7 @@ model Switch {
   modifiedFields        Json?
   personalNotes         String?
   primaryImageId        String?
+  clickType             ClickType?
   masterSwitch          MasterSwitch?     @relation(fields: [masterSwitchId], references: [id])
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   images                SwitchImage[]
@@ -218,6 +219,7 @@ model MasterSwitch {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   primaryImageId         String?
+  clickType              ClickType?
   approvedBy             User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
   submittedBy            User               @relation("SubmittedBy", fields: [submittedById], references: [id])
   edits                  MasterSwitchEdit[]
@@ -347,4 +349,10 @@ enum NotificationType {
 enum ImageType {
   UPLOADED
   LINKED
+}
+
+enum ClickType {
+  CLICK_LEAF
+  CLICK_BAR
+  CLICK_JACKET
 }

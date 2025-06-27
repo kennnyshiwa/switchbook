@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { switchSchema } from '@/lib/validation'
-import { Switch } from '@prisma/client'
+import { Switch, ClickType } from '@prisma/client'
 import SwitchForm from './SwitchForm'
 import SwitchImageManager from './SwitchImageManager'
 
@@ -87,6 +87,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       frankenTop: switchItem.frankenTop || '',
       frankenBottom: switchItem.frankenBottom || '',
       frankenStem: switchItem.frankenStem || '',
+      clickType: switchItem.clickType || undefined,
       dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
     }
   })
@@ -223,6 +224,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         initialMagneticFlux: currentData.initialMagneticFlux || null,
         bottomOutMagneticFlux: currentData.bottomOutMagneticFlux || null,
         pcbThickness: currentData.pcbThickness || null,
+        clickType: currentData.clickType || null,
         notes: currentData.notes || null,
         submissionNotes: submissionNotes,
         confirmNotDuplicate: confirmNotDuplicate,
