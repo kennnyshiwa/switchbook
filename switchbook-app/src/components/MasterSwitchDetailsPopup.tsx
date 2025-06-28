@@ -34,6 +34,7 @@ interface MasterSwitch {
   bottomOutMagneticFlux?: number
   pcbThickness?: string
   compatibility?: string
+  clickType?: 'CLICK_LEAF' | 'CLICK_BAR' | 'CLICK_JACKET'
   inCollection: boolean
   userCount: number
   submittedBy: {
@@ -156,6 +157,12 @@ export default function MasterSwitchDetailsPopup({
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-600 dark:text-gray-400">Compatibility</span>
                     <span className="text-gray-900 dark:text-white">{switchItem.compatibility}</span>
+                  </div>
+                )}
+                {switchItem.clickType && (
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Click Type</span>
+                    <span className="text-gray-900 dark:text-white">{switchItem.clickType.replace(/_/g, ' ')}</span>
                   </div>
                 )}
               </div>
