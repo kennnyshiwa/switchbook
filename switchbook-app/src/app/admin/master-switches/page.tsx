@@ -443,6 +443,9 @@ export default function AdminMasterSwitchesPage() {
                       {submission.originalSubmissionData.doubleStage && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Double Stage:</span> Yes</p>
                       )}
+                      {submission.originalSubmissionData.clickType && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Click Type:</span> {submission.originalSubmissionData.clickType.replace(/_/g, ' ')}</p>
+                      )}
                     </div>
                     
                     {/* Additional Info */}
