@@ -1192,7 +1192,7 @@ export default function BulkUploadPage() {
                 <li>• Manufacturer names will be verified during import - use standard names like &quot;Gateron&quot;, &quot;Cherry&quot;, &quot;Kailh&quot;</li>
                 <li>• Franken Top, Franken Bottom, Franken Stem are free text fields for custom switch modifications</li>
                 <li>• Forces should be numeric values in grams (Actuation, Bottom Out, and Tactile for tactile switches)</li>
-                <li>• Tactile Force is only applicable for TACTILE and SILENT_TACTILE switch types</li>
+                <li>• Tactile Force is only applicable for TACTILE, SILENT_TACTILE, and CLICKY switch types</li>
                 <li>• Click Type is only applicable for CLICKY switches and must be: CLICK_LEAF, CLICK_BAR, or CLICK_JACKET (case-insensitive)</li>
                 <li>• Progressive Spring and Double Stage should be &quot;true&quot;/&quot;false&quot;, &quot;yes&quot;/&quot;no&quot;, or &quot;1&quot;/&quot;0&quot;</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
