@@ -58,6 +58,7 @@ const editSuggestionSchema = z.object({
   frankenTop: optionalString,
   frankenBottom: optionalString,
   frankenStem: optionalString,
+  clickType: z.enum(['CLICK_LEAF', 'CLICK_BAR', 'CLICK_JACKET']).optional().nullable(),
   editReason: z.string().min(10),
   changedFields: z.array(z.string()).min(1),
 })
@@ -164,6 +165,7 @@ export async function POST(
           frankenTop: validated.frankenTop,
           frankenBottom: validated.frankenBottom,
           frankenStem: validated.frankenStem,
+          clickType: validated.clickType,
           editReason: validated.editReason,
         },
       },

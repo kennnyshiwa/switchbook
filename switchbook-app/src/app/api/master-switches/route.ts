@@ -30,6 +30,7 @@ const querySchema = z.object({
   bottomOutForceMax: z.string().optional().transform(val => val ? Number(val) : undefined),
   progressiveSpring: z.string().optional(),
   doubleStage: z.string().optional(),
+  clickType: z.string().optional(),
   preTravelMin: z.string().optional().transform(val => val ? Number(val) : undefined),
   preTravelMax: z.string().optional().transform(val => val ? Number(val) : undefined),
   bottomOutMin: z.string().optional().transform(val => val ? Number(val) : undefined),
@@ -80,6 +81,7 @@ export async function GET(request: Request) {
       bottomOutForceMax,
       progressiveSpring,
       doubleStage,
+      clickType,
       preTravelMin,
       preTravelMax,
       bottomOutMin,
@@ -138,6 +140,7 @@ export async function GET(request: Request) {
       }),
       ...(progressiveSpring && { progressiveSpring: progressiveSpring === 'true' }),
       ...(doubleStage && { doubleStage: doubleStage === 'true' }),
+      ...(clickType && { clickType: clickType as any }),
       ...((preTravelMin !== undefined || preTravelMax !== undefined) && {
         preTravel: {
           ...(preTravelMin !== undefined && { gte: preTravelMin }),

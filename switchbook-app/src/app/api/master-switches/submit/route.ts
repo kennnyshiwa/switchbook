@@ -28,6 +28,9 @@ const submissionSchema = z.object({
   progressiveSpring: z.boolean().optional().nullable(),
   doubleStage: z.boolean().optional().nullable(),
   
+  // Click type
+  clickType: z.enum(['CLICK_LEAF', 'CLICK_BAR', 'CLICK_JACKET']).optional().nullable(),
+  
   // Materials
   topHousing: z.string().optional().nullable(),
   bottomHousing: z.string().optional().nullable(),
@@ -192,6 +195,7 @@ export async function POST(req: NextRequest) {
         springLength: validated.springLength || null,
         progressiveSpring: validated.progressiveSpring || false,
         doubleStage: validated.doubleStage || false,
+        clickType: validated.clickType || null,
         topHousing: validated.topHousing || null,
         bottomHousing: validated.bottomHousing || null,
         stem: validated.stem || null,
