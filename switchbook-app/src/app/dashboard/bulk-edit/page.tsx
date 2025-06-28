@@ -256,7 +256,7 @@ export default function BulkEditPage() {
 
   // Check if we should show tactile force
   const showTactileForce = useMemo(() => {
-    return switches.some(s => s.type === 'TACTILE' || s.type === 'SILENT_TACTILE')
+    return switches.some(s => s.type === 'TACTILE' || s.type === 'SILENT_TACTILE' || s.type === 'CLICKY')
   }, [switches])
 
   // Check if we should show click type
@@ -639,7 +639,7 @@ export default function BulkEditPage() {
         header: 'Tactile (g)',
         size: 100,
         cell: ({ row }) => {
-          const isVisible = row.original.type === 'TACTILE' || row.original.type === 'SILENT_TACTILE'
+          const isVisible = row.original.type === 'TACTILE' || row.original.type === 'SILENT_TACTILE' || row.original.type === 'CLICKY'
           return isVisible ? (
             <EditableCell
               value={row.original.tactileForce}
