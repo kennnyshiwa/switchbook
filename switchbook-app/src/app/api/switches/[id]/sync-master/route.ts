@@ -67,6 +67,7 @@ export async function POST(
         bottomHousing: userSwitch.masterSwitch.bottomHousing,
         stem: userSwitch.masterSwitch.stem,
         tactileForce: userSwitch.masterSwitch.tactileForce,
+        tactilePosition: userSwitch.masterSwitch.tactilePosition,
         progressiveSpring: userSwitch.masterSwitch.progressiveSpring,
         doubleStage: userSwitch.masterSwitch.doubleStage,
         clickType: userSwitch.masterSwitch.clickType,
@@ -173,6 +174,7 @@ export async function GET(
             pcbThickness: true,
             compatibility: true,
             tactileForce: true,
+            tactilePosition: true,
             progressiveSpring: true,
             doubleStage: true,
             clickType: true,
@@ -212,7 +214,7 @@ export async function GET(
         'topHousing', 'bottomHousing', 'stem',
         'magnetOrientation', 'magnetPosition', 'magnetPolarity',
         'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
-        'pcbThickness', 'compatibility', 'tactileForce',
+        'pcbThickness', 'compatibility', 'tactileForce', 'tactilePosition',
         'progressiveSpring', 'doubleStage', 'clickType'
       ]
 

@@ -29,6 +29,7 @@ interface MasterSwitchDetail {
   clickType?: string
   actuationForce?: number
   tactileForce?: number
+  tactilePosition?: string
   bottomOutForce?: number
   preTravel?: number
   bottomOut?: number
@@ -388,6 +389,12 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Tactile Force</dt>
                       <dd className="text-sm text-gray-900 dark:text-white">{switchData.tactileForce}g</dd>
+                    </div>
+                  )}
+                  {switchData.tactilePosition && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Tactile Position</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.tactilePosition}</dd>
                     </div>
                   )}
                   {switchData.bottomOutForce && (

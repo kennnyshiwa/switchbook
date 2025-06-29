@@ -77,6 +77,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 Tactile Force
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Tactile Position
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Bottom Out Force
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -208,6 +211,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.tactileForce ? `${switchItem.tactileForce}g` : '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
+                  {switchItem.tactilePosition || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.bottomOutForce ? `${switchItem.bottomOutForce}g` : '-'}
