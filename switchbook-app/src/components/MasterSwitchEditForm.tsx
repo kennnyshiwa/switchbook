@@ -19,7 +19,7 @@ const editSuggestionSchema = z.object({
   initialForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
   actuationForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
   tactileForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
-  tactilePosition: z.string().optional().nullable().or(z.literal('')),
+  tactilePosition: z.number().min(0).max(10).optional().nullable().or(z.nan()),
   bottomOutForce: z.number().min(0).max(1000).optional().nullable().or(z.nan()),
   preTravel: z.number().min(0).max(10).optional().nullable().or(z.nan()),
   bottomOut: z.number().min(0).max(10).optional().nullable().or(z.nan()),
@@ -89,7 +89,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     initialForce: currentData.initialForce,
     actuationForce: currentData.actuationForce,
     tactileForce: currentData.tactileForce,
-    tactilePosition: currentData.tactilePosition || '',
+    tactilePosition: currentData.tactilePosition || undefined,
     bottomOutForce: currentData.bottomOutForce,
     progressiveSpring: currentData.progressiveSpring || false,
     doubleStage: currentData.doubleStage || false,
@@ -368,17 +368,20 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
           {showTactilePosition && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tactile Position
+                Tactile Position (mm)
               </label>
               <input
-                {...register('tactilePosition')}
+                {...register('tactilePosition', { valueAsNumber: true })}
                 onChange={(e) => {
                   register('tactilePosition').onChange(e);
-                  handleFieldChange('tactilePosition', e.target.value);
+                  handleFieldChange('tactilePosition', e.target.value ? parseFloat(e.target.value) : null);
                 }}
-                type="text"
+                type="number"
+                step="0.1"
+                min="0"
+                max="10"
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-                placeholder="e.g., Early, Mid, Late"
+                placeholder="e.g., 0.3, 1.5"
               />
             </div>
           )}

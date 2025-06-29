@@ -194,7 +194,7 @@ export default function MasterSwitchDetailsPopup({
                 {switchItem.tactilePosition && (
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-600 dark:text-gray-400">Tactile Position</span>
-                    <span className="text-gray-900 dark:text-white">{switchItem.tactilePosition}</span>
+                    <span className="text-gray-900 dark:text-white">{switchItem.tactilePosition}mm</span>
                   </div>
                 )}
                 {switchItem.bottomOutForce && (

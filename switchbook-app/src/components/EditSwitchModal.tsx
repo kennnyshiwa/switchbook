@@ -89,7 +89,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       frankenBottom: switchItem.frankenBottom || '',
       frankenStem: switchItem.frankenStem || '',
       clickType: switchItem.clickType || undefined,
-      tactilePosition: switchItem.tactilePosition || '',
+      tactilePosition: switchItem.tactilePosition || undefined,
       dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
     }
   })

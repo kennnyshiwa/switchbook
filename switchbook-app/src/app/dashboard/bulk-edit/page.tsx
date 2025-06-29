@@ -32,7 +32,7 @@ interface EditableSwitchData {
   springLength?: string
   actuationForce?: number
   tactileForce?: number
-  tactilePosition?: string
+  tactilePosition?: number
   bottomOutForce?: number
   progressiveSpring?: boolean
   doubleStage?: boolean
@@ -666,7 +666,7 @@ export default function BulkEditPage() {
       cols.push({
         id: 'tactilePosition',
         accessorKey: 'tactilePosition',
-        header: 'Tactile Position',
+        header: 'Tactile Position (mm)',
         size: 120,
         cell: ({ row }) => {
           const isVisible = row.original.type === 'TACTILE' || row.original.type === 'SILENT_TACTILE'
@@ -676,7 +676,11 @@ export default function BulkEditPage() {
               field="tactilePosition"
               switchId={row.original.id}
               onUpdate={updateSwitch}
-              placeholder="e.g., Early, Mid, Late"
+              type="number"
+              step={0.1}
+              min={0}
+              max={10}
+              placeholder="0.3, 1.5"
             />
           ) : null
         },
