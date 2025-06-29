@@ -44,6 +44,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
   const [isSubmittingToMaster, setIsSubmittingToMaster] = useState(false)
   const [showSubmissionDialog, setShowSubmissionDialog] = useState(false)
   const [submissionNotes, setSubmissionNotes] = useState('')
+  const [masterNotes, setMasterNotes] = useState('')
   const [similarSwitches, setSimilarSwitches] = useState<any[]>([])
   const [confirmNotDuplicate, setConfirmNotDuplicate] = useState(false)
   const [localImages, setLocalImages] = useState<SwitchImage[]>(switchItem.images || [])
@@ -194,6 +195,34 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     try {
       const currentData = watch()
       
+      // If this is the first time linking and there are existing notes, move them to personalNotes first
+      if (!switchItem.masterSwitchId && currentData.notes) {
+        const currentPersonalNotes = currentData.personalNotes || ''
+        const notesToMove = currentData.notes
+        
+        // Create a simplified update that only touches the notes fields
+        const notesUpdate = {
+          notes: '', // Clear notes field
+          personalNotes: currentPersonalNotes ? `${currentPersonalNotes}\n\n${notesToMove}` : notesToMove
+        }
+        
+        const moveNotesResponse = await fetch(`/api/switches/${switchItem.id}/update-notes`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notesUpdate)
+        })
+        
+        if (!moveNotesResponse.ok) {
+          const errorText = await moveNotesResponse.text()
+          console.error('Failed to preserve personal notes:', errorText)
+          throw new Error('Failed to preserve personal notes')
+        }
+        
+        // Update the form to reflect this change
+        setValue('notes', '')
+        setValue('personalNotes', notesUpdate.personalNotes)
+      }
+      
       // Find the first externally linked image if available
       const linkedImage = localImages.find(img => img.type === 'LINKED')
       const imageUrl = linkedImage ? linkedImage.url : null
@@ -225,7 +254,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         bottomOutMagneticFlux: currentData.bottomOutMagneticFlux || null,
         pcbThickness: currentData.pcbThickness || null,
         clickType: currentData.clickType || null,
-        notes: currentData.notes || null,
+        notes: masterNotes || null,
         submissionNotes: submissionNotes,
         confirmNotDuplicate: confirmNotDuplicate,
         sourceSwitchId: switchItem.id,  // Include the source switch ID
@@ -256,26 +285,33 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       // Success
       setShowSubmissionDialog(false)
       setSubmissionNotes('')
+      setMasterNotes('')
       setSimilarSwitches([])
       setConfirmNotDuplicate(false)
       
       // If the switch was linked, update the local state to reflect this
       if (data.linkedSwitch) {
-        // Update the switch data to show it's now linked
-        const updatedSwitch = {
-          ...switchItem,
-          masterSwitchId: data.id,
-          masterSwitchVersion: 1,
-          isModified: false,
-          modifiedFields: null
-        }
-        onSwitchUpdated(updatedSwitch)
+        // The master switch was successfully created and linked
+        // Now we need to sync with the master to get the master notes
+        const syncResponse = await fetch(`/api/switches/${switchItem.id}/sync-master`, {
+          method: 'POST'
+        })
         
-        // Refresh sync status
-        const syncResponse = await fetch(`/api/switches/${switchItem.id}/sync-master`)
         if (syncResponse.ok) {
           const syncData = await syncResponse.json()
-          setSyncStatus(syncData)
+          // Update with the synced data (notes already moved to personalNotes if needed)
+          onSwitchUpdated(syncData.switch)
+          
+          // Update form to reflect the synced data
+          setValue('notes', syncData.switch.notes || '')
+          // personalNotes should already be set from the earlier update
+        }
+        
+        // Refresh sync status
+        const statusResponse = await fetch(`/api/switches/${switchItem.id}/sync-master`)
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json()
+          setSyncStatus(statusData)
         }
       }
       
@@ -455,6 +491,23 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
               )}
 
               <div>
+                <label htmlFor="masterNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Master Switch Notes (optional)
+                </label>
+                <textarea
+                  id="masterNotes"
+                  value={masterNotes}
+                  onChange={(e) => setMasterNotes(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                  placeholder="Add any notes about this switch that should be included in the master database..."
+                />
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  These notes will be visible to all users in the master database
+                </p>
+              </div>
+
+              <div>
                 <label htmlFor="submissionNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Submission Notes (required)
                 </label>
@@ -478,6 +531,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
                 onClick={() => {
                   setShowSubmissionDialog(false)
                   setSubmissionNotes('')
+                  setMasterNotes('')
                   setSimilarSwitches([])
                   setConfirmNotDuplicate(false)
                   setError(null)
