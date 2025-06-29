@@ -405,6 +405,9 @@ export default function AdminMasterSwitchesPage() {
                       {submission.originalSubmissionData.tactileForce && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Tactile Force:</span> {submission.originalSubmissionData.tactileForce}g</p>
                       )}
+                      {submission.originalSubmissionData.tactilePosition && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Tactile Position:</span> {submission.originalSubmissionData.tactilePosition}mm</p>
+                      )}
                       {submission.originalSubmissionData.bottomOutForce && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Bottom Out Force:</span> {submission.originalSubmissionData.bottomOutForce}g</p>
                       )}
