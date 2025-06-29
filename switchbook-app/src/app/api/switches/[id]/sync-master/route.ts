@@ -71,6 +71,7 @@ export async function POST(
         progressiveSpring: userSwitch.masterSwitch.progressiveSpring,
         doubleStage: userSwitch.masterSwitch.doubleStage,
         clickType: userSwitch.masterSwitch.clickType,
+        imageUrl: userSwitch.masterSwitch.imageUrl,
         // Reset tracking fields
         isModified: false,
         modifiedFields: [],
@@ -178,6 +179,7 @@ export async function GET(
             progressiveSpring: true,
             doubleStage: true,
             clickType: true,
+            imageUrl: true,
             version: true,
             lastModifiedAt: true,
           }
@@ -215,7 +217,7 @@ export async function GET(
         'magnetOrientation', 'magnetPosition', 'magnetPolarity',
         'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
         'pcbThickness', 'compatibility', 'tactileForce', 'tactilePosition',
-        'progressiveSpring', 'doubleStage', 'clickType'
+        'progressiveSpring', 'doubleStage', 'clickType', 'imageUrl'
       ]
 
       for (const field of fieldsToCheck) {
