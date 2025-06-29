@@ -102,7 +102,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
   const technologyValue = watch('technology');
   const typeValue = watch('type');
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY';
-  const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE';
+  const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY';
   const showClickType = typeValue === 'CLICKY';
 
   // Show magnetic fields when magnetic technology is selected

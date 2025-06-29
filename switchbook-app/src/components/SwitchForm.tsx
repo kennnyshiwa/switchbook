@@ -23,7 +23,7 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
   const typeValue = watch('type')
   const showMagneticFields = technologyValue === 'MAGNETIC'
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY'
-  const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE'
+  const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY'
   const showClickType = typeValue === 'CLICKY'
   
   return (

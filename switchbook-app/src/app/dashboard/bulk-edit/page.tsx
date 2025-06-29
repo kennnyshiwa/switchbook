@@ -661,7 +661,7 @@ export default function BulkEditPage() {
     }
 
     // Add tactile position column if needed  
-    const showTactilePosition = switches.some(s => s.type === 'TACTILE' || s.type === 'SILENT_TACTILE')
+    const showTactilePosition = switches.some(s => s.type === 'TACTILE' || s.type === 'SILENT_TACTILE' || s.type === 'CLICKY')
     if (showTactilePosition) {
       cols.push({
         id: 'tactilePosition',
@@ -669,7 +669,7 @@ export default function BulkEditPage() {
         header: 'Tactile Position (mm)',
         size: 120,
         cell: ({ row }) => {
-          const isVisible = row.original.type === 'TACTILE' || row.original.type === 'SILENT_TACTILE'
+          const isVisible = row.original.type === 'TACTILE' || row.original.type === 'SILENT_TACTILE' || row.original.type === 'CLICKY'
           return isVisible ? (
             <EditableCell
               value={row.original.tactilePosition}
