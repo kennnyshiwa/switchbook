@@ -57,9 +57,11 @@ export async function POST(req: NextRequest) {
         bottomHousing: userSwitch.masterSwitch.bottomHousing,
         stem: userSwitch.masterSwitch.stem,
         tactileForce: userSwitch.masterSwitch.tactileForce,
+        tactilePosition: userSwitch.masterSwitch.tactilePosition,
         progressiveSpring: userSwitch.masterSwitch.progressiveSpring,
         doubleStage: userSwitch.masterSwitch.doubleStage,
         clickType: userSwitch.masterSwitch.clickType,
+        imageUrl: userSwitch.masterSwitch.imageUrl,
         masterSwitchVersion: userSwitch.masterSwitch.version,
         isModified: false,
         modifiedFields: null
@@ -81,6 +83,41 @@ export async function POST(req: NextRequest) {
         where: { id: userSwitch.id },
         data: updateData
       })
+
+      // Sync master switch imageUrl to SwitchImage if it exists
+      if (userSwitch.masterSwitch.imageUrl) {
+        // Check if this image URL already exists for this switch
+        const existingImage = await prisma.switchImage.findFirst({
+          where: {
+            switchId: userSwitch.id,
+            url: userSwitch.masterSwitch.imageUrl
+          }
+        })
+
+        if (!existingImage) {
+          const switchImage = await prisma.switchImage.create({
+            data: {
+              switchId: userSwitch.id,
+              url: userSwitch.masterSwitch.imageUrl,
+              type: 'LINKED',
+              order: 0
+            }
+          })
+
+          // Set as primary image if no primary image exists
+          const switchWithImages = await prisma.switch.findUnique({
+            where: { id: userSwitch.id },
+            select: { primaryImageId: true }
+          })
+
+          if (!switchWithImages?.primaryImageId) {
+            await prisma.switch.update({
+              where: { id: userSwitch.id },
+              data: { primaryImageId: switchImage.id }
+            })
+          }
+        }
+      }
 
       updates.push({
         id: userSwitch.id,

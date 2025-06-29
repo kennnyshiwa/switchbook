@@ -49,12 +49,13 @@ export async function POST(
     const updateData: any = {}
     const fieldsToUpdate = [
       'name', 'chineseName', 'manufacturer', 'type', 'technology',
-      'compatibility', 'actuationForce', 'bottomOutForce', 'preTravel',
-      'notes', 'imageUrl', 'topHousing', 'bottomHousing', 'stem',
-      'springWeight', 'springLength', 'bottomOut', 'magnetOrientation',
-      'magnetPosition', 'magnetPolarity', 'initialForce', 'initialMagneticFlux',
-      'bottomOutMagneticFlux', 'pcbThickness', 'frankenTop', 'frankenBottom',
-      'frankenStem'
+      'compatibility', 'actuationForce', 'tactileForce', 'tactilePosition',
+      'bottomOutForce', 'preTravel', 'notes', 'imageUrl', 'topHousing', 
+      'bottomHousing', 'stem', 'springWeight', 'springLength', 'bottomOut', 
+      'magnetOrientation', 'magnetPosition', 'magnetPolarity', 'initialForce', 
+      'initialMagneticFlux', 'bottomOutMagneticFlux', 'pcbThickness', 
+      'frankenTop', 'frankenBottom', 'frankenStem', 'clickType',
+      'progressiveSpring', 'doubleStage'
     ]
 
     for (const field of fieldsToUpdate) {
