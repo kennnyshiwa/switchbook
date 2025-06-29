@@ -36,7 +36,7 @@ const editSuggestionSchema = z.object({
   springLength: optionalString,
   actuationForce: z.number().optional().nullable(),
   tactileForce: z.number().optional().nullable(),
-  tactilePosition: optionalString,
+  tactilePosition: z.number().optional().nullable(),
   bottomOutForce: z.number().optional().nullable(),
   preTravel: z.number().optional().nullable(),
   bottomOut: z.number().optional().nullable(),

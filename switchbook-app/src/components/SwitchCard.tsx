@@ -193,7 +193,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
                 )}
                 {switchItem.tactilePosition && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    <span className="font-medium">Tactile Position:</span> {switchItem.tactilePosition}
+                    <span className="font-medium">Tactile Position:</span> {switchItem.tactilePosition}mm
                   </p>
                 )}
                 {switchItem.bottomOutForce && (

@@ -394,7 +394,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                   {switchData.tactilePosition && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Tactile Position</dt>
-                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.tactilePosition}</dd>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.tactilePosition}mm</dd>
                     </div>
                   )}
                   {switchData.bottomOutForce && (

@@ -79,7 +79,7 @@ model Switch {
   personalNotes         String?
   primaryImageId        String?
   clickType             ClickType?
-  tactilePosition       String?
+  tactilePosition       Float?
   masterSwitch          MasterSwitch?     @relation(fields: [masterSwitchId], references: [id])
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   images                SwitchImage[]
@@ -221,7 +221,7 @@ model MasterSwitch {
   updatedAt              DateTime           @updatedAt
   primaryImageId         String?
   clickType              ClickType?
-  tactilePosition        String?
+  tactilePosition        Float?
   approvedBy             User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
   submittedBy            User               @relation("SubmittedBy", fields: [submittedById], references: [id])
   edits                  MasterSwitchEdit[]
