@@ -14,6 +14,7 @@ interface MasterSwitch {
   manufacturer?: string
   actuationForce?: number
   tactileForce?: number
+  tactilePosition?: string
   bottomOutForce?: number
   progressiveSpring?: boolean
   doubleStage?: boolean
@@ -188,6 +189,12 @@ export default function MasterSwitchDetailsPopup({
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-600 dark:text-gray-400">Tactile Force</span>
                     <span className="text-gray-900 dark:text-white">{switchItem.tactileForce}g</span>
+                  </div>
+                )}
+                {switchItem.tactilePosition && (
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-600 dark:text-gray-400">Tactile Position</span>
+                    <span className="text-gray-900 dark:text-white">{switchItem.tactilePosition}</span>
                   </div>
                 )}
                 {switchItem.bottomOutForce && (

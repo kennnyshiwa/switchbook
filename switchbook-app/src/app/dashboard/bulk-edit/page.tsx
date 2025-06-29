@@ -32,6 +32,7 @@ interface EditableSwitchData {
   springLength?: string
   actuationForce?: number
   tactileForce?: number
+  tactilePosition?: string
   bottomOutForce?: number
   progressiveSpring?: boolean
   doubleStage?: boolean
@@ -320,6 +321,7 @@ export default function BulkEditPage() {
           springLength: sw.springLength || undefined,
           actuationForce: sw.actuationForce || undefined,
           tactileForce: sw.tactileForce || undefined,
+          tactilePosition: sw.tactilePosition || undefined,
           bottomOutForce: sw.bottomOutForce || undefined,
           progressiveSpring: sw.progressiveSpring || undefined,
           doubleStage: sw.doubleStage || undefined,
@@ -352,6 +354,7 @@ export default function BulkEditPage() {
           'technology',
           'actuationForce',
           'tactileForce',
+          'tactilePosition',
           'bottomOutForce',
           'preTravel',
           'bottomOut',
@@ -389,6 +392,7 @@ export default function BulkEditPage() {
         defaultVisibility.frankenBottom = false
         defaultVisibility.frankenStem = false
         defaultVisibility.clickType = false
+        defaultVisibility.tactilePosition = false
         defaultVisibility.magnetOrientation = false
         defaultVisibility.magnetPosition = false
         defaultVisibility.magnetPolarity = false
@@ -650,6 +654,29 @@ export default function BulkEditPage() {
               min={0}
               max={1000}
               step={0.1}
+            />
+          ) : null
+        },
+      })
+    }
+
+    // Add tactile position column if needed  
+    const showTactilePosition = switches.some(s => s.type === 'TACTILE' || s.type === 'SILENT_TACTILE')
+    if (showTactilePosition) {
+      cols.push({
+        id: 'tactilePosition',
+        accessorKey: 'tactilePosition',
+        header: 'Tactile Position',
+        size: 120,
+        cell: ({ row }) => {
+          const isVisible = row.original.type === 'TACTILE' || row.original.type === 'SILENT_TACTILE'
+          return isVisible ? (
+            <EditableCell
+              value={row.original.tactilePosition}
+              field="tactilePosition"
+              switchId={row.original.id}
+              onUpdate={updateSwitch}
+              placeholder="e.g., Early, Mid, Late"
             />
           ) : null
         },

@@ -23,6 +23,7 @@ interface ParsedSwitch {
   springLength?: string
   actuationForce?: number
   tactileForce?: number
+  tactilePosition?: string
   bottomOutForce?: number
   progressiveSpring?: boolean
   doubleStage?: boolean
@@ -502,6 +503,16 @@ const SwitchTableRow = memo(({
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
+          type="text"
+          value={localValues.tactilePosition || ''}
+          onChange={(e) => handleChange('tactilePosition', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite || (localValues.type !== 'TACTILE' && localValues.type !== 'SILENT_TACTILE')}
+          placeholder="e.g., Early, Mid, Late"
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
           type="number"
           value={localValues.bottomOutForce || ''}
           onChange={(e) => handleChange('bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
@@ -705,6 +716,7 @@ export default function BulkUploadPage() {
     { key: 'springLength', label: 'Spring Length', required: false },
     { key: 'actuationForce', label: 'Actuation Force (g)', required: false },
     { key: 'tactileForce', label: 'Tactile Force (g)', required: false },
+    { key: 'tactilePosition', label: 'Tactile Position', required: false },
     { key: 'bottomOutForce', label: 'Bottom Out Force (g)', required: false },
     { key: 'progressiveSpring', label: 'Progressive Spring', required: false },
     { key: 'doubleStage', label: 'Double Stage', required: false },
@@ -1193,6 +1205,7 @@ export default function BulkUploadPage() {
                 <li>• Franken Top, Franken Bottom, Franken Stem are free text fields for custom switch modifications</li>
                 <li>• Forces should be numeric values in grams (Actuation, Bottom Out, and Tactile for tactile switches)</li>
                 <li>• Tactile Force is only applicable for TACTILE, SILENT_TACTILE, and CLICKY switch types</li>
+                <li>• Tactile Position is only applicable for TACTILE and SILENT_TACTILE switch types (e.g., "Early", "Mid", "Late")</li>
                 <li>• Click Type is only applicable for CLICKY switches and must be: CLICK_LEAF, CLICK_BAR, or CLICK_JACKET (case-insensitive)</li>
                 <li>• Progressive Spring and Double Stage should be &quot;true&quot;/&quot;false&quot;, &quot;yes&quot;/&quot;no&quot;, or &quot;1&quot;/&quot;0&quot;</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
@@ -1397,6 +1410,9 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Tactile Force (g)
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Tactile Position
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Bottom Out Force (g)

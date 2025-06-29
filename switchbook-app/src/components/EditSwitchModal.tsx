@@ -89,6 +89,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       frankenBottom: switchItem.frankenBottom || '',
       frankenStem: switchItem.frankenStem || '',
       clickType: switchItem.clickType || undefined,
+      tactilePosition: switchItem.tactilePosition || '',
       dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
     }
   })
@@ -237,6 +238,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         initialForce: currentData.initialForce || null,
         actuationForce: currentData.actuationForce || null,
         tactileForce: currentData.tactileForce || null,
+        tactilePosition: currentData.tactilePosition || null,
         bottomOutForce: currentData.bottomOutForce || null,
         preTravel: currentData.preTravel || null,
         bottomOut: currentData.bottomOut || null,
