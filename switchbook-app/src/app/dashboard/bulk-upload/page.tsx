@@ -507,7 +507,7 @@ const SwitchTableRow = memo(({
           value={localValues.tactilePosition || ''}
           onChange={(e) => handleChange('tactilePosition', e.target.value ? parseFloat(e.target.value) : undefined)}
           className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          disabled={(switchItem.isDuplicate && !switchItem.overwrite) || (localValues.type !== 'TACTILE' && localValues.type !== 'SILENT_TACTILE')}
+          disabled={(switchItem.isDuplicate && !switchItem.overwrite) || (localValues.type !== 'TACTILE' && localValues.type !== 'SILENT_TACTILE' && localValues.type !== 'CLICKY')}
           placeholder="0.3, 1.5"
           step="0.1"
           min="0"
@@ -1208,7 +1208,7 @@ export default function BulkUploadPage() {
                 <li>• Franken Top, Franken Bottom, Franken Stem are free text fields for custom switch modifications</li>
                 <li>• Forces should be numeric values in grams (Actuation, Bottom Out, and Tactile for tactile switches)</li>
                 <li>• Tactile Force is only applicable for TACTILE, SILENT_TACTILE, and CLICKY switch types</li>
-                <li>• Tactile Position is only applicable for TACTILE and SILENT_TACTILE switch types, numeric value in mm (e.g., 0.3, 1.5)</li>
+                <li>• Tactile Position is only applicable for TACTILE, SILENT_TACTILE, and CLICKY switch types, numeric value in mm (e.g., 0.3, 1.5)</li>
                 <li>• Click Type is only applicable for CLICKY switches and must be: CLICK_LEAF, CLICK_BAR, or CLICK_JACKET (case-insensitive)</li>
                 <li>• Progressive Spring and Double Stage should be &quot;true&quot;/&quot;false&quot;, &quot;yes&quot;/&quot;no&quot;, or &quot;1&quot;/&quot;0&quot;</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
