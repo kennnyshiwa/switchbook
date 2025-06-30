@@ -187,8 +187,120 @@ async function bulkCreateHandler(request: NextRequest) {
   }
 }
 
+// Bulk update handler for editing multiple switches
+async function bulkUpdateHandler(request: NextRequest) {
+  let monitor: BulkOperationMonitor | null = null
+  
+  try {
+    const session = await auth()
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    const userId = session.user.id
+    const body = await request.json()
+    const { switches } = bulkSwitchSchema.parse(body)
+
+    // Initialize performance monitoring
+    monitor = new BulkOperationMonitor(userId, 'bulk_update', switches.length)
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    }
+
+    // Process switches in batches
+    const batchSize = 25
+    for (let i = 0; i < switches.length; i += batchSize) {
+      const batch = switches.slice(i, i + batchSize)
+      
+      const batchPromises = batch.map(async (switchData, index) => {
+        try {
+          // Verify the switch belongs to the user
+          const existingSwitch = await prisma.switch.findFirst({
+            where: {
+              id: switchData.id,
+              userId
+            }
+          })
+
+          if (!existingSwitch) {
+            throw new Error('Switch not found or unauthorized')
+          }
+
+          // Transform and validate data
+          const transformedData = transformSwitchData(switchData)
+
+          // Normalize manufacturer name if provided
+          if (transformedData.manufacturer) {
+            transformedData.manufacturer = await normalizeManufacturerName(
+              transformedData.manufacturer, 
+              userId
+            )
+          }
+
+          // Update switch in database
+          await prisma.switch.update({
+            where: { id: switchData.id },
+            data: transformedData,
+          })
+
+          results.success++
+        } catch (error) {
+          results.failed++
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+          results.errors.push(`Switch ${i + index + 1}: ${errorMsg}`)
+          monitor?.addError(`Switch ${i + index + 1}: ${errorMsg}`)
+        }
+      })
+
+      await Promise.allSettled(batchPromises)
+    }
+
+    // Complete monitoring
+    const metrics = monitor?.complete()
+
+    return NextResponse.json({
+      message: "Bulk update completed successfully",
+      results,
+      processed: switches.length,
+      performance: {
+        duration: metrics?.duration,
+        itemsPerSecond: metrics?.duration ? Math.round((switches.length / metrics.duration) * 1000) : 0
+      }
+    })
+
+  } catch (error) {
+    // Complete monitoring with error
+    monitor?.addError(error instanceof Error ? error.message : 'Unknown error')
+    monitor?.complete()
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input data", details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    console.error("Bulk update error:", error)
+    return NextResponse.json(
+      { 
+        error: "Failed to process bulk update", 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
+  }
+}
+
 // NO RATE LIMITING on bulk operations - users should be able to upload their collections freely
 export const POST = bulkCreateHandler
+export const PUT = bulkUpdateHandler
 
 // Cleanup active operations periodically
 setInterval(() => {
