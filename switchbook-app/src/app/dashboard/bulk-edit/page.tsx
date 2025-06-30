@@ -497,7 +497,7 @@ export default function BulkEditPage() {
         ...rest,
         progressiveSpring,
         doubleStage,
-        dateObtained: dateObtained ? new Date(dateObtained).toISOString() : null
+        dateObtained: dateObtained || ''
       }))
       
       const response = await fetch('/api/switches/bulk', {
