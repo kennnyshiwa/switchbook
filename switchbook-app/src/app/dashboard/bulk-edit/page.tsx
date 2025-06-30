@@ -932,122 +932,143 @@ export default function BulkEditPage() {
           accessorKey: 'magnetOrientation',
           header: 'Magnet Orient.',
           size: 120,
-          cell: ({ row }) => (
-            <select
-              value={row.original.magnetOrientation || ''}
-              onChange={(e) => updateSwitch(row.original.id, 'magnetOrientation', e.target.value || undefined)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            >
-              <option value="">-</option>
-              <option value="Horizontal">Horizontal</option>
-              <option value="Vertical">Vertical</option>
-            </select>
-          ),
+          cell: ({ row }) => {
+            const isVisible = row.original.technology === 'MAGNETIC'
+            return isVisible ? (
+              <select
+                value={row.original.magnetOrientation || ''}
+                onChange={(e) => updateSwitch(row.original.id, 'magnetOrientation', e.target.value || undefined)}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">-</option>
+                <option value="Horizontal">Horizontal</option>
+                <option value="Vertical">Vertical</option>
+              </select>
+            ) : null
+          },
         },
         {
           id: 'magnetPosition',
           accessorKey: 'magnetPosition',
           header: 'Magnet Pos.',
           size: 120,
-          cell: ({ row }) => (
-            <select
-              value={row.original.magnetPosition || ''}
-              onChange={(e) => updateSwitch(row.original.id, 'magnetPosition', e.target.value || undefined)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            >
-              <option value="">-</option>
-              <option value="Center">Center</option>
-              <option value="Off-Center">Off-Center</option>
-            </select>
-          ),
+          cell: ({ row }) => {
+            const isVisible = row.original.technology === 'MAGNETIC'
+            return isVisible ? (
+              <select
+                value={row.original.magnetPosition || ''}
+                onChange={(e) => updateSwitch(row.original.id, 'magnetPosition', e.target.value || undefined)}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">-</option>
+                <option value="Center">Center</option>
+                <option value="Off-Center">Off-Center</option>
+              </select>
+            ) : null
+          },
         },
         {
           id: 'magnetPolarity',
           accessorKey: 'magnetPolarity',
           header: 'Magnet Polarity',
           size: 120,
-          cell: ({ row }) => (
-            <select
-              value={row.original.magnetPolarity || ''}
-              onChange={(e) => updateSwitch(row.original.id, 'magnetPolarity', e.target.value || undefined)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            >
-              <option value="">-</option>
-              <option value="North">North</option>
-              <option value="South">South</option>
-            </select>
-          ),
+          cell: ({ row }) => {
+            const isVisible = row.original.technology === 'MAGNETIC'
+            return isVisible ? (
+              <select
+                value={row.original.magnetPolarity || ''}
+                onChange={(e) => updateSwitch(row.original.id, 'magnetPolarity', e.target.value || undefined)}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">-</option>
+                <option value="North">North</option>
+                <option value="South">South</option>
+              </select>
+            ) : null
+          },
         },
         {
           id: 'initialForce',
           accessorKey: 'initialForce',
           header: 'Initial Force',
           size: 100,
-          cell: ({ row }) => (
-            <EditableCell
-              value={row.original.initialForce}
-              field="initialForce"
-              switchId={row.original.id}
-              onUpdate={updateSwitch}
-              type="number"
-              min={0}
-              max={1000}
-              step={0.1}
-            />
-          ),
+          cell: ({ row }) => {
+            const isVisible = row.original.technology === 'MAGNETIC'
+            return isVisible ? (
+              <EditableCell
+                value={row.original.initialForce}
+                field="initialForce"
+                switchId={row.original.id}
+                onUpdate={updateSwitch}
+                type="number"
+                min={0}
+                max={1000}
+                step={0.1}
+              />
+            ) : null
+          },
         },
         {
           id: 'initialMagneticFlux',
           accessorKey: 'initialMagneticFlux',
           header: 'Initial Flux',
           size: 100,
-          cell: ({ row }) => (
-            <EditableCell
-              value={row.original.initialMagneticFlux}
-              field="initialMagneticFlux"
-              switchId={row.original.id}
-              onUpdate={updateSwitch}
-              type="number"
-              min={0}
-              max={10000}
-              step={0.1}
-            />
-          ),
+          cell: ({ row }) => {
+            const isVisible = row.original.technology === 'MAGNETIC'
+            return isVisible ? (
+              <EditableCell
+                value={row.original.initialMagneticFlux}
+                field="initialMagneticFlux"
+                switchId={row.original.id}
+                onUpdate={updateSwitch}
+                type="number"
+                min={0}
+                max={10000}
+                step={0.1}
+              />
+            ) : null
+          },
         },
         {
           id: 'bottomOutMagneticFlux',
           accessorKey: 'bottomOutMagneticFlux',
           header: 'Bottom Flux',
           size: 100,
-          cell: ({ row }) => (
-            <EditableCell
-              value={row.original.bottomOutMagneticFlux}
-              field="bottomOutMagneticFlux"
-              switchId={row.original.id}
-              onUpdate={updateSwitch}
-              type="number"
-              min={0}
-              max={10000}
-              step={0.1}
-            />
-          ),
+          cell: ({ row }) => {
+            const isVisible = row.original.technology === 'MAGNETIC'
+            return isVisible ? (
+              <EditableCell
+                value={row.original.bottomOutMagneticFlux}
+                field="bottomOutMagneticFlux"
+                switchId={row.original.id}
+                onUpdate={updateSwitch}
+                type="number"
+                min={0}
+                max={10000}
+                step={0.1}
+              />
+            ) : null
+          },
         },
         {
           id: 'pcbThickness',
           accessorKey: 'pcbThickness',
           header: 'PCB Thickness',
           size: 100,
-          cell: ({ row }) => (
-            <select
-              value={row.original.pcbThickness || ''}
-              onChange={(e) => updateSwitch(row.original.id, 'pcbThickness', e.target.value || undefined)}
-              className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            >
-              <option value="">-</option>
-              <option value="1.2mm">1.2mm</option>
-              <option value="1.6mm">1.6mm</option>
-            </select>
-          ),
+          cell: ({ row }) => {
+            const isVisible = row.original.technology === 'MAGNETIC'
+            return isVisible ? (
+              <select
+                value={row.original.pcbThickness || ''}
+                onChange={(e) => updateSwitch(row.original.id, 'pcbThickness', e.target.value || undefined)}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">-</option>
+                <option value="1.2mm">1.2mm</option>
+                <option value="1.6mm">1.6mm</option>
+              </select>
+            ) : null
+          },
         },
       )
     }

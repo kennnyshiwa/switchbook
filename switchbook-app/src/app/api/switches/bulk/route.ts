@@ -18,10 +18,17 @@ const BULK_CONFIG = {
 // Track active bulk operations per user
 const activeBulkOperations = new Map<string, number>()
 
-const bulkSwitchSchema = z.object({
+const bulkCreateSchema = z.object({
   switches: z.array(switchSchema).max(BULK_CONFIG.MAX_SWITCHES_PER_REQUEST, 
     `Maximum ${BULK_CONFIG.MAX_SWITCHES_PER_REQUEST} switches per request`),
   batchId: z.string().optional(), // For tracking multi-batch uploads
+})
+
+const bulkUpdateSchema = z.object({
+  switches: z.array(switchSchema.extend({
+    id: z.string(), // Required for updates
+  })).max(BULK_CONFIG.MAX_SWITCHES_PER_REQUEST, 
+    `Maximum ${BULK_CONFIG.MAX_SWITCHES_PER_REQUEST} switches per request`),
 })
 
 async function bulkCreateHandler(request: NextRequest) {
@@ -59,7 +66,7 @@ async function bulkCreateHandler(request: NextRequest) {
     })
 
     const body = await request.json()
-    const { switches, batchId } = bulkSwitchSchema.parse(body)
+    const { switches, batchId } = bulkCreateSchema.parse(body)
 
     // Initialize performance monitoring
     monitor = new BulkOperationMonitor(userId, 'bulk_create', switches.length)
@@ -203,7 +210,7 @@ async function bulkUpdateHandler(request: NextRequest) {
 
     const userId = session.user.id
     const body = await request.json()
-    const { switches } = bulkSwitchSchema.parse(body)
+    const { switches } = bulkUpdateSchema.parse(body)
 
     // Initialize performance monitoring
     monitor = new BulkOperationMonitor(userId, 'bulk_update', switches.length)
