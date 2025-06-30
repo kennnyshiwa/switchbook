@@ -1227,6 +1227,54 @@ export default function BulkEditPage() {
                   ))}
                 </div>
               </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reorder Columns (Drag to rearrange)</h3>
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {columnOrder.map((colId, index) => {
+                    const column = columns.find(c => c.id === colId)
+                    const isVisible = columnVisibility[colId] !== false
+                    return (
+                      <div
+                        key={colId}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', index.toString())
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          e.dataTransfer.dropEffect = 'move'
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'))
+                          const targetIndex = index
+                          
+                          if (draggedIndex !== targetIndex) {
+                            const newOrder = [...columnOrder]
+                            const [removed] = newOrder.splice(draggedIndex, 1)
+                            newOrder.splice(targetIndex, 0, removed)
+                            setColumnOrder(newOrder)
+                          }
+                        }}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded cursor-move transition-colors ${
+                          isVisible 
+                            ? 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600' 
+                            : 'bg-gray-50 dark:bg-gray-800 opacity-50'
+                        }`}
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {column?.header as string || colId}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </details>
         </div>
@@ -1257,24 +1305,75 @@ export default function BulkEditPage() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-20">
                   <tr>
-                    {table.getFlatHeaders().map(header => {
+                    {table.getFlatHeaders().map((header, headerIndex) => {
                       const isNameColumn = header.id === 'name'
                       return (
                         <th
                           key={header.id}
+                          draggable={!isNameColumn}
+                          onDragStart={(e) => {
+                            if (isNameColumn) {
+                              e.preventDefault()
+                              return
+                            }
+                            e.dataTransfer.effectAllowed = 'move'
+                            e.dataTransfer.setData('columnId', header.id)
+                            e.currentTarget.classList.add('opacity-50')
+                          }}
+                          onDragEnd={(e) => {
+                            e.currentTarget.classList.remove('opacity-50')
+                          }}
+                          onDragOver={(e) => {
+                            if (isNameColumn) return
+                            e.preventDefault()
+                            e.dataTransfer.dropEffect = 'move'
+                            e.currentTarget.classList.add('bg-gray-200', 'dark:bg-gray-600')
+                          }}
+                          onDragLeave={(e) => {
+                            e.currentTarget.classList.remove('bg-gray-200', 'dark:bg-gray-600')
+                          }}
+                          onDrop={(e) => {
+                            if (isNameColumn) return
+                            e.preventDefault()
+                            e.currentTarget.classList.remove('bg-gray-200', 'dark:bg-gray-600')
+                            
+                            const draggedColumnId = e.dataTransfer.getData('columnId')
+                            const targetColumnId = header.id
+                            
+                            if (draggedColumnId !== targetColumnId) {
+                              const currentOrder = [...columnOrder]
+                              const draggedIndex = currentOrder.indexOf(draggedColumnId)
+                              const targetIndex = currentOrder.indexOf(targetColumnId)
+                              
+                              if (draggedIndex !== -1 && targetIndex !== -1) {
+                                const [removed] = currentOrder.splice(draggedIndex, 1)
+                                currentOrder.splice(targetIndex, 0, removed)
+                                setColumnOrder(currentOrder)
+                              }
+                            }
+                          }}
                           className={`${
                             isNameColumn 
                               ? 'sticky left-0 z-30 bg-gray-50 dark:bg-gray-700' 
-                              : 'bg-gray-50 dark:bg-gray-700'
-                          } px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap`}
+                              : 'bg-gray-50 dark:bg-gray-700 cursor-move'
+                          } px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap transition-opacity`}
                           style={{ 
                             minWidth: header.column.getSize()
                           }}
                         >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {!isNameColumn && (
+                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                              </svg>
+                            )}
+                            <span>
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                            </span>
+                          </div>
                         </th>
                       )
                     })}
@@ -1335,6 +1434,8 @@ export default function BulkEditPage() {
           <p className="font-medium mb-2">Tips:</p>
           <ul className="list-disc list-inside space-y-1">
             <li>Click on any field to edit it directly</li>
+            <li>Drag column headers to reorder them (except the Name column which stays fixed)</li>
+            <li>Use Column Settings above to show/hide columns or reorder them</li>
             <li>Changes are highlighted in blue</li>
             <li>Invalid manufacturer names are highlighted in red</li>
             <li>Use Tab to move between fields</li>
