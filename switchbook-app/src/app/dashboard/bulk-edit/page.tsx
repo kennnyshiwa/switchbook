@@ -559,7 +559,30 @@ export default function BulkEditPage() {
       {
         id: 'manufacturer',
         accessorKey: 'manufacturer',
-        header: 'Manufacturer',
+        header: () => (
+          <span className="inline-flex items-center gap-1">
+            Manufacturer
+            <span className="relative group">
+              <svg 
+                className="w-4 h-4 text-gray-400 dark:text-gray-500 cursor-help" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                />
+              </svg>
+              <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded-md shadow-lg z-10">
+                If you don&apos;t know the manufacturer, you can enter &quot;Unknown&quot; in this field.
+                <span className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-0 h-0 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></span>
+              </span>
+            </span>
+          </span>
+        ),
         size: 150,
         cell: ({ row }) => (
           <EditableCell
@@ -1221,7 +1244,13 @@ export default function BulkEditPage() {
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {columns.find(c => c.id === colId)?.header as string || colId}
+                        {(() => {
+                          const column = columns.find(c => c.id === colId)
+                          if (!column) return colId
+                          if (typeof column.header === 'string') return column.header
+                          if (colId === 'manufacturer') return 'Manufacturer'
+                          return colId
+                        })()}
                       </span>
                     </label>
                   ))}
@@ -1268,7 +1297,12 @@ export default function BulkEditPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                         <span className="text-sm text-gray-700 dark:text-gray-300">
-                          {column?.header as string || colId}
+                          {(() => {
+                            if (!column) return colId
+                            if (typeof column.header === 'string') return column.header
+                            if (colId === 'manufacturer') return 'Manufacturer'
+                            return colId
+                          })()}
                         </span>
                       </div>
                     )
