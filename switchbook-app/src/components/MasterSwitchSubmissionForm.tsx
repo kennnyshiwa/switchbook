@@ -83,6 +83,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       initialForce: isNaN(data.initialForce as number) ? undefined : data.initialForce,
       actuationForce: isNaN(data.actuationForce as number) ? undefined : data.actuationForce,
       tactileForce: isNaN(data.tactileForce as number) ? undefined : data.tactileForce,
+      tactilePosition: isNaN(data.tactilePosition as number) ? undefined : data.tactilePosition,
       bottomOutForce: isNaN(data.bottomOutForce as number) ? undefined : data.bottomOutForce,
       preTravel: isNaN(data.preTravel as number) ? undefined : data.preTravel,
       bottomOut: isNaN(data.bottomOut as number) ? undefined : data.bottomOut,
