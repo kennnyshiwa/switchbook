@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: switchbook-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-switchbook}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-switchbook_password}
+      POSTGRES_DB: ${DB_NAME:-switchbook}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-switchbook}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: switchbook-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${DB_USER:-switchbook}:${DB_PASSWORD:-switchbook_password}@postgres:5432/${DB_NAME:-switchbook}
+      
+      # NextAuth
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      
+      # Email (Mailgun)
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN}
+      MAILGUN_FROM: ${MAILGUN_FROM}
+      MAILGUN_URL: ${MAILGUN_URL:-https://api.mailgun.net}
+      MAILGUN_MAILING_LIST: ${MAILGUN_MAILING_LIST}
+      
+      # OAuth
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      
+      # Node
+      NODE_ENV: production
+    volumes:
+      # Persist uploaded images
+      - uploads:/app/uploads
+      # Persist public uploads
+      - public_uploads:/app/public/uploads
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        node server.js
+      "
+
+  nginx:
+    image: nginx:alpine
+    container_name: switchbook-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - public_uploads:/app/public/uploads:ro
+
+  certbot:
+    image: certbot/certbot
+    container_name: switchbook-certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN}
+
+volumes:
+  postgres_data:
+  uploads:
+  public_uploads:
+  certbot_www:
+  certbot_conf:
