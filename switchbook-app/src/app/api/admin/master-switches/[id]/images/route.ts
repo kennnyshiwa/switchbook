@@ -79,7 +79,8 @@ export async function POST(
 
     // Read file buffer
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const uint8Array = new Uint8Array(arrayBuffer)
+    const buffer: Buffer = Buffer.from(uint8Array)
 
     // Validate and get image metadata
     const validation = await validateAndProcessImage(buffer, file.type)
