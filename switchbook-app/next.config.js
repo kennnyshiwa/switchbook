@@ -1,11 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   images: {
-    domains: ['localhost'],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '**', // Allow any HTTPS domain for user-uploaded images
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
       },
     ],
     // Security configurations for image handling
