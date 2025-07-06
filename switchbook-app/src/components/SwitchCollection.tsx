@@ -72,7 +72,6 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
   // Cache for force curve results to avoid repeated API calls
   const [forceCurveCache, setForceCurveCache] = useState<Map<string, boolean>>(new Map())
-  const [isBatchCheckingForceCurves, setIsBatchCheckingForceCurves] = useState(false)
   
   // Create a map of force curve preferences for quick lookup
   const forceCurvePreferencesMap = useMemo(() => {
@@ -87,12 +86,15 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     return map
   }, [forceCurvePreferences])
 
+  // Track if we've already done the initial batch check
+  const [hasCheckedForceCurves, setHasCheckedForceCurves] = useState(false)
+  
   // Load existing cache entries and batch check force curves for all switches on mount
   useEffect(() => {
     const checkAllForceCurves = async () => {
-      if (switches.length === 0 || isBatchCheckingForceCurves) return
+      if (switches.length === 0 || hasCheckedForceCurves) return
       
-      setIsBatchCheckingForceCurves(true)
+      setHasCheckedForceCurves(true)
       
       try {
         // First, load existing cache entries from database
@@ -147,14 +149,12 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         }
       } catch (error) {
         console.error('Error batch checking force curves:', error)
-      } finally {
-        setIsBatchCheckingForceCurves(false)
       }
     }
     
     checkAllForceCurves()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [switches, forceCurvePreferences])
+  }, [])
 
   // Helper function to check if a switch has force curves
   const switchHasForceCurves = useCallback(async (switchItem: Switch): Promise<boolean> => {
