@@ -279,7 +279,7 @@ export async function DELETE(
     })
 
     // If this was the primary image, clear it
-    if (image.switch.imageUrl === image.url) {
+    if (image.switch && image.switch.imageUrl === image.url) {
       const remainingImages = await prisma.switchImage.findMany({
         where: { switchId: id },
         orderBy: { order: 'asc' },
