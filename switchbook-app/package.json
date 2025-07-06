@@ -31,7 +31,6 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@types/sharp": "^0.31.1",
-    "@vercel/blob": "^1.1.1",
     "autoprefixer": "^10.4.21",
     "bcryptjs": "^3.0.2",
     "date-fns": "^4.1.0",

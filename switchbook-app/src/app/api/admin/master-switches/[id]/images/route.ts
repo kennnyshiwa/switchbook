@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { put, del } from '@vercel/blob'
+import { uploadFile, deleteFile } from '@/lib/local-storage'
 import { 
   IMAGE_CONFIG, 
-  getImagePath, 
   isValidImageType, 
   isValidFileSize,
   getFileExtension,
@@ -12,9 +11,9 @@ import {
 } from '@/lib/image-config'
 import { 
   validateAndProcessImage, 
-  createImageVariants,
   convertHeicToJpeg
 } from '@/lib/image-utils'
+import crypto from 'crypto'
 
 export async function POST(
   request: NextRequest,
@@ -80,8 +79,7 @@ export async function POST(
 
     // Read file buffer
     const arrayBuffer = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
-    const buffer: Buffer = Buffer.from(uint8Array)
+    const buffer = Buffer.from(arrayBuffer)
 
     // Validate and get image metadata
     const validation = await validateAndProcessImage(buffer, file.type)
@@ -93,48 +91,18 @@ export async function POST(
     }
 
     // Convert HEIC/HEIF to JPEG if needed
-    let processedBuffer: Buffer = buffer
-    let fileExtension = getFileExtension(file.name)
+    let processedBuffer = buffer
+    let processedFile = file
     if (file.type === 'image/heic' || file.type === 'image/heif') {
       processedBuffer = await convertHeicToJpeg(buffer)
-      fileExtension = 'jpg'
+      processedFile = new File([processedBuffer], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+        type: 'image/jpeg'
+      })
     }
 
-    // Create image variants
-    const variants = await createImageVariants(processedBuffer)
-
-    // Generate unique image ID
-    const imageId = crypto.randomUUID()
-
-    // Upload to Vercel Blob (using 'master' as userId for master switches)
-    const uploadPromises = [
-      put(
-        getImagePath('master', id, imageId, 'thumb', 'jpg'),
-        variants.thumbnail,
-        { 
-          access: 'public',
-          contentType: 'image/jpeg'
-        }
-      ),
-      put(
-        getImagePath('master', id, imageId, 'medium', 'jpg'),
-        variants.medium,
-        { 
-          access: 'public',
-          contentType: 'image/jpeg'
-        }
-      ),
-      put(
-        getImagePath('master', id, imageId, 'original', fileExtension),
-        variants.original,
-        { 
-          access: 'public',
-          contentType: file.type === 'image/heic' || file.type === 'image/heif' ? 'image/jpeg' : file.type
-        }
-      )
-    ]
-
-    const [thumbBlob, mediumBlob, originalBlob] = await Promise.all(uploadPromises)
+    // Upload to local storage
+    const folder = `master-switches/${id}`
+    const { url, pathname } = await uploadFile(processedFile, folder)
 
     // Get the next order number
     const maxOrder = masterSwitch.images.length > 0
@@ -145,31 +113,27 @@ export async function POST(
     const image = await prisma.switchImage.create({
       data: {
         masterSwitchId: id,
-        url: originalBlob.url,
+        url: url,
         type: 'UPLOADED',
         order: maxOrder + 1,
         caption: caption || null,
         width: validation.metadata?.width,
         height: validation.metadata?.height,
-        size: variants.original.length
+        size: processedFile.size
       }
     })
 
     // If this is the first image, set it as primary
     if (masterSwitch.images.length === 0) {
       await prisma.masterSwitch.update({
-        where: { id: id },
-        data: { primaryImageId: image.id }
+        where: { id },
+        data: { imageUrl: url }
       })
     }
 
-    return NextResponse.json({
-      ...image,
-      thumbnailUrl: thumbBlob.url,
-      mediumUrl: mediumBlob.url
-    })
+    return NextResponse.json(image)
   } catch (error) {
-    console.error('Failed to upload master switch image:', error)
+    console.error('Failed to upload image:', error)
     return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })
   }
 }
@@ -192,7 +156,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Image ID required' }, { status: 400 })
     }
 
-    // Verify image exists
+    // Verify image exists and belongs to this master switch
     const image = await prisma.switchImage.findFirst({
       where: {
         id: imageId,
@@ -207,21 +171,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Image not found' }, { status: 404 })
     }
 
-    // Delete from Vercel Blob (only for uploaded images)
-    if (image.type === 'UPLOADED') {
-      try {
-        const urlParts = new URL(image.url).pathname.split('/')
-        const fileName = urlParts[urlParts.length - 1]
-        const baseImageId = fileName.split('.')[0].replace(/-original$/, '')
-        
-        await Promise.all([
-          del(image.url).catch(() => {}),
-          del(image.url.replace(`${baseImageId}.`, `${baseImageId}-thumb.`)).catch(() => {}),
-          del(image.url.replace(`${baseImageId}.`, `${baseImageId}-medium.`)).catch(() => {})
-        ])
-      } catch (error) {
-        console.error('Failed to delete from blob storage:', error)
-      }
+    // Delete from local storage
+    try {
+      const pathname = image.url.replace('/uploads/', '')
+      await deleteFile(pathname)
+    } catch (error) {
+      console.error('Failed to delete file from storage:', error)
     }
 
     // Delete from database
@@ -229,25 +184,25 @@ export async function DELETE(
       where: { id: imageId }
     })
 
-    // If this was the primary image, update to the next available image
-    if (image.masterSwitch?.primaryImageId === imageId) {
-      const nextImage = await prisma.switchImage.findFirst({
-        where: {
-          masterSwitchId: id,
-          id: { not: imageId }
-        },
-        orderBy: { order: 'asc' }
+    // If this was the primary image, update to next available
+    if (image.masterSwitch.imageUrl === image.url) {
+      const remainingImages = await prisma.switchImage.findMany({
+        where: { masterSwitchId: id },
+        orderBy: { order: 'asc' },
+        take: 1
       })
 
       await prisma.masterSwitch.update({
-        where: { id: id },
-        data: { primaryImageId: nextImage?.id || null }
+        where: { id },
+        data: { 
+          imageUrl: remainingImages[0]?.url || null 
+        }
       })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to delete master switch image:', error)
+    console.error('Failed to delete image:', error)
     return NextResponse.json({ error: 'Failed to delete image' }, { status: 500 })
   }
 }

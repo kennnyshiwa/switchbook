@@ -12,15 +12,15 @@ export const metadata: Metadata = {
   authors: [{ name: 'Switchbook' }],
   creator: 'Switchbook',
   publisher: 'Switchbook',
-  metadataBase: new URL('https://switchbook.vercel.app'),
+  metadataBase: new URL('https://switchbook.app'),
   openGraph: {
     title: 'Switchbook - Mechanical Switch Collection',
     description: 'Catalogue and share your mechanical keyboard switch collection with fellow enthusiasts',
-    url: 'https://switchbook.vercel.app',
+    url: 'https://switchbook.app',
     siteName: 'Switchbook',
     images: [
       {
-        url: 'https://switchbook.vercel.app/logo.png',
+        url: 'https://switchbook.app/logo.png',
         width: 1200,
         height: 630,
         alt: 'Switchbook Logo',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Switchbook - Mechanical Switch Collection',
     description: 'Catalogue and share your mechanical keyboard switch collection with fellow enthusiasts',
-    images: ['https://switchbook.vercel.app/logo.png'],
+    images: ['https://switchbook.app/logo.png'],
   },
   icons: {
     icon: [
