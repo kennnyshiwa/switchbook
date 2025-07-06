@@ -32,7 +32,8 @@ run_migration() {
     else
         # Outside container - use docker-compose
         echo "📦 Running migration inside app container..."
-        $DOCKER_CMD exec app node scripts/migrate-vercel-images.js
+        # Run with proper environment context
+        $DOCKER_CMD exec app sh -c "DATABASE_URL=\$DATABASE_URL node scripts/migrate-vercel-images.js"
     fi
 }
 
