@@ -190,13 +190,21 @@ export default function SwitchImageManager({
               onDrop={(e) => handleDrop(e, index)}
             >
               <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-                <Image
-                  src={getImageUrl(image, 'thumb')}
-                  alt={image.caption || `Image ${index + 1}`}
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
-                />
+                {image.type === 'UPLOADED' ? (
+                  <img
+                    src={getImageUrl(image, 'thumb')}
+                    alt={image.caption || `Image ${index + 1}`}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <Image
+                    src={getImageUrl(image, 'thumb')}
+                    alt={image.caption || `Image ${index + 1}`}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                  />
+                )}
                 
                 {/* Type badge */}
                 {image.type === 'LINKED' && (
