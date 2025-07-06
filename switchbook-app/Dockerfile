@@ -41,8 +41,9 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 
-# Create uploads directory
-RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
+# Create uploads directory and cache directories
+RUN mkdir -p /app/uploads /app/.next/cache && \
+    chown -R nextjs:nodejs /app/uploads /app/.next/cache
 
 # Switch to non-root user
 USER nextjs
