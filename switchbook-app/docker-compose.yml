@@ -48,7 +48,7 @@ services:
       NODE_ENV: production
     volumes:
       # Persist uploaded images
-      - uploads:/app/uploads
+      - uploads:/app/public/uploads
     command: >
       sh -c "
         npx prisma migrate deploy &&
@@ -66,7 +66,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - uploads:/app/uploads:ro
+      - uploads:/app/public/uploads:ro
 
 volumes:
   postgres_data:
