@@ -49,8 +49,6 @@ services:
     volumes:
       # Persist uploaded images
       - uploads:/app/uploads
-      # Persist public uploads
-      - public_uploads:/app/public/uploads
     command: >
       sh -c "
         npx prisma migrate deploy &&
@@ -68,9 +66,8 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - public_uploads:/app/public/uploads:ro
+      - uploads:/app/uploads:ro
 
 volumes:
   postgres_data:
   uploads:
-  public_uploads:

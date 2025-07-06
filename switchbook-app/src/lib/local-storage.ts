@@ -3,7 +3,7 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 
 const UPLOAD_DIR = process.env.NODE_ENV === 'production' 
-  ? '/app/public/uploads' 
+  ? '/app/uploads' 
   : path.join(process.cwd(), 'public', 'uploads')
 
 // Ensure upload directory exists
