@@ -153,7 +153,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     }
     
     checkAllForceCurves()
-  }, [switches, forceCurvePreferences, isBatchCheckingForceCurves])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [switches, forceCurvePreferences])
 
   // Helper function to check if a switch has force curves
   const switchHasForceCurves = useCallback(async (switchItem: Switch): Promise<boolean> => {
