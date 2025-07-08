@@ -143,8 +143,6 @@ See `.env.example` for all available options. Key variables:
 - `DATABASE_URL`: PostgreSQL connection string (required)
 - `NEXTAUTH_SECRET`: Session encryption secret (required)
 - `NEXTAUTH_URL`: Application URL (required)
-- `AUTH_SECRET`: Same as NEXTAUTH_SECRET (required)
-- `AUTH_URL`: Same as NEXTAUTH_URL (required)
 - `MAILGUN_*`: Email service configuration (optional for local dev)
 - `DISCORD_*`: OAuth provider configuration (optional)
 
