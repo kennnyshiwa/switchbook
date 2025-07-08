@@ -148,7 +148,7 @@ See `.env.example` for all available options. Key variables:
 
 ## License
 
-[Your chosen license]
+GPL 3.0 
 
 ## Support
 
