@@ -161,6 +161,41 @@ export default async function CreditsPage() {
             </div>
           </div>
 
+          {/* Infrastructure Partners Section */}
+          <div className="border-t border-gray-200 dark:border-gray-700 p-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Infrastructure Partners</h2>
+            
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4">
+                <a 
+                  href="https://www.digitalocean.com/?refcode=09b9a4287821&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0"
+                >
+                  <img 
+                    src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%201.svg" 
+                    alt="DigitalOcean Referral Badge" 
+                    className="h-32"
+                  />
+                </a>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">DigitalOcean</h3>
+                  <p className="text-gray-700 dark:text-gray-300 mb-4">
+                    DigitalOcean provides the reliable cloud infrastructure that powers Switchbook. Their developer-friendly 
+                    platform and excellent performance ensure that our community can access their switch collections quickly 
+                    and reliably from anywhere in the world.
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300">
+                    We&apos;re proud to be hosted on DigitalOcean&apos;s platform, which shares our values of simplicity, 
+                    transparency, and community support. Their commitment to supporting open source projects and 
+                    individual developers aligns perfectly with Switchbook&apos;s mission.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Additional Credits Section */}
           <div className="border-t border-gray-200 dark:border-gray-700 p-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Additional Thanks</h2>

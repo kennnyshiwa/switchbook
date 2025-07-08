@@ -214,6 +214,26 @@ export default async function HomePage() {
                   <div className="text-sm text-gray-500 dark:text-gray-400">Thank you for the force curve database and comprehensive switch reviews</div>
                 </div>
               </a>
+
+              {/* DigitalOcean */}
+              <a
+                href="https://www.digitalocean.com/?refcode=09b9a4287821&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center px-6 py-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
+              >
+                <div className="w-10 h-10 mr-4 flex items-center justify-center flex-shrink-0">
+                  <img 
+                    src="https://cdn.brandfetch.io/idvF37rNoN/theme/dark/symbol.svg?c=1dxbfHSJFAPEGdCLU4o5B" 
+                    alt="DigitalOcean" 
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="text-left flex-1">
+                  <div className="font-medium text-base">DigitalOcean</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Powering Switchbook with reliable cloud infrastructure</div>
+                </div>
+              </a>
             </div>
           </div>
         </div>
