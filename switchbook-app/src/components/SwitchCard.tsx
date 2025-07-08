@@ -161,6 +161,19 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             )}
           </div>
 
+          {switchItem.personalTags && switchItem.personalTags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {switchItem.personalTags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
           <p className="text-sm text-gray-600 dark:text-gray-300">
             <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer || 'Unknown'}
           </p>

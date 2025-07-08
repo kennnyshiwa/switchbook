@@ -75,6 +75,7 @@ model Switch {
   modifiedFields        Json?
   personalNotes         String?
   primaryImageId        String?
+  personalTags          String[]          @default([])
   doubleStage           Boolean           @default(false)
   progressiveSpring     Boolean           @default(false)
   tactileForce          Float?

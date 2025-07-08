@@ -280,7 +280,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
           (s.magnetPolarity?.toLowerCase().includes(search) ?? false) ||
           (s.pcbThickness?.toLowerCase().includes(search) ?? false) ||
-          (s.compatibility?.toLowerCase().includes(search) ?? false)
+          (s.compatibility?.toLowerCase().includes(search) ?? false) ||
+          (s.personalTags?.some(tag => tag.toLowerCase().includes(search)) ?? false)
         )
       }
 

@@ -45,7 +45,10 @@ export default function AddSwitchModal({ userId, onClose, onSwitchAdded }: AddSw
     setValue,
     watch,
   } = useForm<SwitchFormData>({
-    resolver: zodResolver(switchSchema),
+    resolver: zodResolver(switchSchema) as any,
+    defaultValues: {
+      personalTags: [],
+    }
   })
 
   const switchName = watch('name')

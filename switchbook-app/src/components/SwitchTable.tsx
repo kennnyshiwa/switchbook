@@ -130,6 +130,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Notes
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Personal Tags
+              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Actions
               </th>
@@ -303,6 +306,22 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                     )}
                     {!switchItem.notes && (!switchItem.masterSwitchId || !switchItem.personalNotes) && '-'}
                   </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                  {switchItem.personalTags && switchItem.personalTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {switchItem.personalTags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    '-'
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center space-x-2">
