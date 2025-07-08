@@ -154,4 +154,4 @@ See `.env.example` for all available options. Key variables:
 
 For questions or issues:
 - Open an issue on GitHub
-- Join our community [Discord]
+- Join our community [Discord](https://discord.gg/Ypqn93shzv)
