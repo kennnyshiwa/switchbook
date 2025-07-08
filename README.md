@@ -51,7 +51,7 @@ Switchbook is a community-driven platform that helps keyboard enthusiasts:
 
 3. **Set up environment variables**
    ```bash
-   cp .env.example .env
+   cp .env.docker.example .env
    ```
    
    Edit `.env` and configure:
