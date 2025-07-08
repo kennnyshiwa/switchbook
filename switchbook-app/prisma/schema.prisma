@@ -11,7 +11,7 @@ model User {
   id                      String                  @id @default(cuid())
   email                   String                  @unique
   username                String                  @unique
-  password                String?                 // Made optional for OAuth users
+  password                String?
   role                    UserRole                @default(USER)
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
@@ -42,10 +42,7 @@ model Switch {
   type                  SwitchType?
   springWeight          String?
   springLength          String?
-  progressiveSpring     Boolean           @default(false)
-  doubleStage           Boolean           @default(false)
   actuationForce        Float?
-  tactileForce          Float?
   bottomOutForce        Float?
   preTravel             Float?
   bottomOut             Float?
@@ -78,6 +75,9 @@ model Switch {
   modifiedFields        Json?
   personalNotes         String?
   primaryImageId        String?
+  doubleStage           Boolean           @default(false)
+  progressiveSpring     Boolean           @default(false)
+  tactileForce          Float?
   clickType             ClickType?
   tactilePosition       Float?
   masterSwitch          MasterSwitch?     @relation(fields: [masterSwitchId], references: [id])
@@ -192,10 +192,7 @@ model MasterSwitch {
   compatibility          String?
   springWeight           String?
   springLength           String?
-  progressiveSpring      Boolean            @default(false)
-  doubleStage            Boolean            @default(false)
   actuationForce         Float?
-  tactileForce           Float?
   bottomOutForce         Float?
   preTravel              Float?
   bottomOut              Float?
@@ -220,18 +217,23 @@ model MasterSwitch {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   primaryImageId         String?
+  doubleStage            Boolean            @default(false)
+  progressiveSpring      Boolean            @default(false)
+  tactileForce           Float?
   clickType              ClickType?
   tactilePosition        Float?
+  shareableId            String?            @unique
   approvedBy             User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
   submittedBy            User               @relation("SubmittedBy", fields: [submittedById], references: [id])
   edits                  MasterSwitchEdit[]
+  views                  MasterSwitchView[]
   userSwitches           Switch[]
   images                 SwitchImage[]
-  views                  MasterSwitchView[]
 
   @@index([name, manufacturer])
   @@index([status])
   @@index([submittedById])
+  @@index([shareableId])
 }
 
 model MasterSwitchEdit {

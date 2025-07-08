@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -57,6 +57,7 @@ interface MasterSwitchDetail {
     username: string
   }
   approvedAt?: string
+  shareableId?: string
 }
 
 export default function MasterSwitchDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ submitted?: string }> }) {
@@ -68,6 +69,8 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
   const [deleting, setDeleting] = useState(false)
   const [showSubmittedMessage, setShowSubmittedMessage] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -101,6 +104,19 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
 
     fetchSwitch()
   }, [params, searchParams, session, status, router])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const addToCollection = async () => {
     if (!switchData) return
@@ -233,78 +249,112 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             </div>
             
             <div className="flex items-center space-x-4">
-              {switchData.inCollection ? (
-                <>
-                  <span className="text-green-600 dark:text-green-400">
-                    ✓ In your collection
-                  </span>
-                  {switchData.userSwitchId && (
-                    <Link
-                      href="/dashboard"
-                      className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                    >
-                      View in Collection
-                    </Link>
-                  )}
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={addToCollection}
-                    disabled={adding}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {adding ? 'Adding...' : 'Add to Collection'}
-                  </button>
-                  <button
-                    onClick={() => setShowLinkDialog(true)}
-                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    Link to Collection
-                  </button>
-                </>
+              {switchData.inCollection && (
+                <span className="text-green-600 dark:text-green-400">
+                  ✓ In your collection
+                </span>
               )}
               
-              {switchData.status === 'APPROVED' && (
-                <>
-                  <Link
-                    href={`/switches/${switchData.id}/suggest-edit`}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-                  >
-                    Suggest Edit
-                  </Link>
-                  <Link
-                    href={`/switches/${switchData.id}/history`}
-                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
-                  >
-                    View History
-                  </Link>
-                </>
-              )}
-              
-              {session?.user?.role === 'ADMIN' && (
+              {!switchData.inCollection && (
                 <button
-                  onClick={deleteSwitch}
-                  disabled={deleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-2"
+                  onClick={addToCollection}
+                  disabled={adding}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {deleting ? (
-                    <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      <span>Deleting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      <span>Delete</span>
-                    </>
-                  )}
+                  {adding ? 'Adding...' : 'Add to Collection'}
                 </button>
               )}
+              
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
+                  aria-label="More options"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </button>
+                
+                {showDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                    <div className="py-1">
+                      {switchData.inCollection && switchData.userSwitchId && (
+                        <Link
+                          href="/dashboard"
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => setShowDropdown(false)}
+                        >
+                          View in Collection
+                        </Link>
+                      )}
+                      
+                      {!switchData.inCollection && (
+                        <button
+                          onClick={() => {
+                            setShowLinkDialog(true)
+                            setShowDropdown(false)
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          Link to Collection
+                        </button>
+                      )}
+                      
+                      {switchData.status === 'APPROVED' && (
+                        <>
+                          <button
+                            onClick={async () => {
+                              const shareUrl = `${window.location.origin}/share/switch/${switchData.shareableId}`
+                              try {
+                                await navigator.clipboard.writeText(shareUrl)
+                                alert('Share link copied to clipboard!')
+                              } catch (err) {
+                                console.error('Failed to copy:', err)
+                              }
+                              setShowDropdown(false)
+                            }}
+                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            disabled={!switchData.shareableId}
+                          >
+                            Copy Share Link
+                          </button>
+                          <Link
+                            href={`/switches/${switchData.id}/suggest-edit`}
+                            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            onClick={() => setShowDropdown(false)}
+                          >
+                            Suggest Edit
+                          </Link>
+                          <Link
+                            href={`/switches/${switchData.id}/history`}
+                            className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            onClick={() => setShowDropdown(false)}
+                          >
+                            View History
+                          </Link>
+                        </>
+                      )}
+                      
+                      {session?.user?.role === 'ADMIN' && (
+                        <>
+                          <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                          <button
+                            onClick={() => {
+                              deleteSwitch()
+                              setShowDropdown(false)
+                            }}
+                            disabled={deleting}
+                            className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deleting ? 'Deleting...' : 'Delete Switch'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           

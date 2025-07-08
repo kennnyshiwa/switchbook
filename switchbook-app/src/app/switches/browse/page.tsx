@@ -444,6 +444,10 @@ export default function BrowseMasterSwitchesPage() {
         setFilteredSwitches(prev => prev.map(s => 
           s.id === switchId ? { ...s, inCollection: true } : s
         ))
+        // Update the selected switch if it's open in the popup
+        if (selectedSwitch && selectedSwitch.id === switchId) {
+          setSelectedSwitch({ ...selectedSwitch, inCollection: true })
+        }
         // Optionally redirect to the switch in their collection
         // router.push(`/dashboard/switches/${data.switchId}`)
       } else {

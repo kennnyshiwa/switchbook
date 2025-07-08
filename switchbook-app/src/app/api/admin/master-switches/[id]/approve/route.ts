@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { MasterSwitchStatus } from '@prisma/client'
 import { sendMasterSwitchApprovalEmail } from '@/lib/email'
+import { nanoid } from 'nanoid'
 
 export async function POST(
   req: NextRequest,
@@ -47,6 +48,9 @@ export async function POST(
       )
     }
 
+    // Generate a shareable ID for the approved switch
+    const shareableId = nanoid(10)
+
     // Update submission status
     const updatedSubmission = await prisma.masterSwitch.update({
       where: { id },
@@ -55,6 +59,7 @@ export async function POST(
         approvedById: session.user.id,
         approvedAt: new Date(),
         version: 1,
+        shareableId,
       }
     })
 

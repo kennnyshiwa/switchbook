@@ -7,13 +7,25 @@ export default auth((req) => {
   const isAuthPage = req.nextUrl.pathname.startsWith("/auth")
   const isPublicSharePage = req.nextUrl.pathname.startsWith("/share")
   const isApiRoute = req.nextUrl.pathname.startsWith("/api")
+  const isAuthApiRoute = req.nextUrl.pathname.startsWith("/api/auth")
+  const isPublicShareApi = req.nextUrl.pathname.startsWith("/api/share")
   const isDashboard = req.nextUrl.pathname.startsWith("/dashboard")
   const isAdminRoute = req.nextUrl.pathname.startsWith("/admin")
   const isSettingsPage = req.nextUrl.pathname.startsWith("/settings")
 
-  // Allow API routes and public share pages
-  if (isApiRoute || isPublicSharePage) {
+  // Allow public share pages and their API routes
+  if (isPublicSharePage || isPublicShareApi) {
     return NextResponse.next()
+  }
+
+  // Allow auth API routes (NextAuth endpoints)
+  if (isAuthApiRoute) {
+    return NextResponse.next()
+  }
+
+  // Allow API routes (but require auth for non-public APIs)
+  if (isApiRoute && !isPublicShareApi && !isAuthApiRoute && !isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Redirect logged-in users away from auth pages
