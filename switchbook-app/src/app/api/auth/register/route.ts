@@ -43,13 +43,14 @@ async function registerHandler(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12)
     
-    // Create user (first user becomes admin)
+    // Create user (first user becomes admin and is auto-verified)
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
         username: validatedData.username,
         password: hashedPassword,
         role: isFirstUser ? 'ADMIN' : 'USER',
+        emailVerified: isFirstUser ? new Date() : null, // Auto-verify first admin
       },
       select: {
         id: true,
@@ -57,15 +58,18 @@ async function registerHandler(request: NextRequest) {
         username: true,
         shareableId: true,
         role: true,
+        emailVerified: true,
       }
     })
     
-    // Send verification email
-    const emailResult = await sendVerificationEmail(user.email, user.id)
-    
-    if (!emailResult.success) {
-      // User created but email failed - log error but don't fail registration
-      console.error("Failed to send verification email:", emailResult.error)
+    // Send verification email (skip for first admin)
+    if (!isFirstUser) {
+      const emailResult = await sendVerificationEmail(user.email, user.id)
+      
+      if (!emailResult.success) {
+        // User created but email failed - log error but don't fail registration
+        console.error("Failed to send verification email:", emailResult.error)
+      }
     }
     
     // Add user to mailing list if emailMarketing is enabled (default is true for new users)
@@ -75,10 +79,10 @@ async function registerHandler(request: NextRequest) {
     
     return NextResponse.json({
       message: isFirstUser 
-        ? "Admin account created successfully! Please check your email to verify your account." 
+        ? "Admin account created successfully! Your account has been automatically verified. You can now log in." 
         : "User created successfully. Please check your email to verify your account.",
       user,
-      requiresEmailVerification: true,
+      requiresEmailVerification: !isFirstUser,
       isAdmin: isFirstUser
     }, { status: 201 })
     
