@@ -5,9 +5,8 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { MasterSwitch, SwitchImage, User } from '@prisma/client'
 import Image from 'next/image'
-import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS, CLICK_TYPE_COLORS } from '@/constants/switchTypes'
+import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switchTypes'
 import ForceCurvesButton from '@/components/ForceCurvesButton'
-import { ForceCurveCache } from '@/utils/forceCurveCache'
 
 interface MasterSwitchWithRelations extends MasterSwitch {
   submittedBy: User
@@ -149,9 +148,7 @@ export default function ShareMasterSwitchPageClient() {
             )}
             {masterSwitch.clickType && (
               <span 
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  CLICK_TYPE_COLORS[masterSwitch.clickType as keyof typeof CLICK_TYPE_COLORS] || 'bg-gray-100 text-gray-800'
-                }`}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
               >
                 {masterSwitch.clickType}
               </span>
@@ -162,9 +159,7 @@ export default function ShareMasterSwitchPageClient() {
           <div className="mb-6">
             <ForceCurvesButton
               switchName={`${masterSwitch.manufacturer} ${masterSwitch.name}`}
-              onCacheUpdate={(cache: ForceCurveCache) => {
-                // No-op for public view
-              }}
+              manufacturer={masterSwitch.manufacturer}
             />
           </div>
 
