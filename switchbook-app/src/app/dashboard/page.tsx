@@ -9,6 +9,9 @@ import HamburgerMenu from "@/components/HamburgerMenu"
 import MasterSwitchUpdatesNotification from "@/components/MasterSwitchUpdatesNotification"
 import NotificationBanner from "@/components/NotificationBanner"
 
+// Force dynamic rendering to improve initial load performance
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const session = await auth()
   
@@ -23,7 +26,8 @@ export default async function DashboardPage() {
         orderBy: { createdAt: "desc" },
         include: {
           images: {
-            orderBy: { order: 'asc' }
+            orderBy: { order: 'asc' },
+            take: 1  // Only load the primary image initially
           }
         }
       },

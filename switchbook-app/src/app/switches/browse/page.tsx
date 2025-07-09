@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
@@ -53,6 +53,7 @@ interface MasterSwitch {
 export default function BrowseMasterSwitchesPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [switches, setSwitches] = useState<MasterSwitch[]>([])
   const [filteredSwitches, setFilteredSwitches] = useState<MasterSwitch[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,6 +62,13 @@ export default function BrowseMasterSwitchesPage() {
   const [deletingSwitch, setDeletingSwitch] = useState<string | null>(null)
   const [linkDialogSwitch, setLinkDialogSwitch] = useState<{ id: string; name: string } | null>(null)
   const [selectedSwitch, setSelectedSwitch] = useState<MasterSwitch | null>(null)
+  
+  // Virtualization state
+  const [displayedSwitches, setDisplayedSwitches] = useState<MasterSwitch[]>([])
+  const [loadedCount, setLoadedCount] = useState(0)
+  const INITIAL_LOAD = 60  // Initial switches to load
+  const BATCH_SIZE = 30    // Switches to load per scroll
+  const loadMoreRef = useRef<HTMLDivElement>(null)
   
   // Filters - UI state (immediate updates)
   const [search, setSearch] = useState('')
@@ -123,9 +131,32 @@ export default function BrowseMasterSwitchesPage() {
   const [pcbThickness, setPcbThickness] = useState('')
   const [progressiveSpring, setProgressiveSpring] = useState<string>('')
   const [doubleStage, setDoubleStage] = useState<string>('')
-  const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>('createdAt')
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc')
+  
+  // Initialize sort and order from URL parameters
+  const sortParam = searchParams.get('sort') as 'name' | 'viewCount' | 'createdAt' | null
+  const orderParam = searchParams.get('order') as 'asc' | 'desc' | null
+  
+  const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>(
+    sortParam && ['name', 'viewCount', 'createdAt'].includes(sortParam) ? sortParam : 'createdAt'
+  )
+  const [order, setOrder] = useState<'asc' | 'desc'>(
+    orderParam && ['asc', 'desc'].includes(orderParam) ? orderParam : 'desc'
+  )
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+
+  // Update URL when sort or order changes
+  const updateURLParams = useCallback((newSort?: string, newOrder?: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    
+    if (newSort !== undefined) {
+      params.set('sort', newSort)
+    }
+    if (newOrder !== undefined) {
+      params.set('order', newOrder)
+    }
+    
+    router.replace(`/switches/browse?${params.toString()}`, { scroll: false })
+  }, [router, searchParams])
 
   // Create debounced setters for search (faster) and other filters (slower)
   const debouncedSearchUpdate = useMemo(
@@ -214,9 +245,22 @@ export default function BrowseMasterSwitchesPage() {
     const fetchAllSwitches = async () => {
       setLoading(true)
       try {
-        // Load all switches without pagination
+        // First get the total count with a minimal request
+        const countParams = new URLSearchParams({
+          limit: '1',
+          sort: sort,
+          order: order,
+        })
+        
+        const countResponse = await fetch(`/api/master-switches?${countParams}`)
+        if (countResponse.ok) {
+          const countData = await countResponse.json()
+          setTotalCount(countData.pagination.total)
+        }
+        
+        // Then load a reasonable batch of switches
         const params = new URLSearchParams({
-          limit: '10000', // High limit to get all switches
+          limit: '500', // Load 500 switches initially - enough for most use cases
           sort: sort,
           order: order,
         })
@@ -226,7 +270,8 @@ export default function BrowseMasterSwitchesPage() {
           const data = await response.json()
           setSwitches(data.switches)
           setFilteredSwitches(data.switches)
-          setTotalCount(data.pagination.total)
+          setDisplayedSwitches(data.switches.slice(0, INITIAL_LOAD))
+          setLoadedCount(INITIAL_LOAD)
         }
       } catch (error) {
         console.error('Failed to fetch master switches:', error)
@@ -236,6 +281,7 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     fetchAllSwitches()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router, sort, order])
 
   const clearAllFilters = () => {
@@ -429,7 +475,34 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     setFilteredSwitches(sorted)
+    // Reset virtualization when filters change
+    setLoadedCount(INITIAL_LOAD)
+    setDisplayedSwitches(sorted.slice(0, INITIAL_LOAD))
   }, [switches, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, progressiveSpring, doubleStage, debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin, debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && loadedCount < filteredSwitches.length) {
+          const nextCount = Math.min(loadedCount + BATCH_SIZE, filteredSwitches.length)
+          setDisplayedSwitches(filteredSwitches.slice(0, nextCount))
+          setLoadedCount(nextCount)
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current)
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current)
+      }
+    }
+  }, [loadedCount, filteredSwitches])
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -445,6 +518,9 @@ export default function BrowseMasterSwitchesPage() {
           s.id === switchId ? { ...s, inCollection: true } : s
         ))
         setFilteredSwitches(prev => prev.map(s => 
+          s.id === switchId ? { ...s, inCollection: true } : s
+        ))
+        setDisplayedSwitches(prev => prev.map(s => 
           s.id === switchId ? { ...s, inCollection: true } : s
         ))
         // Update the selected switch if it's open in the popup
@@ -482,6 +558,7 @@ export default function BrowseMasterSwitchesPage() {
         // Remove the switch from the list
         setSwitches(prev => prev.filter(s => s.id !== switchId))
         setFilteredSwitches(prev => prev.filter(s => s.id !== switchId))
+        setDisplayedSwitches(prev => prev.filter(s => s.id !== switchId))
         // Update total count
         setTotalCount(prev => prev - 1)
       } else {
@@ -530,7 +607,7 @@ export default function BrowseMasterSwitchesPage() {
                 </span>
                 {hasActiveFilters && (
                   <span className="text-gray-500 dark:text-gray-400">
-                    ({filteredSwitches.length} matching filters)
+                    ({filteredSwitches.length} matching filters, showing {displayedSwitches.length})
                   </span>
                 )}
               </div>
@@ -669,7 +746,11 @@ export default function BrowseMasterSwitchesPage() {
               </label>
               <select
                 value={sort}
-                onChange={(e) => setSort(e.target.value as 'name' | 'viewCount' | 'createdAt')}
+                onChange={(e) => {
+                  const newSort = e.target.value as 'name' | 'viewCount' | 'createdAt'
+                  setSort(newSort)
+                  updateURLParams(newSort, undefined)
+                }}
                 className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm"
               >
                 <option value="name">Alphabetical</option>
@@ -677,7 +758,11 @@ export default function BrowseMasterSwitchesPage() {
                 <option value="createdAt">Recently Added</option>
               </select>
               <button
-                onClick={() => setOrder(order === 'asc' ? 'desc' : 'asc')}
+                onClick={() => {
+                  const newOrder = order === 'asc' ? 'desc' : 'asc'
+                  setOrder(newOrder)
+                  updateURLParams(undefined, newOrder)
+                }}
                 className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm"
                 title={order === 'asc' ? 'Sort ascending' : 'Sort descending'}
               >
@@ -1082,7 +1167,7 @@ export default function BrowseMasterSwitchesPage() {
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6">
-                {filteredSwitches.map((switchItem) => (
+                {displayedSwitches.map((switchItem) => (
                   <div
                     key={switchItem.id}
                     onClick={() => setSelectedSwitch(switchItem)}
@@ -1093,6 +1178,8 @@ export default function BrowseMasterSwitchesPage() {
                         <img
                           src={switchItem.imageUrl}
                           alt={switchItem.name}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
                         />
                       ) : (
@@ -1126,6 +1213,16 @@ export default function BrowseMasterSwitchesPage() {
                   </div>
                 ))}
               </div>
+              
+              {/* Load more trigger */}
+              {displayedSwitches.length < filteredSwitches.length && (
+                <div ref={loadMoreRef} className="p-4 text-center">
+                  <div className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 dark:border-gray-400"></div>
+                    <span>Loading more switches...</span>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

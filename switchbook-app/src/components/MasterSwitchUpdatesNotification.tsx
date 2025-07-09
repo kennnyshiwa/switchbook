@@ -33,55 +33,38 @@ export default function MasterSwitchUpdatesNotification({ switches, userId }: Ma
         return;
       }
 
-      // First check if user has dismissed this notification
-      let dismissedVersion = 0;
       try {
-        const dismissalResponse = await fetch('/api/user/dismissed-notifications');
-        if (dismissalResponse.ok) {
-          const dismissals = await dismissalResponse.json();
-          const masterUpdatesDismissal = dismissals.find((d: any) => d.type === 'MASTER_UPDATES');
-          if (masterUpdatesDismissal && masterUpdatesDismissal.lastMasterUpdateVersion) {
-            dismissedVersion = masterUpdatesDismissal.lastMasterUpdateVersion;
+        // First check if user has dismissed this notification
+        let dismissedVersion = 0;
+        try {
+          const dismissalResponse = await fetch('/api/user/dismissed-notifications');
+          if (dismissalResponse.ok) {
+            const dismissals = await dismissalResponse.json();
+            const masterUpdatesDismissal = dismissals.find((d: any) => d.type === 'MASTER_UPDATES');
+            if (masterUpdatesDismissal && masterUpdatesDismissal.lastMasterUpdateVersion) {
+              dismissedVersion = masterUpdatesDismissal.lastMasterUpdateVersion;
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check dismissals:', error);
+        }
+
+        // Use batch endpoint to check all switches at once
+        const response = await fetch('/api/switches/check-master-updates');
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Only show notification if there are updates AND the master version is newer than what was dismissed
+          if (data.updatesAvailable.length > 0 && data.highestMasterVersion > dismissedVersion) {
+            setUpdatesAvailable(data.updatesAvailable);
+            setHighestMasterVersion(data.highestMasterVersion);
+            setShowNotification(true);
+          } else {
+            setShowNotification(false);
           }
         }
       } catch (error) {
-        console.error('Failed to check dismissals:', error);
-      }
-
-      const updateStatuses: SwitchUpdateStatus[] = [];
-      let maxVersion = 0;
-      
-      // Check each switch for updates
-      await Promise.all(
-        switchesWithMaster.map(async (switchItem) => {
-          try {
-            const response = await fetch(`/api/switches/${switchItem.id}/sync-master`);
-            if (response.ok) {
-              const data = await response.json();
-              if (data.hasUpdates) {
-                updateStatuses.push({
-                  switchId: switchItem.id,
-                  switchName: switchItem.name,
-                  hasUpdates: true
-                });
-              }
-              if (data.masterVersion > maxVersion) {
-                maxVersion = data.masterVersion;
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to check updates for switch ${switchItem.id}:`, error);
-          }
-        })
-      );
-
-      // Only show notification if there are updates AND the master version is newer than what was dismissed
-      if (updateStatuses.length > 0 && maxVersion > dismissedVersion) {
-        setUpdatesAvailable(updateStatuses);
-        setHighestMasterVersion(maxVersion);
-        setShowNotification(true);
-      } else {
-        setShowNotification(false);
+        console.error('Failed to check for updates:', error);
       }
       
       setIsChecking(false);

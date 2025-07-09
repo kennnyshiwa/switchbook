@@ -86,6 +86,8 @@ export default function ImageCarousel({
       <img
         src={imageUrl}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         className="w-full h-full object-contain transition-opacity duration-300"
         onLoad={() => {
           // Image loaded successfully
