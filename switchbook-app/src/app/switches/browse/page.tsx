@@ -123,8 +123,8 @@ export default function BrowseMasterSwitchesPage() {
   const [pcbThickness, setPcbThickness] = useState('')
   const [progressiveSpring, setProgressiveSpring] = useState<string>('')
   const [doubleStage, setDoubleStage] = useState<string>('')
-  const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>('name')
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc')
+  const [sort, setSort] = useState<'name' | 'viewCount' | 'createdAt'>('createdAt')
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   // Create debounced setters for search (faster) and other filters (slower)
@@ -217,8 +217,8 @@ export default function BrowseMasterSwitchesPage() {
         // Load all switches without pagination
         const params = new URLSearchParams({
           limit: '10000', // High limit to get all switches
-          sort: 'name',
-          order: 'asc',
+          sort: sort,
+          order: order,
         })
 
         const response = await fetch(`/api/master-switches?${params}`)
@@ -236,7 +236,7 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     fetchAllSwitches()
-  }, [session, status, router])
+  }, [session, status, router, sort, order])
 
   const clearAllFilters = () => {
     setSearch('')
@@ -412,6 +412,8 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     // Apply sorting
+    // Only sort client-side for name and viewCount
+    // createdAt sorting is handled by the API
     const sorted = [...filtered]
     switch (sort) {
       case 'name':
@@ -421,7 +423,8 @@ export default function BrowseMasterSwitchesPage() {
         sorted.sort((a, b) => order === 'asc' ? (a.userCount - b.userCount) : (b.userCount - a.userCount))
         break
       case 'createdAt':
-        sorted.sort((a, b) => order === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)) // Fallback to name since we don't have createdAt
+        // Don't re-sort - the API already sorted by createdAt
+        // Just use the filtered results as-is
         break
     }
 
@@ -631,24 +634,24 @@ export default function BrowseMasterSwitchesPage() {
             </div>
           </div>
 
-          {/* Advanced Filters Toggle */}
+          {/* Sort Controls and Advanced Filters Toggle */}
           <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              <svg 
-                className={`w-4 h-4 transform transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
-            </button>
-
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                <svg 
+                  className={`w-4 h-4 transform transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+                {showAdvancedFilters ? 'Hide' : 'Show'} Advanced Filters
+              </button>
+              
               {hasActiveFilters && (
                 <button
                   onClick={clearAllFilters}
@@ -657,26 +660,29 @@ export default function BrowseMasterSwitchesPage() {
                   Clear All Filters
                 </button>
               )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Sort By
-                </label>
-                <select
-                  value={`${sort}-${order}`}
-                  onChange={(e) => {
-                    const [newSort, newOrder] = e.target.value.split('-') as [typeof sort, typeof order]
-                    setSort(newSort)
-                    setOrder(newOrder)
-                  }}
-                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                >
-                  <option value="name-asc">Name (A-Z)</option>
-                  <option value="name-desc">Name (Z-A)</option>
-                  <option value="viewCount-desc">Most Popular</option>
-                  <option value="createdAt-desc">Recently Added</option>
-                </select>
-              </div>
+            </div>
+            
+            {/* Sort Controls */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Sort by:
+              </label>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as 'name' | 'viewCount' | 'createdAt')}
+                className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-1 text-sm"
+              >
+                <option value="name">Alphabetical</option>
+                <option value="viewCount">Most Popular</option>
+                <option value="createdAt">Recently Added</option>
+              </select>
+              <button
+                onClick={() => setOrder(order === 'asc' ? 'desc' : 'asc')}
+                className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm"
+                title={order === 'asc' ? 'Sort ascending' : 'Sort descending'}
+              >
+                {order === 'asc' ? 'Ascending' : 'Descending'}
+              </button>
             </div>
           </div>
 
