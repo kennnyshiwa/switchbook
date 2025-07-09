@@ -50,6 +50,7 @@ export const switchSchema = z.object({
   clickType: z.enum(["CLICK_LEAF", "CLICK_BAR", "CLICK_JACKET"]).optional().or(z.literal("")),
   tactilePosition: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   dateObtained: z.string().optional().or(z.literal("")),
+  personalTags: z.array(z.string().max(50)).optional().default([]),
 })
 
 export const passwordResetRequestSchema = z.object({

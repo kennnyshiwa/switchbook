@@ -56,7 +56,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
     setValue,
     watch,
   } = useForm<SwitchFormData>({
-    resolver: zodResolver(switchSchema),
+    resolver: zodResolver(switchSchema) as any,
     defaultValues: {
       name: switchItem.name,
       chineseName: switchItem.chineseName || '',
@@ -91,6 +91,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       clickType: switchItem.clickType || undefined,
       tactilePosition: switchItem.tactilePosition || undefined,
       dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
+      personalTags: switchItem.personalTags || [],
     }
   })
 
@@ -137,8 +138,45 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       }
 
       const data = await response.json()
+      const syncedSwitch = data.switch
+      
+      // Update all form fields with the synced data
+      setValue('name', syncedSwitch.name)
+      setValue('chineseName', syncedSwitch.chineseName || '')
+      setValue('type', syncedSwitch.type || undefined)
+      setValue('technology', syncedSwitch.technology || undefined)
+      setValue('magnetOrientation', syncedSwitch.magnetOrientation || '')
+      setValue('magnetPosition', syncedSwitch.magnetPosition || '')
+      setValue('magnetPolarity', syncedSwitch.magnetPolarity || '')
+      setValue('initialForce', syncedSwitch.initialForce || undefined)
+      setValue('initialMagneticFlux', syncedSwitch.initialMagneticFlux || undefined)
+      setValue('bottomOutMagneticFlux', syncedSwitch.bottomOutMagneticFlux || undefined)
+      setValue('pcbThickness', syncedSwitch.pcbThickness || '')
+      setValue('compatibility', syncedSwitch.compatibility || '')
+      setValue('manufacturer', syncedSwitch.manufacturer || '')
+      setValue('actuationForce', syncedSwitch.actuationForce || undefined)
+      setValue('tactileForce', syncedSwitch.tactileForce || undefined)
+      setValue('tactilePosition', syncedSwitch.tactilePosition || undefined)
+      setValue('bottomOutForce', syncedSwitch.bottomOutForce || undefined)
+      setValue('progressiveSpring', syncedSwitch.progressiveSpring || false)
+      setValue('doubleStage', syncedSwitch.doubleStage || false)
+      setValue('preTravel', syncedSwitch.preTravel || undefined)
+      setValue('bottomOut', syncedSwitch.bottomOut || undefined)
+      setValue('springWeight', syncedSwitch.springWeight || '')
+      setValue('springLength', syncedSwitch.springLength || '')
+      setValue('notes', syncedSwitch.notes || '')
+      // Keep personalNotes and personalTags unchanged - they're user-specific
+      setValue('topHousing', syncedSwitch.topHousing || '')
+      setValue('bottomHousing', syncedSwitch.bottomHousing || '')
+      setValue('stem', syncedSwitch.stem || '')
+      setValue('frankenTop', syncedSwitch.frankenTop || '')
+      setValue('frankenBottom', syncedSwitch.frankenBottom || '')
+      setValue('frankenStem', syncedSwitch.frankenStem || '')
+      setValue('clickType', syncedSwitch.clickType || undefined)
+      setValue('dateObtained', syncedSwitch.dateObtained ? new Date(syncedSwitch.dateObtained).toISOString().split('T')[0] : '')
+      
       // Preserve local images when syncing
-      onSwitchUpdated({ ...data.switch, images: localImages })
+      onSwitchUpdated({ ...syncedSwitch, images: localImages })
       setSyncStatus(prev => prev ? { ...prev, hasUpdates: false, isModified: false } : null)
     } catch (error) {
       setError('Failed to sync with master database. Please try again.')

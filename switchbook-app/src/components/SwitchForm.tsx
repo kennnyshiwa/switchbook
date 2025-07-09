@@ -4,6 +4,7 @@ import { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'rea
 import { z } from 'zod'
 import { switchSchema } from '@/lib/validation'
 import ManufacturerAutocomplete from './ManufacturerAutocomplete'
+import TagsInput from './TagsInput'
 
 type SwitchFormData = z.infer<typeof switchSchema>
 
@@ -540,6 +541,20 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
           )}
         </div>
       )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Personal Tags</label>
+        <div className="mt-1">
+          <TagsInput
+            tags={watch('personalTags') || []}
+            onChange={(tags) => setValue('personalTags', tags)}
+            placeholder="Add personal tags..."
+          />
+        </div>
+        {errors.personalTags && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.personalTags.message}</p>
+        )}
+      </div>
     </>
   )
 }

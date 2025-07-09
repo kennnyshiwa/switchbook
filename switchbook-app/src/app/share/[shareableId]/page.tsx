@@ -169,7 +169,8 @@ export default function SharePage() {
         (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
         (s.magnetPolarity?.toLowerCase().includes(search) ?? false) ||
         (s.pcbThickness?.toLowerCase().includes(search) ?? false) ||
-        (s.compatibility?.toLowerCase().includes(search) ?? false)
+        (s.compatibility?.toLowerCase().includes(search) ?? false) ||
+        (s.personalTags?.some(tag => tag.toLowerCase().includes(search)) ?? false)
       )
     }
 

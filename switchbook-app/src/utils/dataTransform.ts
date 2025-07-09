@@ -34,6 +34,7 @@ interface SwitchData {
   frankenStem?: string | null;
   clickType?: ClickType | null | '';
   dateObtained?: string | null;
+  personalTags?: string[];
 }
 
 export function transformSwitchData(data: SwitchData) {
@@ -71,5 +72,6 @@ export function transformSwitchData(data: SwitchData) {
     frankenStem: data.frankenStem || null,
     clickType: data.clickType === '' ? null : (data.clickType || null),
     dateObtained: data.dateObtained ? new Date(data.dateObtained) : null,
+    personalTags: data.personalTags || [],
   };
 }
