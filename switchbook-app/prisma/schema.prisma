@@ -34,6 +34,7 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   switches                Switch[]
   verificationTokens      VerificationToken[]
+  wishlistItems           Wishlist[]
 }
 
 model Switch {
@@ -230,6 +231,7 @@ model MasterSwitch {
   views                  MasterSwitchView[]
   userSwitches           Switch[]
   images                 SwitchImage[]
+  wishlistItems          Wishlist[]
 
   @@index([name, manufacturer])
   @@index([status])
@@ -315,6 +317,25 @@ model SwitchImage {
   @@index([switchId])
   @@index([masterSwitchId])
   @@index([order])
+}
+
+model Wishlist {
+  id                  String        @id @default(cuid())
+  userId              String
+  masterSwitchId      String?
+  customName          String?
+  customManufacturer  String?
+  customNotes         String?
+  priority            Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  masterSwitch        MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, masterSwitchId])
+  @@index([userId])
+  @@index([masterSwitchId])
 }
 
 enum UserRole {

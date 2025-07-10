@@ -94,10 +94,20 @@ export async function GET(
       }
     })
 
+    // Check if user has this in their wishlist
+    const wishlistItem = await prisma.wishlist.findFirst({
+      where: {
+        userId: session.user.id,
+        masterSwitchId: id
+      }
+    })
+
     return NextResponse.json({
       ...masterSwitch,
       inCollection: !!userSwitch,
       userSwitchId: userSwitch?.id,
+      inWishlist: !!wishlistItem,
+      wishlistId: wishlistItem?.id,
       userCount: masterSwitch._count.userSwitches
     })
   } catch (error) {

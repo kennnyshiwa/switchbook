@@ -44,6 +44,8 @@ interface MasterSwitchDetail {
   frankenStem?: string
   inCollection: boolean
   userSwitchId?: string
+  inWishlist: boolean
+  wishlistId?: string
   userCount: number
   viewCount: number
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
@@ -66,6 +68,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
   const [switchData, setSwitchData] = useState<MasterSwitchDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [addingToWishlist, setAddingToWishlist] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showSubmittedMessage, setShowSubmittedMessage] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
@@ -139,6 +142,36 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
       alert('Failed to add switch to collection')
     } finally {
       setAdding(false)
+    }
+  }
+
+  const addToWishlist = async () => {
+    if (!switchData) return
+    
+    setAddingToWishlist(true)
+    try {
+      const response = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          masterSwitchId: switchData.id,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSwitchData(prev => prev ? { ...prev, inWishlist: true, wishlistId: data.id } : null)
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to add switch to wishlist')
+      }
+    } catch (error) {
+      console.error('Failed to add to wishlist:', error)
+      alert('Failed to add switch to wishlist')
+    } finally {
+      setAddingToWishlist(false)
     }
   }
 
@@ -250,9 +283,31 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             
             <div className="flex items-center space-x-4">
               {switchData.inCollection && (
-                <span className="text-green-600 dark:text-green-400">
-                  ✓ In your collection
+                <span className="text-green-600 dark:text-green-400 flex items-center">
+                  <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  In collection
                 </span>
+              )}
+              
+              {switchData.inWishlist && !switchData.inCollection && (
+                <span className="text-purple-600 dark:text-purple-400 flex items-center">
+                  <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                  </svg>
+                  In wishlist
+                </span>
+              )}
+              
+              {!switchData.inWishlist && !switchData.inCollection && (
+                <button
+                  onClick={addToWishlist}
+                  disabled={addingToWishlist}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {addingToWishlist ? 'Adding...' : 'Add to Wishlist'}
+                </button>
               )}
               
               {!switchData.inCollection && (
@@ -299,6 +354,16 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                         >
                           Link to Collection
                         </button>
+                      )}
+                      
+                      {switchData.inWishlist && switchData.wishlistId && (
+                        <Link
+                          href="/wishlist"
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          onClick={() => setShowDropdown(false)}
+                        >
+                          View in Wishlist
+                        </Link>
                       )}
                       
                       {switchData.status === 'APPROVED' && (

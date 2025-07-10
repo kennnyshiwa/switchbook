@@ -37,6 +37,7 @@ interface MasterSwitch {
   compatibility?: string
   clickType?: 'CLICK_LEAF' | 'CLICK_BAR' | 'CLICK_JACKET'
   inCollection: boolean
+  inWishlist: boolean
   userCount: number
   submittedBy: {
     id: string
@@ -48,9 +49,11 @@ interface MasterSwitchDetailsPopupProps {
   switchItem: MasterSwitch
   onClose: () => void
   onAddToCollection: (switchId: string) => void
+  onAddToWishlist: (switchId: string) => void
   onDeleteSwitch?: (switchId: string) => void
   onOpenLinkDialog: (switchItem: { id: string; name: string }) => void
   isAddingSwitch: boolean
+  isAddingToWishlist: boolean
   isDeletingSwitch: boolean
   isAdmin?: boolean
 }
@@ -59,9 +62,11 @@ export default function MasterSwitchDetailsPopup({
   switchItem,
   onClose,
   onAddToCollection,
+  onAddToWishlist,
   onDeleteSwitch,
   onOpenLinkDialog,
   isAddingSwitch,
+  isAddingToWishlist,
   isDeletingSwitch,
   isAdmin
 }: MasterSwitchDetailsPopupProps) {
@@ -343,27 +348,51 @@ export default function MasterSwitchDetailsPopup({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            {switchItem.inCollection ? (
-              <span className="text-green-600 dark:text-green-400 text-sm">
-                ✓ In your collection
+        <div className="flex items-center justify-between gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className={`flex items-center gap-3 ${switchItem.inWishlist && !switchItem.inCollection ? 'min-w-[200px] justify-center' : ''}`}>
+            {switchItem.inCollection && (
+              <span className="text-green-600 dark:text-green-400 text-sm flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                In collection
               </span>
-            ) : (
+            )}
+            
+            {switchItem.inWishlist && !switchItem.inCollection && (
+              <span className="text-purple-600 dark:text-purple-400 text-sm flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                </svg>
+                In wishlist
+              </span>
+            )}
+            
+            {!switchItem.inWishlist && !switchItem.inCollection && (
+              <button
+                onClick={() => onAddToWishlist(switchItem.id)}
+                disabled={isAddingToWishlist}
+                className="px-4 py-2 bg-purple-600 text-white text-center rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {isAddingToWishlist ? 'Adding...' : 'Add to Wishlist'}
+              </button>
+            )}
+            
+            {!switchItem.inCollection && (
               <button
                 onClick={() => onAddToCollection(switchItem.id)}
                 disabled={isAddingSwitch}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="px-4 py-2 bg-blue-600 text-white text-center rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 {isAddingSwitch ? 'Adding...' : 'Add to Collection'}
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Link
               href={`/switches/${switchItem.id}`}
-              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+              className="px-4 py-2 text-sm text-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
             >
               View Full Details
             </Link>
@@ -371,7 +400,7 @@ export default function MasterSwitchDetailsPopup({
             {!switchItem.inCollection && (
               <button
                 onClick={() => onOpenLinkDialog({ id: switchItem.id, name: switchItem.name })}
-                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                className="px-4 py-2 text-sm text-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
               >
                 Link to Collection
               </button>
@@ -379,7 +408,7 @@ export default function MasterSwitchDetailsPopup({
             
             <Link
               href={`/switches/${switchItem.id}/suggest-edit`}
-              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+              className="px-4 py-2 text-sm text-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
             >
               Suggest Edit
             </Link>
@@ -388,7 +417,7 @@ export default function MasterSwitchDetailsPopup({
               <button
                 onClick={() => onDeleteSwitch(switchItem.id)}
                 disabled={isDeletingSwitch}
-                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md disabled:opacity-50"
+                className="px-4 py-2 text-sm text-center text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md disabled:opacity-50"
               >
                 {isDeletingSwitch ? 'Deleting...' : 'Delete'}
               </button>

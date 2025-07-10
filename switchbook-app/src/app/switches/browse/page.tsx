@@ -42,6 +42,7 @@ interface MasterSwitch {
   pcbThickness?: string
   compatibility?: string
   inCollection: boolean
+  inWishlist: boolean
   userCount: number
   submittedBy: {
     id: string
@@ -59,6 +60,7 @@ export default function BrowseMasterSwitchesPage() {
   const [loading, setLoading] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
   const [addingSwitch, setAddingSwitch] = useState<string | null>(null)
+  const [addingToWishlist, setAddingToWishlist] = useState<string | null>(null)
   const [deletingSwitch, setDeletingSwitch] = useState<string | null>(null)
   const [linkDialogSwitch, setLinkDialogSwitch] = useState<{ id: string; name: string } | null>(null)
   const [selectedSwitch, setSelectedSwitch] = useState<MasterSwitch | null>(null)
@@ -538,6 +540,46 @@ export default function BrowseMasterSwitchesPage() {
       alert('Failed to add switch to collection')
     } finally {
       setAddingSwitch(null)
+    }
+  }
+
+  const addToWishlist = async (switchId: string) => {
+    setAddingToWishlist(switchId)
+    try {
+      const response = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          masterSwitchId: switchId,
+        }),
+      })
+
+      if (response.ok) {
+        // Update the switch in the list to show it's now in wishlist
+        setSwitches(prev => prev.map(s => 
+          s.id === switchId ? { ...s, inWishlist: true } : s
+        ))
+        setFilteredSwitches(prev => prev.map(s => 
+          s.id === switchId ? { ...s, inWishlist: true } : s
+        ))
+        setDisplayedSwitches(prev => prev.map(s => 
+          s.id === switchId ? { ...s, inWishlist: true } : s
+        ))
+        // Update the selected switch if it's open in the popup
+        if (selectedSwitch && selectedSwitch.id === switchId) {
+          setSelectedSwitch({ ...selectedSwitch, inWishlist: true })
+        }
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to add switch to wishlist')
+      }
+    } catch (error) {
+      console.error('Failed to add to wishlist:', error)
+      alert('Failed to add switch to wishlist')
+    } finally {
+      setAddingToWishlist(null)
     }
   }
 
@@ -1248,9 +1290,11 @@ export default function BrowseMasterSwitchesPage() {
           switchItem={selectedSwitch}
           onClose={() => setSelectedSwitch(null)}
           onAddToCollection={addToCollection}
+          onAddToWishlist={addToWishlist}
           onDeleteSwitch={session?.user?.role === 'ADMIN' ? deleteSwitch : undefined}
           onOpenLinkDialog={setLinkDialogSwitch}
           isAddingSwitch={addingSwitch === selectedSwitch.id}
+          isAddingToWishlist={addingToWishlist === selectedSwitch.id}
           isDeletingSwitch={deletingSwitch === selectedSwitch.id}
           isAdmin={session?.user?.role === 'ADMIN'}
         />

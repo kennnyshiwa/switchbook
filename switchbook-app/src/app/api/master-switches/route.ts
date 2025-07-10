@@ -210,12 +210,27 @@ export async function GET(request: Request) {
       }
     })
 
-    const userSwitchIds = new Set(userSwitches.map(s => s.masterSwitchId))
+    // Check which master switches are in the user's wishlist
+    const wishlistItems = await prisma.wishlist.findMany({
+      where: {
+        userId: session.user.id,
+        masterSwitchId: {
+          in: masterSwitches.map(ms => ms.id)
+        }
+      },
+      select: {
+        masterSwitchId: true
+      }
+    })
 
-    // Add "inCollection" flag to each master switch
+    const userSwitchIds = new Set(userSwitches.map(s => s.masterSwitchId))
+    const wishlistSwitchIds = new Set(wishlistItems.map(w => w.masterSwitchId).filter(Boolean))
+
+    // Add "inCollection" and "inWishlist" flags to each master switch
     const enrichedSwitches = masterSwitches.map(ms => ({
       ...ms,
       inCollection: userSwitchIds.has(ms.id),
+      inWishlist: wishlistSwitchIds.has(ms.id),
       userCount: ms._count.userSwitches
     }))
 
