@@ -65,11 +65,11 @@ export default function BrowseMasterSwitchesPage() {
   const [linkDialogSwitch, setLinkDialogSwitch] = useState<{ id: string; name: string } | null>(null)
   const [selectedSwitch, setSelectedSwitch] = useState<MasterSwitch | null>(null)
   
-  // Virtualization state
-  const [displayedSwitches, setDisplayedSwitches] = useState<MasterSwitch[]>([])
-  const [loadedCount, setLoadedCount] = useState(0)
-  const INITIAL_LOAD = 60  // Initial switches to load
-  const BATCH_SIZE = 30    // Switches to load per scroll
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const PAGE_SIZE = 50  // Number of items per page
   const loadMoreRef = useRef<HTMLDivElement>(null)
   
   // Filters - UI state (immediate updates)
@@ -236,7 +236,99 @@ export default function BrowseMasterSwitchesPage() {
     });
   }, [manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, tactileForceMin, tactileForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedFilterUpdate])
 
-  // Fetch all master switches on mount
+  // Function to fetch switches with pagination
+  const fetchSwitches = useCallback(async (page: number, append: boolean = false) => {
+    if (!append) {
+      setLoading(true)
+    } else {
+      setLoadingMore(true)
+    }
+    
+    try {
+      // Build params with all active filters
+      const params = new URLSearchParams({
+        limit: PAGE_SIZE.toString(),
+        page: page.toString(),
+        sort: sort,
+        order: order,
+      })
+
+        // Add search and filter parameters if they have values
+        if (debouncedSearch) params.set('search', debouncedSearch)
+        if (debouncedManufacturer) params.set('manufacturer', debouncedManufacturer)
+        if (type) params.set('type', type)
+        if (technology) params.set('technology', technology)
+        if (debouncedTopHousing) params.set('topHousing', debouncedTopHousing)
+        if (debouncedBottomHousing) params.set('bottomHousing', debouncedBottomHousing)
+        if (debouncedStem) params.set('stem', debouncedStem)
+        if (debouncedSpringWeight) params.set('springWeight', debouncedSpringWeight)
+        if (debouncedSpringLength) params.set('springLength', debouncedSpringLength)
+        if (debouncedCompatibility) params.set('compatibility', debouncedCompatibility)
+        if (magnetOrientation) params.set('magnetOrientation', magnetOrientation)
+        if (magnetPosition) params.set('magnetPosition', magnetPosition)
+        if (magnetPolarity) params.set('magnetPolarity', magnetPolarity)
+        if (pcbThickness) params.set('pcbThickness', pcbThickness)
+        if (progressiveSpring) params.set('progressiveSpring', progressiveSpring)
+        if (doubleStage) params.set('doubleStage', doubleStage)
+        if (debouncedActuationForceMin) params.set('actuationForceMin', debouncedActuationForceMin)
+        if (debouncedActuationForceMax) params.set('actuationForceMax', debouncedActuationForceMax)
+        if (debouncedTactileForceMin) params.set('tactileForceMin', debouncedTactileForceMin)
+        if (debouncedTactileForceMax) params.set('tactileForceMax', debouncedTactileForceMax)
+        if (debouncedBottomOutForceMin) params.set('bottomOutForceMin', debouncedBottomOutForceMin)
+        if (debouncedBottomOutForceMax) params.set('bottomOutForceMax', debouncedBottomOutForceMax)
+        if (debouncedPreTravelMin) params.set('preTravelMin', debouncedPreTravelMin)
+        if (debouncedPreTravelMax) params.set('preTravelMax', debouncedPreTravelMax)
+        if (debouncedBottomOutMin) params.set('bottomOutMin', debouncedBottomOutMin)
+        if (debouncedBottomOutMax) params.set('bottomOutMax', debouncedBottomOutMax)
+        if (debouncedInitialForceMin) params.set('initialForceMin', debouncedInitialForceMin)
+        if (debouncedInitialForceMax) params.set('initialForceMax', debouncedInitialForceMax)
+        if (debouncedInitialMagneticFluxMin) params.set('initialMagneticFluxMin', debouncedInitialMagneticFluxMin)
+        if (debouncedInitialMagneticFluxMax) params.set('initialMagneticFluxMax', debouncedInitialMagneticFluxMax)
+        if (debouncedBottomOutMagneticFluxMin) params.set('bottomOutMagneticFluxMin', debouncedBottomOutMagneticFluxMin)
+        if (debouncedBottomOutMagneticFluxMax) params.set('bottomOutMagneticFluxMax', debouncedBottomOutMagneticFluxMax)
+
+      const response = await fetch(`/api/master-switches?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        
+        if (append) {
+          // Append new results to existing ones
+          setSwitches(prev => [...prev, ...data.switches])
+          setFilteredSwitches(prev => [...prev, ...data.switches])
+        } else {
+          // Replace existing results
+          setSwitches(data.switches)
+          setFilteredSwitches(data.switches)
+        }
+        
+        setTotalCount(data.pagination.total)
+        setHasMore(data.pagination.current < data.pagination.pages)
+      }
+    } catch (error) {
+      console.error('Failed to fetch master switches:', error)
+    } finally {
+      if (!append) {
+        setLoading(false)
+      } else {
+        setLoadingMore(false)
+      }
+    }
+  }, [
+    sort, order,
+    // Debounced text filters
+    debouncedSearch, debouncedManufacturer, debouncedTopHousing, debouncedBottomHousing,
+    debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility,
+    debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin,
+    debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax,
+    debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax,
+    debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin,
+    debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax,
+    // Non-debounced filters
+    type, technology, magnetOrientation, magnetPosition, magnetPolarity,
+    pcbThickness, progressiveSpring, doubleStage
+  ])
+
+  // Fetch initial data when filters change
   useEffect(() => {
     if (status === 'loading') return
     if (!session) {
@@ -244,47 +336,12 @@ export default function BrowseMasterSwitchesPage() {
       return
     }
 
-    const fetchAllSwitches = async () => {
-      setLoading(true)
-      try {
-        // First get the total count with a minimal request
-        const countParams = new URLSearchParams({
-          limit: '1',
-          sort: sort,
-          order: order,
-        })
-        
-        const countResponse = await fetch(`/api/master-switches?${countParams}`)
-        if (countResponse.ok) {
-          const countData = await countResponse.json()
-          setTotalCount(countData.pagination.total)
-        }
-        
-        // Then load a reasonable batch of switches
-        const params = new URLSearchParams({
-          limit: '500', // Load 500 switches initially - enough for most use cases
-          sort: sort,
-          order: order,
-        })
-
-        const response = await fetch(`/api/master-switches?${params}`)
-        if (response.ok) {
-          const data = await response.json()
-          setSwitches(data.switches)
-          setFilteredSwitches(data.switches)
-          setDisplayedSwitches(data.switches.slice(0, INITIAL_LOAD))
-          setLoadedCount(INITIAL_LOAD)
-        }
-      } catch (error) {
-        console.error('Failed to fetch master switches:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAllSwitches()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status, router, sort, order])
+    // Reset page to 1 and fetch new data
+    setCurrentPage(1)
+    fetchSwitches(1, false)
+  }, [
+    session, status, router, fetchSwitches
+  ])
 
   const clearAllFilters = () => {
     setSearch('')
@@ -319,11 +376,14 @@ export default function BrowseMasterSwitchesPage() {
     setInitialMagneticFluxMax('')
     setBottomOutMagneticFluxMin('')
     setBottomOutMagneticFluxMax('')
+    // Reset pagination
+    setCurrentPage(1)
   }
 
   const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || progressiveSpring || doubleStage || actuationForceMin || actuationForceMax || tactileForceMin || tactileForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
 
-  // Client-side filtering and sorting
+  // Client-side filtering and sorting - REMOVED (now handled server-side)
+  /*
   useEffect(() => {
     let filtered = [...switches]
 
@@ -481,15 +541,23 @@ export default function BrowseMasterSwitchesPage() {
     setLoadedCount(INITIAL_LOAD)
     setDisplayedSwitches(sorted.slice(0, INITIAL_LOAD))
   }, [switches, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, progressiveSpring, doubleStage, debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin, debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
+  */
+
+  // Load more handler
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      const nextPage = currentPage + 1
+      setCurrentPage(nextPage)
+      fetchSwitches(nextPage, true)
+    }
+  }, [currentPage, loadingMore, hasMore, fetchSwitches])
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && loadedCount < filteredSwitches.length) {
-          const nextCount = Math.min(loadedCount + BATCH_SIZE, filteredSwitches.length)
-          setDisplayedSwitches(filteredSwitches.slice(0, nextCount))
-          setLoadedCount(nextCount)
+        if (entries[0].isIntersecting && !loadingMore && hasMore) {
+          loadMore()
         }
       },
       { threshold: 0.1 }
@@ -504,7 +572,7 @@ export default function BrowseMasterSwitchesPage() {
         observer.unobserve(loadMoreRef.current)
       }
     }
-  }, [loadedCount, filteredSwitches])
+  }, [loadMore, loadingMore, hasMore])
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -520,9 +588,6 @@ export default function BrowseMasterSwitchesPage() {
           s.id === switchId ? { ...s, inCollection: true } : s
         ))
         setFilteredSwitches(prev => prev.map(s => 
-          s.id === switchId ? { ...s, inCollection: true } : s
-        ))
-        setDisplayedSwitches(prev => prev.map(s => 
           s.id === switchId ? { ...s, inCollection: true } : s
         ))
         // Update the selected switch if it's open in the popup
@@ -564,9 +629,6 @@ export default function BrowseMasterSwitchesPage() {
         setFilteredSwitches(prev => prev.map(s => 
           s.id === switchId ? { ...s, inWishlist: true } : s
         ))
-        setDisplayedSwitches(prev => prev.map(s => 
-          s.id === switchId ? { ...s, inWishlist: true } : s
-        ))
         // Update the selected switch if it's open in the popup
         if (selectedSwitch && selectedSwitch.id === switchId) {
           setSelectedSwitch({ ...selectedSwitch, inWishlist: true })
@@ -600,7 +662,6 @@ export default function BrowseMasterSwitchesPage() {
         // Remove the switch from the list
         setSwitches(prev => prev.filter(s => s.id !== switchId))
         setFilteredSwitches(prev => prev.filter(s => s.id !== switchId))
-        setDisplayedSwitches(prev => prev.filter(s => s.id !== switchId))
         // Update total count
         setTotalCount(prev => prev - 1)
       } else {
@@ -649,7 +710,7 @@ export default function BrowseMasterSwitchesPage() {
                 </span>
                 {hasActiveFilters && (
                   <span className="text-gray-500 dark:text-gray-400">
-                    ({filteredSwitches.length} matching filters, showing {displayedSwitches.length})
+                    ({totalCount} matching filters, showing {switches.length})
                   </span>
                 )}
               </div>
@@ -1200,7 +1261,7 @@ export default function BrowseMasterSwitchesPage() {
 
         {/* Results */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow relative overflow-visible">
-          {filteredSwitches.length === 0 ? (
+          {switches.length === 0 && !loading ? (
             <div className="p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400">
                 No switches found matching your criteria
@@ -1209,7 +1270,7 @@ export default function BrowseMasterSwitchesPage() {
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-6">
-                {displayedSwitches.map((switchItem) => (
+                {switches.map((switchItem) => (
                   <div
                     key={switchItem.id}
                     onClick={() => setSelectedSwitch(switchItem)}
@@ -1257,12 +1318,21 @@ export default function BrowseMasterSwitchesPage() {
               </div>
               
               {/* Load more trigger */}
-              {displayedSwitches.length < filteredSwitches.length && (
+              {hasMore && (
                 <div ref={loadMoreRef} className="p-4 text-center">
-                  <div className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 dark:border-gray-400"></div>
-                    <span>Loading more switches...</span>
-                  </div>
+                  {loadingMore ? (
+                    <div className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 dark:border-gray-400"></div>
+                      <span>Loading more switches...</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={loadMore}
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      Load more
+                    </button>
+                  )}
                 </div>
               )}
             </>
