@@ -4,7 +4,8 @@ import { UseFormRegister, FieldErrors, UseFormSetValue, UseFormWatch } from 'rea
 import { z } from 'zod'
 import { switchSchema } from '@/lib/validation'
 import ManufacturerAutocomplete from './ManufacturerAutocomplete'
-import TagsInput from './TagsInput'
+import TagsInputWithAutocomplete from './TagsInputWithAutocomplete'
+import { useState, useEffect } from 'react'
 
 type SwitchFormData = z.infer<typeof switchSchema>
 
@@ -26,6 +27,22 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY'
   const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY'
   const showClickType = typeValue === 'CLICKY'
+  
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([])
+  
+  // Fetch user's existing tags for autocomplete
+  useEffect(() => {
+    fetch('/api/user/tags')
+      .then(res => res.json())
+      .then(data => {
+        if (data.tags) {
+          setTagSuggestions(data.tags)
+        }
+      })
+      .catch(err => {
+        // Failed to fetch tag suggestions, but don't interrupt user flow
+      })
+  }, [])
   
   return (
     <>
@@ -545,10 +562,11 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Personal Tags</label>
         <div className="mt-1">
-          <TagsInput
+          <TagsInputWithAutocomplete
             tags={watch('personalTags') || []}
             onChange={(tags) => setValue('personalTags', tags)}
             placeholder="Add personal tags..."
+            suggestions={tagSuggestions}
           />
         </div>
         {errors.personalTags && (

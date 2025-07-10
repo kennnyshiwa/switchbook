@@ -40,7 +40,7 @@ export default function ManufacturerManagement() {
         setManufacturers(data)
       }
     } catch (error) {
-      console.error('Failed to fetch manufacturers:', error)
+      // Failed to fetch manufacturers
     } finally {
       setLoading(false)
     }
@@ -74,7 +74,7 @@ export default function ManufacturerManagement() {
         fetchManufacturers()
       }
     } catch (error) {
-      console.error('Failed to update manufacturer:', error)
+      // Failed to update manufacturer
     }
   }
 
@@ -127,7 +127,7 @@ Are you absolutely sure you want to proceed?`
         }
       }
     } catch (error) {
-      console.error('Failed to delete manufacturer:', error)
+      // Failed to delete manufacturer
       alert('Failed to delete manufacturer. Please try again.')
     }
   }
@@ -163,7 +163,7 @@ Are you absolutely sure you want to proceed?`
         alert(error.error || 'Failed to merge manufacturers')
       }
     } catch (error) {
-      console.error('Failed to merge manufacturers:', error)
+      // Failed to merge manufacturers
     }
   }
 

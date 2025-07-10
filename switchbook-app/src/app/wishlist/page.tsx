@@ -134,7 +134,7 @@ export default function WishlistPage() {
           </div>
         </div>
 
-        <NotificationBanner />
+        <NotificationBanner userId={session?.user?.id || ''} />
 
         <WishlistCollection items={wishlistItems} />
 

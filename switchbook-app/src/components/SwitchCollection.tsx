@@ -106,7 +106,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
             const key = `${entry.switchName}|${entry.manufacturer || ''}`
             cacheMap.set(key, entry.hasForceCurve)
           })
-          console.log(`Loaded ${cacheMap.size} entries from force curve cache`)
+          // Loaded force curve cache entries
         }
         
         // Update local cache with database entries
@@ -128,7 +128,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           .map(sw => ({ name: sw.name, manufacturer: sw.manufacturer || undefined }))
         
         if (switchesToCheck.length > 0) {
-          console.log(`Batch checking ${switchesToCheck.length} switches for force curves`)
+          // Batch checking switches for force curves
           
           // Use API endpoint for batch checking
           const response = await fetch('/api/force-curve-batch-check', {
@@ -142,13 +142,13 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
             const results = new Map(Object.entries(resultsObject).map(([key, value]) => [key, value as boolean]))
             setForceCurveCache(prev => new Map([...prev, ...results]))
           } else {
-            console.error('Failed to batch check force curves:', response.statusText)
+            // Failed to batch check force curves
           }
         } else {
-          console.log('All switches already cached, no API calls needed')
+          // All switches already cached
         }
       } catch (error) {
-        console.error('Error batch checking force curves:', error)
+        // Error batch checking force curves
       }
     }
     
@@ -186,11 +186,11 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         
         return result.hasForceCurve
       } else {
-        console.error('Failed to check force curve availability:', response.statusText)
+        // Failed to check force curve availability
         return false
       }
     } catch (error) {
-      console.error('Error checking force curve availability:', error)
+      // Error checking force curve availability
       return false
     }
   }, [forceCurvePreferences, forceCurveCache])
@@ -210,6 +210,11 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     const magnetPolarities = [...new Set(switches.map(s => s.magnetPolarity).filter(Boolean) as string[])].sort()
     const pcbThicknesses = [...new Set(switches.map(s => s.pcbThickness).filter(Boolean) as string[])].sort()
     const compatibilities = [...new Set(switches.map(s => s.compatibility).filter(Boolean) as string[])].sort()
+    
+    // Extract all unique personal tags
+    const personalTags = [...new Set(
+      switches.flatMap(s => s.personalTags || [])
+    )].sort()
     
     // Get unique numeric values for ranges
     const actuationForces = [...new Set(switches.map(s => s.actuationForce).filter(Boolean) as number[])].sort((a, b) => a - b)
@@ -239,6 +244,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       magnetPolarities,
       pcbThicknesses,
       compatibilities,
+      personalTags,
       actuationForces,
       tactileForces,
       bottomOutForces,
@@ -324,6 +330,9 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       }
       if (activeFilters.compatibility) {
         filtered = filtered.filter(s => s.compatibility === activeFilters.compatibility)
+      }
+      if (activeFilters.personalTag) {
+        filtered = filtered.filter(s => s.personalTags?.includes(activeFilters.personalTag!) ?? false)
       }
 
       // Apply numeric range filters

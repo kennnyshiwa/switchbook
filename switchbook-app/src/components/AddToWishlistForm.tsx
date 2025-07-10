@@ -42,7 +42,7 @@ export default function AddToWishlistForm({ onClose }: AddToWishlistFormProps) {
         alert(error.error || 'Failed to add to wishlist')
       }
     } catch (error) {
-      console.error('Failed to add to wishlist:', error)
+      // Failed to add to wishlist
       alert('Failed to add to wishlist')
     } finally {
       setSubmitting(false)

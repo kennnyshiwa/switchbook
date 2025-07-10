@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(manufacturersWithCount)
   } catch (error) {
-    console.error('Failed to fetch manufacturers:', error)
+    // Failed to fetch manufacturers
     return NextResponse.json(
       { error: "Failed to fetch manufacturers" },
       { status: 500 }

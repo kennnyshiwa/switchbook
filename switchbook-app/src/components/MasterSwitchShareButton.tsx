@@ -22,7 +22,7 @@ export default function MasterSwitchShareButton({ shareableId, className }: Mast
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error('Failed to copy:', err)
+      // Failed to copy to clipboard
     }
   }
 

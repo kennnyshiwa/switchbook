@@ -37,7 +37,7 @@ export default function LinkToCollectionDialog({
           setFilteredSwitches(unlinkedSwitches)
         }
       } catch (error) {
-        console.error('Failed to fetch switches:', error)
+        // Failed to fetch switches
         setError('Failed to load your switches')
       } finally {
         setIsLoading(false)

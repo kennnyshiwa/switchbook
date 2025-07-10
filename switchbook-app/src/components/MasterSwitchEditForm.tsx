@@ -146,8 +146,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
 
   // Clean data before submission
   const handleFormSubmit = (data: EditSuggestionData) => {
-    console.log('Form submitted with data:', data);
-    console.log('Changed fields:', Array.from(changedFields));
+    // Form submitted
     
     if (changedFields.size === 0) {
       alert('Please make at least one change before submitting');
@@ -168,13 +167,13 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
       changedFields: Array.from(changedFields),
     };
     
-    console.log('Submitting cleaned data:', cleanedData);
+    // Submitting cleaned data
     onSubmit(cleanedData);
   };
 
-  // Log errors for debugging
+  // Form validation check
   if (Object.keys(errors).length > 0) {
-    console.log('Form validation errors:', errors);
+    // Validation errors present
   }
 
   return (

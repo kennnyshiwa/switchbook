@@ -31,6 +31,7 @@ export interface FilterOptions {
   magnetPolarities: string[]
   pcbThicknesses: string[]
   compatibilities: string[]
+  personalTags: string[]
   actuationForces: number[]
   tactileForces: number[]
   bottomOutForces: number[]
@@ -57,6 +58,7 @@ export interface ActiveFilters {
   magnetPolarity?: string
   pcbThickness?: string
   compatibility?: string
+  personalTag?: string
   actuationForceMin?: number
   actuationForceMax?: number
   tactileForceMin?: number
@@ -723,6 +725,24 @@ export default function CollectionControls({
                 <option value="">All Switches</option>
                 <option value="true">With Force Curves</option>
                 <option value="false">Without Force Curves</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Personal Tags
+              </label>
+              <select
+                value={activeFilters.personalTag || ''}
+                onChange={(e) => handleFilterChange('personalTag', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Tags</option>
+                {filterOptions.personalTags.map(tag => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
               </select>
             </div>
 

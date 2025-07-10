@@ -81,7 +81,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
         }
       }
     } catch (error) {
-      console.error('Error updating setting:', error)
+      // Error updating setting
       alert('An error occurred. Please try again.')
       // Revert on error
       if (setting === 'showForceCurves') {
@@ -115,7 +115,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
         alert(errorData.error || 'Failed to change password. Please try again.')
       }
     } catch (error) {
-      console.error('Error changing password:', error)
+      // Error changing password
       alert('An error occurred. Please try again.')
     } finally {
       setIsChangingPassword(false)
@@ -147,7 +147,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
         alert('Failed to export data. Please try again.')
       }
     } catch (error) {
-      console.error('Error exporting data:', error)
+      // Error exporting data
       alert('An error occurred while exporting. Please try again.')
     } finally {
       setIsExporting(false)
@@ -182,7 +182,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
         alert('Failed to delete account. Please try again.')
       }
     } catch (error) {
-      console.error('Error deleting account:', error)
+      // Error deleting account
       alert('An error occurred. Please try again.')
     } finally {
       setIsDeleting(false)

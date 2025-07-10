@@ -50,7 +50,6 @@ export default function SubmitMasterSwitchPage() {
   }
 
   const handleSubmit = async (data: any, confirmNotDuplicate = false) => {
-    console.log('handleSubmit called with data:', data);
     setIsSubmitting(true);
     try {
       const submissionData = confirmNotDuplicate 

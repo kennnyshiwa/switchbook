@@ -58,7 +58,7 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
         alert(data.error || 'Failed to send verification email')
       }
     } catch (error) {
-      console.error('Error resending verification:', error)
+      // Error resending verification
       alert('An error occurred')
     } finally {
       setIsResendingVerification(null)
@@ -80,7 +80,7 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
         alert('Failed to reset password')
       }
     } catch (error) {
-      console.error('Error resetting password:', error)
+      // Error resetting password
       alert('An error occurred')
     } finally {
       setIsResetting(null)
@@ -102,7 +102,7 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
         alert('Failed to delete user')
       }
     } catch (error) {
-      console.error('Error deleting user:', error)
+      // Error deleting user
       alert('An error occurred')
     } finally {
       setIsDeleting(null)
@@ -128,7 +128,7 @@ export default function UserManagementTable({ users, currentUserId }: UserManage
         alert(data.error || `Failed to ${action} user`)
       }
     } catch (error) {
-      console.error('Error updating role:', error)
+      // Error updating role
       alert('An error occurred')
     } finally {
       setIsUpdatingRole(null)

@@ -75,7 +75,7 @@ export default function ManufacturerAutocomplete({
           setShowNewManufacturer(!exactMatch && q.length > 0)
         }
       } catch (error) {
-        console.error('Failed to search manufacturers:', error)
+        // Failed to search manufacturers
       } finally {
         setLoading(false)
       }
@@ -121,7 +121,7 @@ export default function ManufacturerAutocomplete({
         onNewManufacturerSubmitted?.(newManufacturer.name)
       }
     } catch (error) {
-      console.error('Failed to add manufacturer:', error)
+      // Failed to add manufacturer
     } finally {
       setLoading(false)
     }

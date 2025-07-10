@@ -67,7 +67,7 @@ export default function MergeAccountsModal({
         setError(data.error || 'Failed to merge accounts')
       }
     } catch (error) {
-      console.error('Error merging accounts:', error)
+      // Error merging accounts
       setError('An error occurred while merging accounts')
     } finally {
       setIsLoading(false)

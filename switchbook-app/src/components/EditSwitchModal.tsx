@@ -114,7 +114,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
           setSyncStatus(data)
         }
       } catch (error) {
-        console.error('Failed to check sync status:', error)
+        // Failed to check sync status
       }
     }
     checkSyncStatus()
@@ -253,7 +253,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         
         if (!moveNotesResponse.ok) {
           const errorText = await moveNotesResponse.text()
-          console.error('Failed to preserve personal notes:', errorText)
+          // Failed to preserve personal notes
           throw new Error('Failed to preserve personal notes')
         }
         

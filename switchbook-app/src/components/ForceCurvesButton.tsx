@@ -76,12 +76,10 @@ export default function ForceCurvesButton({
               }
             } else {
               // If cache check fails, don't make individual API calls
-              console.debug('Cache check failed, deferring to batch system:', cacheResponse.statusText)
               foundMatches = []
             }
           } catch (cacheError) {
             // If cache check fails, don't make individual API calls
-            console.debug('Cache check failed, deferring to batch system:', cacheError)
             foundMatches = []
           }
         }
@@ -167,7 +165,7 @@ export default function ForceCurvesButton({
       setIsDropdownOpen(false)
       setShowAllOptions(false)
     } catch (error) {
-      console.error('Failed to save preference:', error)
+      // Failed to save preference, but don't interrupt user flow
     }
   }
 
@@ -179,7 +177,7 @@ export default function ForceCurvesButton({
         setMatches(foundMatches)
         return foundMatches
       } catch (error) {
-        console.error('Error loading force curve matches:', error)
+        // Error loading force curve matches
         return []
       }
     }
@@ -273,7 +271,6 @@ export default function ForceCurvesButton({
         alert('Failed to submit feedback. Please try again.')
       }
     } catch (error) {
-      console.error('Error submitting feedback:', error)
       alert('Failed to submit feedback. Please try again.')
     }
   }

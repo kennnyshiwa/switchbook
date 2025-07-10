@@ -75,8 +75,6 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
 
   // Clean data before submission
   const handleFormSubmit = (data: MasterSwitchSubmissionData) => {
-    console.log('Form handleFormSubmit called with data:', data);
-    console.log('Form submitted with data:', data);
     // Convert NaN values to undefined for optional number fields
     const cleanedData = {
       ...data,
@@ -116,11 +114,6 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
   return (
     <form 
       onSubmit={handleSubmit(handleFormSubmit, (errors) => {
-        console.error('Form validation errors:', errors);
-        // Log specific field errors
-        Object.entries(errors).forEach(([field, error]) => {
-          console.error(`Field '${field}' error:`, error);
-        });
         // Scroll to top to show error summary
         window.scrollTo({ top: 0, behavior: 'smooth' });
         // Show an alert with the first error
@@ -642,7 +635,6 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
         <button
           type="submit"
           disabled={isSubmitting}
-          onClick={() => console.log('Submit button clicked')}
           className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Submitting...' : 'Submit for Review'}

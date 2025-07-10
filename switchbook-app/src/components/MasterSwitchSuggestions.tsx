@@ -63,7 +63,7 @@ export default function MasterSwitchSuggestions({ searchQuery, setValue, onSelec
         setShowSuggestions(data.switches.length > 0)
       }
     } catch (error) {
-      console.error('Failed to search master switches:', error)
+      // Failed to search master switches
     } finally {
       setIsLoading(false)
     }

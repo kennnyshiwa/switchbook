@@ -87,7 +87,7 @@ export default function WishlistCollection({ items }: WishlistCollectionProps) {
         alert(error.error || 'Failed to remove from wishlist')
       }
     } catch (error) {
-      console.error('Failed to delete:', error)
+      // Failed to delete from wishlist
       alert('Failed to remove from wishlist')
     } finally {
       setDeletingId(null)
@@ -116,7 +116,7 @@ export default function WishlistCollection({ items }: WishlistCollectionProps) {
         alert(error.error || 'Failed to move to collection')
       }
     } catch (error) {
-      console.error('Failed to move:', error)
+      // Failed to move to collection
       alert('Failed to move to collection')
     } finally {
       setMovingId(null)

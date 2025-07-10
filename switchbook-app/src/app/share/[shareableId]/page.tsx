@@ -76,6 +76,7 @@ export default function SharePage() {
       magnetPolarities: [],
       pcbThicknesses: [],
       compatibilities: [],
+      personalTags: [],
       actuationForces: [],
       tactileForces: [],
       bottomOutForces: [],
@@ -102,6 +103,11 @@ export default function SharePage() {
     const magnetPolarities = [...new Set(switches.map(s => s.magnetPolarity).filter(Boolean) as string[])].sort()
     const pcbThicknesses = [...new Set(switches.map(s => s.pcbThickness).filter(Boolean) as string[])].sort()
     const compatibilities = [...new Set(switches.map(s => s.compatibility).filter(Boolean) as string[])].sort()
+    
+    // Extract all unique personal tags
+    const personalTags = [...new Set(
+      switches.flatMap(s => s.personalTags || [])
+    )].sort()
     
     // Get unique numeric values for ranges
     const actuationForces = [...new Set(switches.map(s => s.actuationForce).filter(Boolean) as number[])].sort((a, b) => a - b)
@@ -131,6 +137,7 @@ export default function SharePage() {
       magnetPolarities,
       pcbThicknesses,
       compatibilities,
+      personalTags,
       actuationForces,
       tactileForces,
       bottomOutForces,
@@ -213,6 +220,9 @@ export default function SharePage() {
     }
     if (activeFilters.compatibility) {
       filtered = filtered.filter(s => s.compatibility === activeFilters.compatibility)
+    }
+    if (activeFilters.personalTag) {
+      filtered = filtered.filter(s => s.personalTags?.includes(activeFilters.personalTag!) ?? false)
     }
 
     // Apply numeric range filters

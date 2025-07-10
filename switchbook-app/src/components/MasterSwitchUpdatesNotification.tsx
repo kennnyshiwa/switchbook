@@ -46,7 +46,7 @@ export default function MasterSwitchUpdatesNotification({ switches, userId }: Ma
             }
           }
         } catch (error) {
-          console.error('Failed to check dismissals:', error);
+          // Failed to check dismissals
         }
 
         // Use batch endpoint to check all switches at once
@@ -64,7 +64,7 @@ export default function MasterSwitchUpdatesNotification({ switches, userId }: Ma
           }
         }
       } catch (error) {
-        console.error('Failed to check for updates:', error);
+        // Failed to check for updates
       }
       
       setIsChecking(false);
@@ -94,7 +94,7 @@ export default function MasterSwitchUpdatesNotification({ switches, userId }: Ma
         alert(error.error || 'Failed to update switches');
       }
     } catch (error) {
-      console.error('Failed to update switches:', error);
+      // Failed to update switches
       alert('Failed to update switches');
     } finally {
       setIsUpdating(false);
@@ -115,7 +115,7 @@ export default function MasterSwitchUpdatesNotification({ switches, userId }: Ma
       });
       setShowNotification(false);
     } catch (error) {
-      console.error('Failed to dismiss notification:', error);
+      // Failed to dismiss notification
     }
   };
 

@@ -179,24 +179,8 @@ export async function batchCheckForceCurves(
             const normalizedManufacturer = sw.manufacturer || null
             
             // Update or create cache entry
-            const existingEntry = await prisma.forceCurveCache.findFirst({
-              where: {
-                switchName: sw.name,
-                manufacturer: normalizedManufacturer
-              }
-            })
-
-            if (existingEntry) {
-              await prisma.forceCurveCache.update({
-                where: { id: existingEntry.id },
-                data: {
-                  hasForceCurve,
-                  lastCheckedAt: now,
-                  nextCheckAt,
-                  updatedAt: now
-                }
-              })
-            } else {
+            // Try to create first, if it fails due to unique constraint, update instead
+            try {
               await prisma.forceCurveCache.create({
                 data: {
                   switchName: sw.name,
@@ -206,6 +190,24 @@ export async function batchCheckForceCurves(
                   nextCheckAt
                 }
               })
+            } catch (error: any) {
+              if (error.code === 'P2002') {
+                // Unique constraint violation - record already exists, update it
+                await prisma.forceCurveCache.updateMany({
+                  where: {
+                    switchName: sw.name,
+                    manufacturer: normalizedManufacturer
+                  },
+                  data: {
+                    hasForceCurve,
+                    lastCheckedAt: now,
+                    nextCheckAt,
+                    updatedAt: now
+                  }
+                })
+              } else {
+                throw error
+              }
             }
             
             results.set(sw.key, hasForceCurve)

@@ -38,7 +38,7 @@ export default function NotificationBanner({ userId }: NotificationBannerProps) 
         setNotifications(data.filter((n: Notification) => !n.read));
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      // Failed to fetch notifications
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +51,7 @@ export default function NotificationBanner({ userId }: NotificationBannerProps) 
       });
       setNotifications(notifications.filter(n => n.id !== notificationId));
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      // Failed to mark notification as read
     }
   };
 
@@ -62,7 +62,7 @@ export default function NotificationBanner({ userId }: NotificationBannerProps) 
       });
       setNotifications([]);
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      // Failed to mark all notifications as read
     }
   };
 

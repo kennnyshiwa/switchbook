@@ -17,7 +17,7 @@ export default function ShareButton({ shareableId }: ShareButtonProps) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error('Failed to copy:', err)
+      // Failed to copy to clipboard, silently fail
     }
   }
 
