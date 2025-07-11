@@ -36,6 +36,11 @@ interface MasterSwitch {
   pcbThickness?: string
   compatibility?: string
   clickType?: 'CLICK_LEAF' | 'CLICK_BAR' | 'CLICK_JACKET'
+  topHousingColor?: string
+  bottomHousingColor?: string
+  stemColor?: string
+  stemShape?: string
+  markings?: string
   inCollection: boolean
   inWishlist: boolean
   userCount: number
@@ -266,7 +271,9 @@ export default function MasterSwitchDetailsPopup({
             )}
 
             {/* Materials */}
-            {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem) && (
+            {(switchItem.topHousing || switchItem.bottomHousing || switchItem.stem || 
+              switchItem.topHousingColor || switchItem.bottomHousingColor || 
+              switchItem.stemColor || switchItem.stemShape) && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Materials</h3>
                 <div className="space-y-2 text-sm">
@@ -286,6 +293,30 @@ export default function MasterSwitchDetailsPopup({
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-600 dark:text-gray-400">Stem</span>
                       <span className="text-gray-900 dark:text-white">{switchItem.stem}</span>
+                    </div>
+                  )}
+                  {switchItem.topHousingColor && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600 dark:text-gray-400">Top Housing Color</span>
+                      <span className="text-gray-900 dark:text-white">{switchItem.topHousingColor}</span>
+                    </div>
+                  )}
+                  {switchItem.bottomHousingColor && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600 dark:text-gray-400">Bottom Housing Color</span>
+                      <span className="text-gray-900 dark:text-white">{switchItem.bottomHousingColor}</span>
+                    </div>
+                  )}
+                  {switchItem.stemColor && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600 dark:text-gray-400">Stem Color</span>
+                      <span className="text-gray-900 dark:text-white">{switchItem.stemColor}</span>
+                    </div>
+                  )}
+                  {switchItem.stemShape && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600 dark:text-gray-400">Stem Shape</span>
+                      <span className="text-gray-900 dark:text-white">{switchItem.stemShape}</span>
                     </div>
                   )}
                 </div>
@@ -334,6 +365,14 @@ export default function MasterSwitchDetailsPopup({
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Markings */}
+            {switchItem.markings && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Markings</h3>
+                <p className="text-sm text-gray-700 dark:text-gray-300">{switchItem.markings}</p>
               </div>
             )}
 

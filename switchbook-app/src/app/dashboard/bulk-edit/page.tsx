@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react'
 import { Switch, ClickType } from '@prisma/client'
 import Link from 'next/link'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
+import TagsInputWithAutocomplete from '@/components/TagsInputWithAutocomplete'
 import {
   useReactTable,
   getCoreRowModel,
@@ -47,6 +48,7 @@ interface EditableSwitchData {
   frankenBottom?: string
   frankenStem?: string
   dateObtained?: string
+  personalTags?: string[]
   manufacturerValid?: boolean
   manufacturerSuggestions?: string[]
 }
@@ -96,7 +98,7 @@ const EditableCell = memo(({
   value: any
   field: keyof EditableSwitchData
   switchId: string
-  onUpdate: (switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | undefined) => void
+  onUpdate: (switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | string[] | undefined) => void
   type?: string
   placeholder?: string
   min?: number
@@ -238,6 +240,139 @@ const EditableCell = memo(({
 
 EditableCell.displayName = 'EditableCell'
 
+// Tags cell component for editing tags with autocomplete
+const TagsEditableCell = memo(({
+  tags,
+  switchId,
+  onUpdate,
+  suggestions = []
+}: {
+  tags: string[]
+  switchId: string
+  onUpdate: (switchId: string, field: keyof EditableSwitchData, value: string[] | undefined) => void
+  suggestions?: string[]
+}) => {
+  const [inputValue, setInputValue] = useState('')
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (inputValue.trim()) {
+      const filtered = suggestions
+        .filter(suggestion => 
+          suggestion.toLowerCase().includes(inputValue.toLowerCase()) &&
+          !tags.includes(suggestion)
+        )
+        .slice(0, 5)
+      setFilteredSuggestions(filtered)
+      setShowSuggestions(filtered.length > 0)
+    } else {
+      setShowSuggestions(false)
+      setFilteredSuggestions([])
+    }
+  }, [inputValue, suggestions, tags])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (showSuggestions && filteredSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedSuggestionIndex(prev => 
+          prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+        )
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1)
+      } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+        e.preventDefault()
+        addTag(filteredSuggestions[selectedSuggestionIndex])
+      } else if (e.key === 'Escape') {
+        setShowSuggestions(false)
+        setSelectedSuggestionIndex(-1)
+      }
+    }
+    
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      if (selectedSuggestionIndex === -1) {
+        addTag(inputValue)
+      }
+    } else if (e.key === 'Backspace' && inputValue === '' && tags.length > 0) {
+      removeTag(tags.length - 1)
+    }
+  }
+
+  const addTag = (value: string) => {
+    const trimmedValue = value.trim()
+    if (trimmedValue && !tags.includes(trimmedValue) && tags.length < 10) {
+      onUpdate(switchId, 'personalTags', [...tags, trimmedValue])
+      setInputValue('')
+      setShowSuggestions(false)
+      setSelectedSuggestionIndex(-1)
+    }
+  }
+
+  const removeTag = (indexToRemove: number) => {
+    const newTags = tags.filter((_, index) => index !== indexToRemove)
+    onUpdate(switchId, 'personalTags', newTags.length > 0 ? newTags : undefined)
+  }
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div className="flex items-center flex-wrap gap-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[30px] max-h-[60px] overflow-y-auto">
+        {tags.map((tag, index) => (
+          <span
+            key={index}
+            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"
+          >
+            {tag}
+            <button
+              type="button"
+              onClick={() => removeTag(index)}
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none ml-0.5"
+            >
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={tags.length === 0 ? "Add tags..." : ""}
+          className="flex-1 min-w-[80px] bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+          disabled={tags.length >= 10}
+        />
+      </div>
+      
+      {showSuggestions && (
+        <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto">
+          {filteredSuggestions.map((suggestion, index) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => addTag(suggestion)}
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 ${
+                index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-600' : ''
+              }`}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+})
+
+TagsEditableCell.displayName = 'TagsEditableCell'
+
 export default function BulkEditPage() {
   const [switches, setSwitches] = useState<EditableSwitchData[]>([])
   const [originalData, setOriginalData] = useState<EditableSwitchData[]>([])
@@ -247,6 +382,7 @@ export default function BulkEditPage() {
   const [submittedManufacturers, setSubmittedManufacturers] = useState<Set<string>>(new Set())
   const [invalidSwitches, setInvalidSwitches] = useState<Set<string>>(new Set())
   const [manufacturers, setManufacturers] = useState<{ id: string; name: string }[]>([])
+  const [userTags, setUserTags] = useState<string[]>([])
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([])
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({})
 
@@ -282,9 +418,23 @@ export default function BulkEditPage() {
           return false
         }
         
+        // Handle arrays (personalTags)
+        if (Array.isArray(sValue) && Array.isArray(oValue)) {
+          return sValue.length !== oValue.length || sValue.some((val, idx) => val !== oValue[idx])
+        }
+        
         // Handle undefined vs empty string
         if ((sValue === undefined || sValue === '') && (oValue === undefined || oValue === '')) {
           return false
+        }
+        
+        // Handle undefined vs empty array
+        if (key === 'personalTags') {
+          const sArr = sValue as string[] | undefined
+          const oArr = oValue as string[] | undefined
+          if ((!sArr || sArr.length === 0) && (!oArr || oArr.length === 0)) {
+            return false
+          }
         }
         
         return sValue !== oValue
@@ -336,6 +486,7 @@ export default function BulkEditPage() {
           frankenBottom: sw.frankenBottom || undefined,
           frankenStem: sw.frankenStem || undefined,
           dateObtained: sw.dateObtained ? new Date(sw.dateObtained).toISOString().split('T')[0] : undefined,
+          personalTags: sw.personalTags || undefined,
         }))
         setSwitches(editableData)
         // Store original data without validation fields
@@ -344,6 +495,15 @@ export default function BulkEditPage() {
           return dataWithoutValidation
         })
         setOriginalData(JSON.parse(JSON.stringify(originalDataCopy)))
+        
+        // Extract all unique tags from user's switches
+        const allTags = new Set<string>()
+        editableData.forEach(switchData => {
+          if (switchData.personalTags && Array.isArray(switchData.personalTags)) {
+            switchData.personalTags.forEach(tag => allTags.add(tag))
+          }
+        })
+        setUserTags(Array.from(allTags).sort())
         
         // Set default column order
         const defaultOrder = [
@@ -378,7 +538,8 @@ export default function BulkEditPage() {
           'pcbThickness',
           'frankenTop',
           'frankenBottom',
-          'frankenStem'
+          'frankenStem',
+          'personalTags'
         ]
         setColumnOrder(defaultOrder)
         
@@ -400,6 +561,7 @@ export default function BulkEditPage() {
         defaultVisibility.initialMagneticFlux = false
         defaultVisibility.bottomOutMagneticFlux = false
         defaultVisibility.pcbThickness = false
+        defaultVisibility.personalTags = true
         setColumnVisibility(defaultVisibility)
         
         // Validate manufacturers
@@ -457,9 +619,14 @@ export default function BulkEditPage() {
   useEffect(() => {
     loadSwitches()
     fetchManufacturers().then(setManufacturers)
+    // Fetch user tags for autocomplete
+    fetch('/api/user/tags')
+      .then(res => res.json())
+      .then(data => setUserTags(data.tags || []))
+      .catch(err => console.error('Failed to fetch user tags:', err))
   }, [])
 
-  const updateSwitch = useCallback((switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | undefined) => {
+  const updateSwitch = useCallback((switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | string[] | undefined) => {
     setSwitches(prev => prev.map(s => 
       s.id === switchId ? { ...s, [field]: value } : s
     ))
@@ -492,11 +659,13 @@ export default function BulkEditPage() {
         dateObtained,
         progressiveSpring = false,
         doubleStage = false,
+        personalTags = [],
         ...rest 
       }) => ({
         ...rest,
         progressiveSpring,
         doubleStage,
+        personalTags,
         dateObtained: dateObtained || ''
       }))
       
@@ -1096,6 +1265,24 @@ export default function BulkEditPage() {
       )
     }
 
+    // Add personal tags column
+    cols.push(
+      {
+        id: 'personalTags',
+        accessorKey: 'personalTags',
+        header: 'Personal Tags',
+        size: 250,
+        cell: ({ row }) => (
+          <TagsEditableCell
+            tags={row.original.personalTags || []}
+            switchId={row.original.id}
+            onUpdate={updateSwitch}
+            suggestions={userTags}
+          />
+        ),
+      },
+    )
+
     // Add frankenswitch columns
     cols.push(
       {
@@ -1146,7 +1333,7 @@ export default function BulkEditPage() {
     )
 
     return cols
-  }, [updateSwitch, manufacturers, handleManufacturerSubmitted, submittedManufacturers, invalidSwitches, showMagneticFields, showTactileForce, showClickType])
+  }, [updateSwitch, manufacturers, handleManufacturerSubmitted, submittedManufacturers, invalidSwitches, showMagneticFields, showTactileForce, showClickType, userTags])
 
   // Create table instance
   const table = useReactTable({
@@ -1388,7 +1575,7 @@ export default function BulkEditPage() {
                           }}
                           className={`${
                             isNameColumn 
-                              ? 'sticky left-0 z-30 bg-gray-50 dark:bg-gray-700' 
+                              ? 'sticky left-0 z-30 bg-gray-50 dark:bg-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' 
                               : 'bg-gray-50 dark:bg-gray-700 cursor-move'
                           } px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap transition-opacity`}
                           style={{ 
@@ -1441,7 +1628,7 @@ export default function BulkEditPage() {
                                     : isInvalid
                                     ? 'bg-red-50 dark:bg-red-900/20'
                                     : 'bg-white dark:bg-gray-800'
-                                }` 
+                                } shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]` 
                               : ''
                           } px-4 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100`}
                           style={{ 

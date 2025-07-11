@@ -42,6 +42,11 @@ interface WishlistItem {
     clickType?: string
     tactileForce?: number
     tactilePosition?: string
+    topHousingColor?: string
+    bottomHousingColor?: string
+    stemColor?: string
+    stemShape?: string
+    markings?: string
   }
 }
 
@@ -199,7 +204,9 @@ export default function WishlistDetailsPopup({
                   )}
 
                   {/* Materials */}
-                  {(item.masterSwitch.topHousing || item.masterSwitch.bottomHousing || item.masterSwitch.stem) && (
+                  {(item.masterSwitch.topHousing || item.masterSwitch.bottomHousing || item.masterSwitch.stem || 
+                    item.masterSwitch.topHousingColor || item.masterSwitch.bottomHousingColor || 
+                    item.masterSwitch.stemColor || item.masterSwitch.stemShape) && (
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Materials</h3>
                       <dl className="grid grid-cols-2 gap-4">
@@ -221,6 +228,30 @@ export default function WishlistDetailsPopup({
                             <dd className="text-sm text-gray-900 dark:text-white">{item.masterSwitch.stem}</dd>
                           </div>
                         )}
+                        {item.masterSwitch.topHousingColor && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Top Housing Color</dt>
+                            <dd className="text-sm text-gray-900 dark:text-white">{item.masterSwitch.topHousingColor}</dd>
+                          </div>
+                        )}
+                        {item.masterSwitch.bottomHousingColor && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Bottom Housing Color</dt>
+                            <dd className="text-sm text-gray-900 dark:text-white">{item.masterSwitch.bottomHousingColor}</dd>
+                          </div>
+                        )}
+                        {item.masterSwitch.stemColor && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Stem Color</dt>
+                            <dd className="text-sm text-gray-900 dark:text-white">{item.masterSwitch.stemColor}</dd>
+                          </div>
+                        )}
+                        {item.masterSwitch.stemShape && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Stem Shape</dt>
+                            <dd className="text-sm text-gray-900 dark:text-white">{item.masterSwitch.stemShape}</dd>
+                          </div>
+                        )}
                       </dl>
                     </div>
                   )}
@@ -232,6 +263,14 @@ export default function WishlistDetailsPopup({
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
                   <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{notes}</p>
+                </div>
+              )}
+
+              {/* Markings */}
+              {item.masterSwitch?.markings && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Markings</h3>
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{item.masterSwitch.markings}</p>
                 </div>
               )}
             </div>

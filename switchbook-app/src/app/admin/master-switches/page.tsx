@@ -434,6 +434,18 @@ export default function AdminMasterSwitchesPage() {
                       {submission.originalSubmissionData.stem && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Stem:</span> {submission.originalSubmissionData.stem}</p>
                       )}
+                      {submission.originalSubmissionData.topHousingColor && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Top Housing Color:</span> {submission.originalSubmissionData.topHousingColor}</p>
+                      )}
+                      {submission.originalSubmissionData.bottomHousingColor && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Bottom Housing Color:</span> {submission.originalSubmissionData.bottomHousingColor}</p>
+                      )}
+                      {submission.originalSubmissionData.stemColor && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Stem Color:</span> {submission.originalSubmissionData.stemColor}</p>
+                      )}
+                      {submission.originalSubmissionData.stemShape && (
+                        <p className="text-gray-900 dark:text-white"><span className="font-medium">Stem Shape:</span> {submission.originalSubmissionData.stemShape}</p>
+                      )}
                       {submission.originalSubmissionData.springWeight && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Spring Weight:</span> {submission.originalSubmissionData.springWeight}</p>
                       )}
@@ -456,6 +468,12 @@ export default function AdminMasterSwitchesPage() {
                       <h5 className="font-medium text-gray-700 dark:text-gray-300">Additional Information</h5>
                       {submission.originalSubmissionData.compatibility && (
                         <p className="text-gray-900 dark:text-white"><span className="font-medium">Compatibility:</span> {submission.originalSubmissionData.compatibility}</p>
+                      )}
+                      {submission.originalSubmissionData.markings && (
+                        <div className="text-gray-900 dark:text-white">
+                          <span className="font-medium">Markings:</span>
+                          <p className="mt-1 text-gray-600 dark:text-gray-400">{submission.originalSubmissionData.markings}</p>
+                        </div>
                       )}
                       {submission.originalSubmissionData.imageUrl && (
                         <div className="text-gray-900 dark:text-white">

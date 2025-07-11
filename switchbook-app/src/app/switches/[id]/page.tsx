@@ -39,6 +39,11 @@ interface MasterSwitchDetail {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  topHousingColor?: string
+  bottomHousingColor?: string
+  stemColor?: string
+  stemShape?: string
+  markings?: string
   frankenTop?: string
   frankenBottom?: string
   frankenStem?: string
@@ -546,7 +551,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             )}
 
             {/* Materials */}
-            {(switchData.topHousing || switchData.bottomHousing || switchData.stem) && (
+            {(switchData.topHousing || switchData.bottomHousing || switchData.stem || switchData.topHousingColor || switchData.bottomHousingColor || switchData.stemColor || switchData.stemShape) && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Materials
@@ -568,6 +573,30 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Stem</dt>
                       <dd className="text-sm text-gray-900 dark:text-white">{switchData.stem}</dd>
+                    </div>
+                  )}
+                  {switchData.topHousingColor && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Top Housing Color</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.topHousingColor}</dd>
+                    </div>
+                  )}
+                  {switchData.bottomHousingColor && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Bottom Housing Color</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.bottomHousingColor}</dd>
+                    </div>
+                  )}
+                  {switchData.stemColor && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Stem Color</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.stemColor}</dd>
+                    </div>
+                  )}
+                  {switchData.stemShape && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Stem Shape</dt>
+                      <dd className="text-sm text-gray-900 dark:text-white">{switchData.stemShape}</dd>
                     </div>
                   )}
                 </dl>
@@ -688,6 +717,18 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                     </div>
                   )}
                 </dl>
+              </div>
+            )}
+
+            {/* Markings */}
+            {switchData.markings && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Markings
+                </h2>
+                <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                  {switchData.markings}
+                </p>
               </div>
             )}
 

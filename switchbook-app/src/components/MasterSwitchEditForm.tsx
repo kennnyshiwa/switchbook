@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import ManufacturerAutocomplete from './ManufacturerAutocomplete';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Schema for edit suggestion - matching the submission form
 const editSuggestionSchema = z.object({
@@ -48,6 +48,13 @@ const editSuggestionSchema = z.object({
   notes: z.string().optional().nullable().or(z.literal('')),
   imageUrl: z.union([z.string().url('Invalid URL'), z.literal(''), z.null()]).optional(),
   
+  // Color and shape fields
+  topHousingColor: z.string().optional().nullable().or(z.literal('')),
+  bottomHousingColor: z.string().optional().nullable().or(z.literal('')),
+  stemColor: z.string().optional().nullable().or(z.literal('')),
+  stemShape: z.string().optional().nullable().or(z.literal('')),
+  markings: z.string().max(500).optional().nullable().or(z.literal('')),
+  
   // Edit reason
   editReason: z.string().min(10, 'Please explain what you changed and why'),
 });
@@ -85,6 +92,11 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     pcbThickness: currentData.pcbThickness || '',
     notes: currentData.notes || '',
     imageUrl: currentData.imageUrl || '',
+    topHousingColor: currentData.topHousingColor || '',
+    bottomHousingColor: currentData.bottomHousingColor || '',
+    stemColor: currentData.stemColor || '',
+    stemShape: currentData.stemShape || '',
+    markings: currentData.markings || '',
     // Keep numbers as is (they can be null/undefined)
     initialForce: currentData.initialForce,
     actuationForce: currentData.actuationForce,
@@ -602,6 +614,73 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             />
           </div>
         </div>
+        
+        {/* Color fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Top Housing Color
+            </label>
+            <input
+              {...register('topHousingColor')}
+              onChange={(e) => {
+                register('topHousingColor').onChange(e);
+                handleFieldChange('topHousingColor', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Clear, Black, White"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Bottom Housing Color
+            </label>
+            <input
+              {...register('bottomHousingColor')}
+              onChange={(e) => {
+                register('bottomHousingColor').onChange(e);
+                handleFieldChange('bottomHousingColor', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Black, Red, Blue"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Stem Color
+            </label>
+            <input
+              {...register('stemColor')}
+              onChange={(e) => {
+                register('stemColor').onChange(e);
+                handleFieldChange('stemColor', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Red, Black, Purple"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Stem Shape
+            </label>
+            <input
+              {...register('stemShape')}
+              onChange={(e) => {
+                register('stemShape').onChange(e);
+                handleFieldChange('stemShape', e.target.value);
+              }}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Standard, Box, Plus"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Magnetic Fields (conditional) */}
@@ -761,6 +840,25 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             )}
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
               Provide a URL to an image of the switch. Uploads are not available for master switches.
+            </p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Markings
+            </label>
+            <textarea
+              {...register('markings')}
+              onChange={(e) => {
+                register('markings').onChange(e);
+                handleFieldChange('markings', e.target.value);
+              }}
+              rows={3}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="Describe any identifying markings on the switch housing (e.g., Cherry logo, version numbers, etc.)"
+            />
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Add any identifying markings on the switch housing
             </p>
           </div>
         </div>

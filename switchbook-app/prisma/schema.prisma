@@ -82,6 +82,11 @@ model Switch {
   tactileForce          Float?
   clickType             ClickType?
   tactilePosition       Float?
+  topHousingColor       String?
+  bottomHousingColor    String?
+  stemColor             String?
+  stemShape             String?
+  markings              String?
   masterSwitch          MasterSwitch?     @relation(fields: [masterSwitchId], references: [id])
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   images                SwitchImage[]
@@ -224,6 +229,11 @@ model MasterSwitch {
   tactileForce           Float?
   clickType              ClickType?
   tactilePosition        Float?
+  topHousingColor        String?
+  bottomHousingColor     String?
+  stemColor              String?
+  stemShape              String?
+  markings               String?
   shareableId            String?            @unique
   approvedBy             User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
   submittedBy            User               @relation("SubmittedBy", fields: [submittedById], references: [id])

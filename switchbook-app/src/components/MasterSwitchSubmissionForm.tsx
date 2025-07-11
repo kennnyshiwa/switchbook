@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import ManufacturerAutocomplete from './ManufacturerAutocomplete';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Schema for master switch submission
 const masterSwitchSubmissionSchema = z.object({
@@ -47,6 +47,13 @@ const masterSwitchSubmissionSchema = z.object({
   // Additional info
   notes: z.string().optional(),
   imageUrl: z.union([z.string().url('Invalid URL'), z.literal('')]).optional(),
+  
+  // Color and shape fields
+  topHousingColor: z.string().optional(),
+  bottomHousingColor: z.string().optional(),
+  stemColor: z.string().optional(),
+  stemShape: z.string().optional(),
+  markings: z.string().max(500).optional(),
   
   // Submission reason
   submissionNotes: z.string().min(10, 'Please provide details about this switch and why it should be added'),
@@ -472,6 +479,57 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             />
           </div>
         </div>
+        
+        {/* Color fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Top Housing Color
+            </label>
+            <input
+              {...register('topHousingColor')}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Clear, Black, White"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Bottom Housing Color
+            </label>
+            <input
+              {...register('bottomHousingColor')}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Black, Red, Blue"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Stem Color
+            </label>
+            <input
+              {...register('stemColor')}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Red, Black, Purple"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Stem Shape
+            </label>
+            <input
+              {...register('stemShape')}
+              type="text"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Standard, Box, Plus"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Magnetic Fields (conditional) */}
@@ -599,6 +657,21 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
             )}
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Provide a URL to an image of the switch. Uploads are not available for master switches.
+            </p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Markings
+            </label>
+            <textarea
+              {...register('markings')}
+              rows={3}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="Describe any identifying markings on the switch housing (e.g., Cherry logo, version numbers, etc.)"
+            />
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Add any identifying markings on the switch housing
             </p>
           </div>
         </div>

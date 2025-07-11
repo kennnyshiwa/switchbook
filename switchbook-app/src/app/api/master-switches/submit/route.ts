@@ -36,6 +36,11 @@ const submissionSchema = z.object({
   topHousing: z.string().optional().nullable(),
   bottomHousing: z.string().optional().nullable(),
   stem: z.string().optional().nullable(),
+  topHousingColor: z.string().optional().nullable(),
+  bottomHousingColor: z.string().optional().nullable(),
+  stemColor: z.string().optional().nullable(),
+  stemShape: z.string().optional().nullable(),
+  markings: z.string().max(500).optional().nullable(),
   
   // Magnetic specifications
   magnetOrientation: z.string().optional().nullable(),
@@ -201,6 +206,11 @@ export async function POST(req: NextRequest) {
         topHousing: validated.topHousing || null,
         bottomHousing: validated.bottomHousing || null,
         stem: validated.stem || null,
+        topHousingColor: validated.topHousingColor || null,
+        bottomHousingColor: validated.bottomHousingColor || null,
+        stemColor: validated.stemColor || null,
+        stemShape: validated.stemShape || null,
+        markings: validated.markings || null,
         magnetOrientation: validated.magnetOrientation || null,
         magnetPosition: validated.magnetPosition || null,
         magnetPolarity: validated.magnetPolarity || null,
