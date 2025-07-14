@@ -341,6 +341,39 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             </div>
           )}
 
+          {(switchItem.topHousingColor || switchItem.bottomHousingColor || switchItem.stemColor || switchItem.stemShape || switchItem.markings) && (
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Colors & Appearance</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {switchItem.topHousingColor && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Top Color:</span> {switchItem.topHousingColor}
+                  </p>
+                )}
+                {switchItem.bottomHousingColor && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Bottom Color:</span> {switchItem.bottomHousingColor}
+                  </p>
+                )}
+                {switchItem.stemColor && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Stem Color:</span> {switchItem.stemColor}
+                  </p>
+                )}
+                {switchItem.stemShape && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Stem Shape:</span> {switchItem.stemShape}
+                  </p>
+                )}
+                {switchItem.markings && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300 col-span-2">
+                    <span className="font-medium">Markings:</span> {switchItem.markings}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {switchItem.notes && (
             <div className={`mt-2 ${switchItem.masterSwitchId ? 'p-2 bg-gray-100 dark:bg-gray-700 rounded-md' : ''}`}>
               {switchItem.masterSwitchId && (

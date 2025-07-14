@@ -125,6 +125,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 Materials
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Colors & Appearance
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Franken Parts
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -272,6 +275,26 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                       <div><span className="font-medium">Stem:</span> {switchItem.stem}</div>
                     )}
                     {!switchItem.topHousing && !switchItem.bottomHousing && !switchItem.stem && '-'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                  <div className="space-y-1">
+                    {switchItem.topHousingColor && (
+                      <div><span className="font-medium">Top:</span> {switchItem.topHousingColor}</div>
+                    )}
+                    {switchItem.bottomHousingColor && (
+                      <div><span className="font-medium">Bottom:</span> {switchItem.bottomHousingColor}</div>
+                    )}
+                    {switchItem.stemColor && (
+                      <div><span className="font-medium">Stem:</span> {switchItem.stemColor}</div>
+                    )}
+                    {switchItem.stemShape && (
+                      <div><span className="font-medium">Shape:</span> {switchItem.stemShape}</div>
+                    )}
+                    {switchItem.markings && (
+                      <div><span className="font-medium">Markings:</span> {switchItem.markings}</div>
+                    )}
+                    {!switchItem.topHousingColor && !switchItem.bottomHousingColor && !switchItem.stemColor && !switchItem.stemShape && !switchItem.markings && '-'}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
