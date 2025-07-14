@@ -29,6 +29,11 @@ interface SwitchData {
   topHousing?: string | null;
   bottomHousing?: string | null;
   stem?: string | null;
+  topHousingColor?: string | null;
+  bottomHousingColor?: string | null;
+  stemColor?: string | null;
+  stemShape?: string | null;
+  markings?: string | null;
   frankenTop?: string | null;
   frankenBottom?: string | null;
   frankenStem?: string | null;
@@ -67,6 +72,11 @@ export function transformSwitchData(data: SwitchData) {
     topHousing: data.topHousing || null,
     bottomHousing: data.bottomHousing || null,
     stem: data.stem || null,
+    topHousingColor: data.topHousingColor || null,
+    bottomHousingColor: data.bottomHousingColor || null,
+    stemColor: data.stemColor || null,
+    stemShape: data.stemShape || null,
+    markings: data.markings || null,
     frankenTop: data.frankenTop || null,
     frankenBottom: data.frankenBottom || null,
     frankenStem: data.frankenStem || null,

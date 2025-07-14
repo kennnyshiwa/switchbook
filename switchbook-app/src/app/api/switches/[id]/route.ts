@@ -71,6 +71,7 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
         'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut',
         'springWeight', 'springLength', 'notes',
         'topHousing', 'bottomHousing', 'stem',
+        'topHousingColor', 'bottomHousingColor', 'stemColor', 'stemShape', 'markings',
         'magnetOrientation', 'magnetPosition', 'magnetPolarity',
         'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
         'pcbThickness', 'compatibility', 'tactileForce',
