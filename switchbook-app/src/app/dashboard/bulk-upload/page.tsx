@@ -34,6 +34,11 @@ interface ParsedSwitch {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  topHousingColor?: string
+  bottomHousingColor?: string
+  stemColor?: string
+  stemShape?: string
+  markings?: string
   frankenTop?: string
   frankenBottom?: string
   frankenStem?: string
@@ -610,6 +615,56 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="text"
+          value={localValues.topHousingColor || ''}
+          onChange={(e) => handleChange('topHousingColor', e.target.value)}
+          className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          placeholder="e.g., Clear"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.bottomHousingColor || ''}
+          onChange={(e) => handleChange('bottomHousingColor', e.target.value)}
+          className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          placeholder="e.g., Black"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.stemColor || ''}
+          onChange={(e) => handleChange('stemColor', e.target.value)}
+          className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          placeholder="e.g., Red"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.stemShape || ''}
+          onChange={(e) => handleChange('stemShape', e.target.value)}
+          className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          placeholder="e.g., MX"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
+          value={localValues.markings || ''}
+          onChange={(e) => handleChange('markings', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          placeholder="e.g., Logo on top"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="text"
           value={localValues.frankenTop || ''}
           onChange={(e) => handleChange('frankenTop', e.target.value)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
@@ -729,6 +784,11 @@ export default function BulkUploadPage() {
     { key: 'topHousing', label: 'Top Housing', required: false },
     { key: 'bottomHousing', label: 'Bottom Housing', required: false },
     { key: 'stem', label: 'Stem', required: false },
+    { key: 'topHousingColor', label: 'Top Housing Color', required: false },
+    { key: 'bottomHousingColor', label: 'Bottom Housing Color', required: false },
+    { key: 'stemColor', label: 'Stem Color', required: false },
+    { key: 'stemShape', label: 'Stem Shape', required: false },
+    { key: 'markings', label: 'Markings', required: false },
     { key: 'frankenTop', label: 'Franken Top', required: false },
     { key: 'frankenBottom', label: 'Franken Bottom', required: false },
     { key: 'frankenStem', label: 'Franken Stem', required: false },
@@ -781,6 +841,11 @@ export default function BulkUploadPage() {
       'Nylon', // Top Housing
       'Nylon', // Bottom Housing
       'POM', // Stem
+      'Black', // Top Housing Color
+      'Black', // Bottom Housing Color
+      'Red', // Stem Color
+      'MX', // Stem Shape
+      '', // Markings
       '', // Franken Top
       '', // Franken Bottom
       '', // Franken Stem
@@ -1464,6 +1529,21 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Stem
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Top Housing Color
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Bottom Housing Color
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Stem Color
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Stem Shape
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Markings
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Franken Top

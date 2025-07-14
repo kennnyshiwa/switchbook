@@ -92,6 +92,11 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       tactilePosition: switchItem.tactilePosition || undefined,
       dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
       personalTags: switchItem.personalTags || [],
+      topHousingColor: switchItem.topHousingColor || '',
+      bottomHousingColor: switchItem.bottomHousingColor || '',
+      stemColor: switchItem.stemColor || '',
+      stemShape: switchItem.stemShape || '',
+      markings: switchItem.markings || '',
     }
   })
 
@@ -174,6 +179,11 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       setValue('frankenStem', syncedSwitch.frankenStem || '')
       setValue('clickType', syncedSwitch.clickType || undefined)
       setValue('dateObtained', syncedSwitch.dateObtained ? new Date(syncedSwitch.dateObtained).toISOString().split('T')[0] : '')
+      setValue('topHousingColor', syncedSwitch.topHousingColor || '')
+      setValue('bottomHousingColor', syncedSwitch.bottomHousingColor || '')
+      setValue('stemColor', syncedSwitch.stemColor || '')
+      setValue('stemShape', syncedSwitch.stemShape || '')
+      setValue('markings', syncedSwitch.markings || '')
       
       // Preserve local images when syncing
       onSwitchUpdated({ ...syncedSwitch, images: localImages })
@@ -294,6 +304,11 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         bottomOutMagneticFlux: currentData.bottomOutMagneticFlux || null,
         pcbThickness: currentData.pcbThickness || null,
         clickType: currentData.clickType || null,
+        topHousingColor: currentData.topHousingColor || null,
+        bottomHousingColor: currentData.bottomHousingColor || null,
+        stemColor: currentData.stemColor || null,
+        stemShape: currentData.stemShape || null,
+        markings: currentData.markings || null,
         notes: masterNotes || null,
         submissionNotes: submissionNotes,
         confirmNotDuplicate: confirmNotDuplicate,

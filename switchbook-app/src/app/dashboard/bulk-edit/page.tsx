@@ -44,6 +44,11 @@ interface EditableSwitchData {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  topHousingColor?: string
+  bottomHousingColor?: string
+  stemColor?: string
+  stemShape?: string
+  markings?: string
   frankenTop?: string
   frankenBottom?: string
   frankenStem?: string
@@ -482,6 +487,11 @@ export default function BulkEditPage() {
           topHousing: sw.topHousing || undefined,
           bottomHousing: sw.bottomHousing || undefined,
           stem: sw.stem || undefined,
+          topHousingColor: sw.topHousingColor || undefined,
+          bottomHousingColor: sw.bottomHousingColor || undefined,
+          stemColor: sw.stemColor || undefined,
+          stemShape: sw.stemShape || undefined,
+          markings: sw.markings || undefined,
           frankenTop: sw.frankenTop || undefined,
           frankenBottom: sw.frankenBottom || undefined,
           frankenStem: sw.frankenStem || undefined,
@@ -526,6 +536,11 @@ export default function BulkEditPage() {
           'topHousing',
           'bottomHousing',
           'stem',
+          'topHousingColor',
+          'bottomHousingColor',
+          'stemColor',
+          'stemShape',
+          'markings',
           'compatibility',
           'notes',
           'dateObtained',
@@ -1066,6 +1081,81 @@ export default function BulkEditPage() {
             switchId={row.original.id}
             onUpdate={updateSwitch}
             placeholder="e.g., POM"
+          />
+        ),
+      },
+      {
+        id: 'topHousingColor',
+        accessorKey: 'topHousingColor',
+        header: 'Top Color',
+        size: 100,
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.topHousingColor}
+            field="topHousingColor"
+            switchId={row.original.id}
+            onUpdate={updateSwitch}
+            placeholder="e.g., Clear"
+          />
+        ),
+      },
+      {
+        id: 'bottomHousingColor',
+        accessorKey: 'bottomHousingColor',
+        header: 'Bottom Color',
+        size: 100,
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.bottomHousingColor}
+            field="bottomHousingColor"
+            switchId={row.original.id}
+            onUpdate={updateSwitch}
+            placeholder="e.g., Black"
+          />
+        ),
+      },
+      {
+        id: 'stemColor',
+        accessorKey: 'stemColor',
+        header: 'Stem Color',
+        size: 100,
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.stemColor}
+            field="stemColor"
+            switchId={row.original.id}
+            onUpdate={updateSwitch}
+            placeholder="e.g., Red"
+          />
+        ),
+      },
+      {
+        id: 'stemShape',
+        accessorKey: 'stemShape',
+        header: 'Stem Shape',
+        size: 100,
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.stemShape}
+            field="stemShape"
+            switchId={row.original.id}
+            onUpdate={updateSwitch}
+            placeholder="e.g., MX"
+          />
+        ),
+      },
+      {
+        id: 'markings',
+        accessorKey: 'markings',
+        header: 'Markings',
+        size: 150,
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.markings}
+            field="markings"
+            switchId={row.original.id}
+            onUpdate={updateSwitch}
+            placeholder="e.g., Logo on top"
           />
         ),
       },

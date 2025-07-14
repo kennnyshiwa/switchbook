@@ -51,6 +51,11 @@ export const switchSchema = z.object({
   tactilePosition: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   dateObtained: z.string().optional().or(z.literal("")),
   personalTags: z.array(z.string().max(50)).optional().default([]),
+  topHousingColor: z.string().max(50).optional().or(z.literal("")),
+  bottomHousingColor: z.string().max(50).optional().or(z.literal("")),
+  stemColor: z.string().max(50).optional().or(z.literal("")),
+  stemShape: z.string().max(50).optional().or(z.literal("")),
+  markings: z.string().max(500).optional().or(z.literal("")),
 })
 
 export const passwordResetRequestSchema = z.object({

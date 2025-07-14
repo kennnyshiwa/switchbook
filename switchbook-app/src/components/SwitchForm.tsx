@@ -470,6 +470,75 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.stem.message}</p>
           )}
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Top Housing Color</label>
+            <input
+              {...register('topHousingColor')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Clear, Black, Milky"
+            />
+            {errors.topHousingColor && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.topHousingColor.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Bottom Housing Color</label>
+            <input
+              {...register('bottomHousingColor')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., White, Black, Transparent"
+            />
+            {errors.bottomHousingColor && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.bottomHousingColor.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Stem Color</label>
+            <input
+              {...register('stemColor')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Red, Blue, Clear"
+            />
+            {errors.stemColor && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.stemColor.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Stem Shape</label>
+            <input
+              {...register('stemShape')}
+              type="text"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="e.g., Box, MX"
+            />
+            {errors.stemShape && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.stemShape.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">Markings</label>
+          <textarea
+            {...register('markings')}
+            rows={2}
+            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+            placeholder="Any identifying marks or text on the switch"
+          />
+          {errors.markings && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.markings.message}</p>
+          )}
+        </div>
       </div>
 
       {showFrankenswitch && (
