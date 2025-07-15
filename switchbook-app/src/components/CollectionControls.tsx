@@ -24,6 +24,10 @@ export interface FilterOptions {
   topHousings: string[]
   bottomHousings: string[]
   stems: string[]
+  topHousingColors: string[]
+  bottomHousingColors: string[]
+  stemColors: string[]
+  markingsList: string[]
   springWeights: string[]
   springLengths: string[]
   magnetOrientations: string[]
@@ -51,6 +55,10 @@ export interface ActiveFilters {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  topHousingColor?: string
+  bottomHousingColor?: string
+  stemColor?: string
+  markings?: string
   springWeight?: string
   springLength?: string
   magnetOrientation?: string
@@ -384,6 +392,78 @@ export default function CollectionControls({
                 {filterOptions.stems.map(stem => (
                   <option key={stem} value={stem}>
                     {stem}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Top Housing Color
+              </label>
+              <select
+                value={activeFilters.topHousingColor || ''}
+                onChange={(e) => handleFilterChange('topHousingColor', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Colors</option>
+                {filterOptions.topHousingColors.map(color => (
+                  <option key={color} value={color}>
+                    {color}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Bottom Housing Color
+              </label>
+              <select
+                value={activeFilters.bottomHousingColor || ''}
+                onChange={(e) => handleFilterChange('bottomHousingColor', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Colors</option>
+                {filterOptions.bottomHousingColors.map(color => (
+                  <option key={color} value={color}>
+                    {color}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Stem Color
+              </label>
+              <select
+                value={activeFilters.stemColor || ''}
+                onChange={(e) => handleFilterChange('stemColor', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Colors</option>
+                {filterOptions.stemColors.map(color => (
+                  <option key={color} value={color}>
+                    {color}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Marking
+              </label>
+              <select
+                value={activeFilters.markings || ''}
+                onChange={(e) => handleFilterChange('markings', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Markings</option>
+                {filterOptions.markingsList.map(marking => (
+                  <option key={marking} value={marking}>
+                    {marking}
                   </option>
                 ))}
               </select>

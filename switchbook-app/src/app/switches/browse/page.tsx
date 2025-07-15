@@ -69,7 +69,7 @@ export default function BrowseMasterSwitchesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const PAGE_SIZE = 50  // Number of items per page
+  const PAGE_SIZE = 60  // Number of items per page - increased to ensure scrolling is possible on most screens
   const loadMoreRef = useRef<HTMLDivElement>(null)
   
   // Filters - UI state (immediate updates)
@@ -78,6 +78,10 @@ export default function BrowseMasterSwitchesPage() {
   const [topHousing, setTopHousing] = useState('')
   const [bottomHousing, setBottomHousing] = useState('')
   const [stem, setStem] = useState('')
+  const [topHousingColor, setTopHousingColor] = useState('')
+  const [bottomHousingColor, setBottomHousingColor] = useState('')
+  const [stemColor, setStemColor] = useState('')
+  const [markings, setMarkings] = useState('')
   const [springWeight, setSpringWeight] = useState('')
   const [springLength, setSpringLength] = useState('')
   const [compatibility, setCompatibility] = useState('')
@@ -104,6 +108,10 @@ export default function BrowseMasterSwitchesPage() {
   const [debouncedTopHousing, setDebouncedTopHousing] = useState('')
   const [debouncedBottomHousing, setDebouncedBottomHousing] = useState('')
   const [debouncedStem, setDebouncedStem] = useState('')
+  const [debouncedTopHousingColor, setDebouncedTopHousingColor] = useState('')
+  const [debouncedBottomHousingColor, setDebouncedBottomHousingColor] = useState('')
+  const [debouncedStemColor, setDebouncedStemColor] = useState('')
+  const [debouncedMarkings, setDebouncedMarkings] = useState('')
   const [debouncedSpringWeight, setDebouncedSpringWeight] = useState('')
   const [debouncedSpringLength, setDebouncedSpringLength] = useState('')
   const [debouncedCompatibility, setDebouncedCompatibility] = useState('')
@@ -176,6 +184,10 @@ export default function BrowseMasterSwitchesPage() {
           case 'topHousing': setDebouncedTopHousing(value); break;
           case 'bottomHousing': setDebouncedBottomHousing(value); break;
           case 'stem': setDebouncedStem(value); break;
+          case 'topHousingColor': setDebouncedTopHousingColor(value); break;
+          case 'bottomHousingColor': setDebouncedBottomHousingColor(value); break;
+          case 'stemColor': setDebouncedStemColor(value); break;
+          case 'markings': setDebouncedMarkings(value); break;
           case 'springWeight': setDebouncedSpringWeight(value); break;
           case 'springLength': setDebouncedSpringLength(value); break;
           case 'compatibility': setDebouncedCompatibility(value); break;
@@ -214,6 +226,10 @@ export default function BrowseMasterSwitchesPage() {
       topHousing,
       bottomHousing,
       stem,
+      topHousingColor,
+      bottomHousingColor,
+      stemColor,
+      markings,
       springWeight,
       springLength,
       compatibility,
@@ -234,7 +250,7 @@ export default function BrowseMasterSwitchesPage() {
       bottomOutMagneticFluxMin,
       bottomOutMagneticFluxMax,
     });
-  }, [manufacturer, topHousing, bottomHousing, stem, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, tactileForceMin, tactileForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedFilterUpdate])
+  }, [manufacturer, topHousing, bottomHousing, stem, topHousingColor, bottomHousingColor, stemColor, markings, springWeight, springLength, compatibility, actuationForceMin, actuationForceMax, tactileForceMin, tactileForceMax, bottomOutForceMin, bottomOutForceMax, preTravelMin, preTravelMax, bottomOutMin, bottomOutMax, initialForceMin, initialForceMax, initialMagneticFluxMin, initialMagneticFluxMax, bottomOutMagneticFluxMin, bottomOutMagneticFluxMax, debouncedFilterUpdate])
 
   // Function to fetch switches with pagination
   const fetchSwitches = useCallback(async (page: number, append: boolean = false) => {
@@ -261,6 +277,10 @@ export default function BrowseMasterSwitchesPage() {
         if (debouncedTopHousing) params.set('topHousing', debouncedTopHousing)
         if (debouncedBottomHousing) params.set('bottomHousing', debouncedBottomHousing)
         if (debouncedStem) params.set('stem', debouncedStem)
+        if (debouncedTopHousingColor) params.set('topHousingColor', debouncedTopHousingColor)
+        if (debouncedBottomHousingColor) params.set('bottomHousingColor', debouncedBottomHousingColor)
+        if (debouncedStemColor) params.set('stemColor', debouncedStemColor)
+        if (debouncedMarkings) params.set('markings', debouncedMarkings)
         if (debouncedSpringWeight) params.set('springWeight', debouncedSpringWeight)
         if (debouncedSpringLength) params.set('springLength', debouncedSpringLength)
         if (debouncedCompatibility) params.set('compatibility', debouncedCompatibility)
@@ -317,7 +337,8 @@ export default function BrowseMasterSwitchesPage() {
     sort, order,
     // Debounced text filters
     debouncedSearch, debouncedManufacturer, debouncedTopHousing, debouncedBottomHousing,
-    debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility,
+    debouncedStem, debouncedTopHousingColor, debouncedBottomHousingColor, debouncedStemColor,
+    debouncedMarkings, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility,
     debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin,
     debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax,
     debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax,
@@ -351,6 +372,10 @@ export default function BrowseMasterSwitchesPage() {
     setTopHousing('')
     setBottomHousing('')
     setStem('')
+    setTopHousingColor('')
+    setBottomHousingColor('')
+    setStemColor('')
+    setMarkings('')
     setSpringWeight('')
     setSpringLength('')
     setCompatibility('')
@@ -380,7 +405,7 @@ export default function BrowseMasterSwitchesPage() {
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || progressiveSpring || doubleStage || actuationForceMin || actuationForceMax || tactileForceMin || tactileForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
+  const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || topHousingColor || bottomHousingColor || stemColor || markings || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || progressiveSpring || doubleStage || actuationForceMin || actuationForceMax || tactileForceMin || tactileForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
 
   // Client-side filtering and sorting - REMOVED (now handled server-side)
   /*
@@ -560,19 +585,48 @@ export default function BrowseMasterSwitchesPage() {
           loadMore()
         }
       },
-      { threshold: 0.1 }
+      { 
+        threshold: 0.1,
+        rootMargin: '100px' // Trigger 100px before the element comes into view
+      }
     )
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current)
+    const currentRef = loadMoreRef.current
+    if (currentRef) {
+      observer.observe(currentRef)
     }
 
     return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current)
+      if (currentRef) {
+        observer.unobserve(currentRef)
       }
     }
   }, [loadMore, loadingMore, hasMore])
+
+  // Check if we need to load more content to fill the viewport
+  useEffect(() => {
+    const checkIfNeedMoreContent = () => {
+      if (!loading && !loadingMore && hasMore && loadMoreRef.current) {
+        const rect = loadMoreRef.current.getBoundingClientRect()
+        const viewportHeight = window.innerHeight
+        
+        // If the load more element is already in view, trigger loading
+        if (rect.top < viewportHeight) {
+          loadMore()
+        }
+      }
+    }
+
+    // Check after initial load
+    if (!loading) {
+      // Small delay to ensure DOM is fully rendered
+      setTimeout(checkIfNeedMoreContent, 100)
+    }
+
+    // Also check on window resize
+    window.addEventListener('resize', checkIfNeedMoreContent)
+    return () => window.removeEventListener('resize', checkIfNeedMoreContent)
+  }, [loading, loadingMore, hasMore, loadMore])
 
   const addToCollection = async (switchId: string) => {
     setAddingSwitch(switchId)
@@ -914,6 +968,63 @@ export default function BrowseMasterSwitchesPage() {
                       value={stem}
                       onChange={(e) => setStem(e.target.value)}
                       placeholder="e.g., POM"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Colors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Top Housing Color
+                    </label>
+                    <input
+                      type="text"
+                      value={topHousingColor}
+                      onChange={(e) => setTopHousingColor(e.target.value)}
+                      placeholder="e.g., Clear, Black"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Bottom Housing Color
+                    </label>
+                    <input
+                      type="text"
+                      value={bottomHousingColor}
+                      onChange={(e) => setBottomHousingColor(e.target.value)}
+                      placeholder="e.g., White, Red"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Stem Color
+                    </label>
+                    <input
+                      type="text"
+                      value={stemColor}
+                      onChange={(e) => setStemColor(e.target.value)}
+                      placeholder="e.g., Blue, Orange"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Marking
+                    </label>
+                    <input
+                      type="text"
+                      value={markings}
+                      onChange={(e) => setMarkings(e.target.value)}
+                      placeholder="e.g., 3 Plus, HG"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     />
                   </div>
@@ -1319,19 +1430,24 @@ export default function BrowseMasterSwitchesPage() {
               
               {/* Load more trigger */}
               {hasMore && (
-                <div ref={loadMoreRef} className="p-4 text-center">
+                <div ref={loadMoreRef} className="p-8 text-center border-t border-gray-200 dark:border-gray-700">
                   {loadingMore ? (
                     <div className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 dark:border-gray-400"></div>
-                      <span>Loading more switches...</span>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                      <span className="text-base">Loading more switches...</span>
                     </div>
                   ) : (
-                    <button
-                      onClick={loadMore}
-                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      Load more
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        onClick={loadMore}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+                      >
+                        Load More Switches
+                      </button>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Scroll down to load automatically
+                      </p>
+                    </div>
                   )}
                 </div>
               )}

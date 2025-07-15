@@ -69,6 +69,10 @@ export default function SharePage() {
       topHousings: [],
       bottomHousings: [],
       stems: [],
+      topHousingColors: [],
+      bottomHousingColors: [],
+      stemColors: [],
+      markingsList: [],
       springWeights: [],
       springLengths: [],
       magnetOrientations: [],
@@ -96,6 +100,10 @@ export default function SharePage() {
     const topHousings = [...new Set(switches.map(s => s.topHousing).filter(Boolean) as string[])].sort()
     const bottomHousings = [...new Set(switches.map(s => s.bottomHousing).filter(Boolean) as string[])].sort()
     const stems = [...new Set(switches.map(s => s.stem).filter(Boolean) as string[])].sort()
+    const topHousingColors = [...new Set(switches.map(s => s.topHousingColor).filter(Boolean) as string[])].sort()
+    const bottomHousingColors = [...new Set(switches.map(s => s.bottomHousingColor).filter(Boolean) as string[])].sort()
+    const stemColors = [...new Set(switches.map(s => s.stemColor).filter(Boolean) as string[])].sort()
+    const markingsList = [...new Set(switches.map(s => s.markings).filter(Boolean) as string[])].sort()
     const springWeights = [...new Set(switches.map(s => s.springWeight).filter(Boolean) as string[])].sort()
     const springLengths = [...new Set(switches.map(s => s.springLength).filter(Boolean) as string[])].sort()
     const magnetOrientations = [...new Set(switches.map(s => s.magnetOrientation).filter(Boolean) as string[])].sort()
@@ -130,6 +138,10 @@ export default function SharePage() {
       topHousings,
       bottomHousings,
       stems,
+      topHousingColors,
+      bottomHousingColors,
+      stemColors,
+      markingsList,
       springWeights,
       springLengths,
       magnetOrientations,
@@ -172,6 +184,10 @@ export default function SharePage() {
         (s.topHousing?.toLowerCase().includes(search) ?? false) ||
         (s.bottomHousing?.toLowerCase().includes(search) ?? false) ||
         (s.stem?.toLowerCase().includes(search) ?? false) ||
+        (s.topHousingColor?.toLowerCase().includes(search) ?? false) ||
+        (s.bottomHousingColor?.toLowerCase().includes(search) ?? false) ||
+        (s.stemColor?.toLowerCase().includes(search) ?? false) ||
+        (s.markings?.toLowerCase().includes(search) ?? false) ||
         (s.magnetOrientation?.toLowerCase().includes(search) ?? false) ||
         (s.magnetPosition?.toLowerCase().includes(search) ?? false) ||
         (s.magnetPolarity?.toLowerCase().includes(search) ?? false) ||
@@ -199,6 +215,18 @@ export default function SharePage() {
     }
     if (activeFilters.stem) {
       filtered = filtered.filter(s => s.stem === activeFilters.stem)
+    }
+    if (activeFilters.topHousingColor) {
+      filtered = filtered.filter(s => s.topHousingColor === activeFilters.topHousingColor)
+    }
+    if (activeFilters.bottomHousingColor) {
+      filtered = filtered.filter(s => s.bottomHousingColor === activeFilters.bottomHousingColor)
+    }
+    if (activeFilters.stemColor) {
+      filtered = filtered.filter(s => s.stemColor === activeFilters.stemColor)
+    }
+    if (activeFilters.markings) {
+      filtered = filtered.filter(s => s.markings === activeFilters.markings)
     }
     if (activeFilters.springWeight) {
       filtered = filtered.filter(s => s.springWeight === activeFilters.springWeight)
