@@ -622,6 +622,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
       {editingSwitch && (
         <EditSwitchModal
+          key={editingSwitch.id}
           switch={editingSwitch}
           onClose={() => setEditingSwitch(null)}
           onSwitchUpdated={handleSwitchUpdated}

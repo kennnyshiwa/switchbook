@@ -34,6 +34,7 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
   const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY'
   const showClickType = typeValue === 'CLICKY'
   
+  
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([])
   const [stemShapes, setStemShapes] = useState<{ id: string; name: string }[]>([])
   
@@ -57,6 +58,11 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
         // Failed to fetch tag suggestions, but don't interrupt user flow
       })
   }, [])
+  
+  // Don't render form until materials are loaded
+  if (materials.length === 0 || stemShapes.length === 0) {
+    return <div className="text-center py-4">Loading form data...</div>
+  }
   
   return (
     <>
