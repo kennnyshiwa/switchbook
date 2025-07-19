@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import ManufacturerAutocomplete from './ManufacturerAutocomplete';
 import { useState, useEffect } from 'react';
+import { getMaterials } from '@/utils/materials';
+import { getStemShapes } from '@/utils/stemShapes';
 
 // Schema for edit suggestion - matching the submission form
 const editSuggestionSchema = z.object({
@@ -74,6 +76,13 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   const [showMagneticFields, setShowMagneticFields] = useState(
     currentData.technology === 'MAGNETIC'
   );
+  const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
+  const [stemShapes, setStemShapes] = useState<{ id: string; name: string }[]>([]);
+  
+  useEffect(() => {
+    getMaterials().then(setMaterials);
+    getStemShapes().then(setStemShapes);
+  }, []);
   
   // Clean initial data - convert null to empty string or undefined for form
   const cleanedInitialData = {
@@ -570,48 +579,64 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Top Housing
             </label>
-            <input
+            <select
               {...register('topHousing')}
               onChange={(e) => {
                 register('topHousing').onChange(e);
                 handleFieldChange('topHousing', e.target.value);
               }}
-              type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="e.g., Polycarbonate, Nylon"
-            />
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2"
+            >
+              <option value="">Select material (optional)</option>
+              {materials.map(material => (
+                <option key={material.id} value={material.name}>
+                  {material.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Bottom Housing
             </label>
-            <input
+            <select
               {...register('bottomHousing')}
               onChange={(e) => {
                 register('bottomHousing').onChange(e);
                 handleFieldChange('bottomHousing', e.target.value);
               }}
-              type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="e.g., Nylon, POM"
-            />
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2"
+            >
+              <option value="">Select material (optional)</option>
+              {materials.map(material => (
+                <option key={material.id} value={material.name}>
+                  {material.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Stem
             </label>
-            <input
+            <select
               {...register('stem')}
               onChange={(e) => {
                 register('stem').onChange(e);
                 handleFieldChange('stem', e.target.value);
               }}
-              type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="e.g., POM, UHMWPE"
-            />
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2"
+            >
+              <option value="">Select material (optional)</option>
+              {materials.map(material => (
+                <option key={material.id} value={material.name}>
+                  {material.name}
+                </option>
+              ))}
+              <option value="POM">POM</option>
+            </select>
           </div>
         </div>
         
@@ -669,16 +694,21 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Stem Shape
             </label>
-            <input
+            <select
               {...register('stemShape')}
               onChange={(e) => {
                 register('stemShape').onChange(e);
                 handleFieldChange('stemShape', e.target.value);
               }}
-              type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="e.g., Standard, Box, Plus"
-            />
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2"
+            >
+              <option value="">Select shape (optional)</option>
+              {stemShapes.map(shape => (
+                <option key={shape.id} value={shape.name}>
+                  {shape.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

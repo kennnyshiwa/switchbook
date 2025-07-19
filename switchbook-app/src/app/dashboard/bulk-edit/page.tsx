@@ -5,6 +5,8 @@ import { Switch, ClickType } from '@prisma/client'
 import Link from 'next/link'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 import TagsInputWithAutocomplete from '@/components/TagsInputWithAutocomplete'
+import { getMaterials } from '@/utils/materials'
+import { getStemShapes } from '@/utils/stemShapes'
 import {
   useReactTable,
   getCoreRowModel,
@@ -98,7 +100,8 @@ const EditableCell = memo(({
   onManufacturerSubmitted,
   submittedManufacturers,
   isCheckbox = false,
-  isInvalid = false
+  isInvalid = false,
+  options = []
 }: {
   value: any
   field: keyof EditableSwitchData
@@ -114,6 +117,7 @@ const EditableCell = memo(({
   submittedManufacturers?: Set<string>
   isCheckbox?: boolean
   isInvalid?: boolean
+  options?: { value: string; label: string }[]
 }) => {
   const [localValue, setLocalValue] = useState(value)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -197,21 +201,40 @@ const EditableCell = memo(({
 
   return (
     <div className="relative">
-      <input
-        type={type}
-        value={localValue || ''}
-        onChange={(e) => handleChange(type === 'number' ? parseFloat(e.target.value) || '' : e.target.value)}
-        onKeyDown={field === 'manufacturer' ? handleKeyDown : undefined}
-        placeholder={placeholder}
-        min={min}
-        max={max}
-        step={step}
-        className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 ${
-          isInvalid 
-            ? 'border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500' 
-            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-blue-500'
-        } text-gray-900 dark:text-gray-100`}
-      />
+      {options.length > 0 ? (
+        <select
+          value={localValue || ''}
+          onChange={(e) => handleChange(e.target.value)}
+          className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 ${
+            isInvalid 
+              ? 'border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500' 
+              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-blue-500'
+          } text-gray-900 dark:text-gray-100`}
+        >
+          <option value="">Select...</option>
+          {options.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={localValue || ''}
+          onChange={(e) => handleChange(type === 'number' ? parseFloat(e.target.value) || '' : e.target.value)}
+          onKeyDown={field === 'manufacturer' ? handleKeyDown : undefined}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          step={step}
+          className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 ${
+            isInvalid 
+              ? 'border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500' 
+              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-blue-500'
+          } text-gray-900 dark:text-gray-100`}
+        />
+      )}
       
       {/* Manufacturer autocomplete dropdown */}
       {field === 'manufacturer' && showSuggestions && (
@@ -390,6 +413,8 @@ export default function BulkEditPage() {
   const [userTags, setUserTags] = useState<string[]>([])
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([])
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({})
+  const [materials, setMaterials] = useState<{ id: string; name: string }[]>([])
+  const [stemShapes, setStemShapes] = useState<{ id: string; name: string }[]>([])
 
   // Determine if we should show magnetic fields
   const showMagneticFields = useMemo(() => {
@@ -634,6 +659,8 @@ export default function BulkEditPage() {
   useEffect(() => {
     loadSwitches()
     fetchManufacturers().then(setManufacturers)
+    getMaterials().then(setMaterials)
+    getStemShapes().then(setStemShapes)
     // Fetch user tags for autocomplete
     fetch('/api/user/tags')
       .then(res => res.json())
@@ -1051,6 +1078,10 @@ export default function BulkEditPage() {
             switchId={row.original.id}
             onUpdate={updateSwitch}
             placeholder="e.g., PC"
+            options={materials.map(material => ({
+              value: material.name,
+              label: material.name
+            }))}
           />
         ),
       },
@@ -1066,6 +1097,10 @@ export default function BulkEditPage() {
             switchId={row.original.id}
             onUpdate={updateSwitch}
             placeholder="e.g., Nylon"
+            options={materials.map(material => ({
+              value: material.name,
+              label: material.name
+            }))}
           />
         ),
       },
@@ -1081,6 +1116,10 @@ export default function BulkEditPage() {
             switchId={row.original.id}
             onUpdate={updateSwitch}
             placeholder="e.g., POM"
+            options={materials.map(material => ({
+              value: material.name,
+              label: material.name
+            }))}
           />
         ),
       },
@@ -1133,14 +1172,18 @@ export default function BulkEditPage() {
         id: 'stemShape',
         accessorKey: 'stemShape',
         header: 'Stem Shape',
-        size: 100,
+        size: 120,
         cell: ({ row }) => (
           <EditableCell
             value={row.original.stemShape}
             field="stemShape"
             switchId={row.original.id}
             onUpdate={updateSwitch}
-            placeholder="e.g., MX"
+            placeholder="Select stem shape"
+            options={stemShapes.map(shape => ({
+              value: shape.name,
+              label: shape.name
+            }))}
           />
         ),
       },
@@ -1423,7 +1466,7 @@ export default function BulkEditPage() {
     )
 
     return cols
-  }, [updateSwitch, manufacturers, handleManufacturerSubmitted, submittedManufacturers, invalidSwitches, showMagneticFields, showTactileForce, showClickType, userTags])
+  }, [updateSwitch, manufacturers, handleManufacturerSubmitted, submittedManufacturers, invalidSwitches, showMagneticFields, showTactileForce, showClickType, userTags, materials])
 
   // Create table instance
   const table = useReactTable({

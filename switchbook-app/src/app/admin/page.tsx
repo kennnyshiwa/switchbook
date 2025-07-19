@@ -167,6 +167,30 @@ export default async function AdminDashboard() {
           </Link>
 
           <Link
+            href="/admin/materials"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Manage Materials</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Add, edit, and manage switch material options
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/stem-shapes"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Manage Stem Shapes</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Add, edit, and manage stem shape options
+              </p>
+            </div>
+          </Link>
+
+          <Link
             href="/admin/stats"
             className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow"
           >

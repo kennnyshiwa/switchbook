@@ -76,17 +76,17 @@ model Switch {
   modifiedFields        Json?
   personalNotes         String?
   primaryImageId        String?
-  personalTags          String[]          @default([])
   doubleStage           Boolean           @default(false)
   progressiveSpring     Boolean           @default(false)
   tactileForce          Float?
   clickType             ClickType?
   tactilePosition       Float?
-  topHousingColor       String?
+  personalTags          String[]          @default([])
   bottomHousingColor    String?
+  markings              String?
   stemColor             String?
   stemShape             String?
-  markings              String?
+  topHousingColor       String?
   masterSwitch          MasterSwitch?     @relation(fields: [masterSwitchId], references: [id])
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   images                SwitchImage[]
@@ -229,12 +229,12 @@ model MasterSwitch {
   tactileForce           Float?
   clickType              ClickType?
   tactilePosition        Float?
-  topHousingColor        String?
+  shareableId            String?            @unique
   bottomHousingColor     String?
+  markings               String?
   stemColor              String?
   stemShape              String?
-  markings               String?
-  shareableId            String?            @unique
+  topHousingColor        String?
   approvedBy             User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
   submittedBy            User               @relation("SubmittedBy", fields: [submittedById], references: [id])
   edits                  MasterSwitchEdit[]
@@ -330,19 +330,18 @@ model SwitchImage {
 }
 
 model Wishlist {
-  id                  String        @id @default(cuid())
-  userId              String
-  masterSwitchId      String?
-  customName          String?
-  customManufacturer  String?
-  customNotes         String?
-  priority            Int           @default(0)
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  
-  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  masterSwitch        MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
-  
+  id                 String        @id @default(cuid())
+  userId             String
+  masterSwitchId     String?
+  customName         String?
+  customManufacturer String?
+  customNotes        String?
+  priority           Int           @default(0)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  masterSwitch       MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, masterSwitchId])
   @@index([userId])
   @@index([masterSwitchId])
@@ -391,4 +390,28 @@ enum ClickType {
   CLICK_LEAF
   CLICK_BAR
   CLICK_JACKET
+}
+
+model Material {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([active])
+  @@index([order])
+}
+
+model StemShape {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([active])
+  @@index([order])
 }

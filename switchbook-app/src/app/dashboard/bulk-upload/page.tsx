@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
+import { getMaterials } from '@/utils/materials'
+import { getStemShapes } from '@/utils/stemShapes'
 
 interface ParsedSwitch {
   name: string
@@ -91,7 +93,9 @@ const SwitchTableRow = memo(({
   onRemove,
   onManufacturerSubmitted,
   isManufacturerSubmitted,
-  invalidRowRef
+  invalidRowRef,
+  materials,
+  stemShapes
 }: {
   switchItem: ParsedSwitchWithDuplicate
   index: number
@@ -101,6 +105,8 @@ const SwitchTableRow = memo(({
   onManufacturerSubmitted: (name: string) => void
   isManufacturerSubmitted: boolean
   invalidRowRef?: (el: HTMLTableRowElement | null) => void
+  materials: { id: string; name: string }[]
+  stemShapes: { id: string; name: string }[]
 }) => {
   // Local state for each input to prevent re-renders of other rows
   const [localValues, setLocalValues] = useState(switchItem)
@@ -586,31 +592,49 @@ const SwitchTableRow = memo(({
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
+        <select
           value={localValues.topHousing || ''}
           onChange={(e) => handleChange('topHousing', e.target.value)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-        />
+        >
+          <option value="">Select...</option>
+          {materials.map(material => (
+            <option key={material.id} value={material.name}>
+              {material.name}
+            </option>
+          ))}
+        </select>
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
+        <select
           value={localValues.bottomHousing || ''}
           onChange={(e) => handleChange('bottomHousing', e.target.value)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-        />
+        >
+          <option value="">Select...</option>
+          {materials.map(material => (
+            <option key={material.id} value={material.name}>
+              {material.name}
+            </option>
+          ))}
+        </select>
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
+        <select
           value={localValues.stem || ''}
           onChange={(e) => handleChange('stem', e.target.value)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-        />
+        >
+          <option value="">Select...</option>
+          {materials.map(material => (
+            <option key={material.id} value={material.name}>
+              {material.name}
+            </option>
+          ))}
+        </select>
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
@@ -643,14 +667,19 @@ const SwitchTableRow = memo(({
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
-        <input
-          type="text"
+        <select
           value={localValues.stemShape || ''}
           onChange={(e) => handleChange('stemShape', e.target.value)}
           className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          placeholder="e.g., MX"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-        />
+        >
+          <option value="">Select...</option>
+          {stemShapes.map(shape => (
+            <option key={shape.id} value={shape.name}>
+              {shape.name}
+            </option>
+          ))}
+        </select>
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
@@ -735,6 +764,14 @@ export default function BulkUploadPage() {
   const [submittedManufacturers, setSubmittedManufacturers] = useState<Set<string>>(new Set())
   const tableRef = useRef<HTMLDivElement>(null)
   const invalidRowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+  const [materials, setMaterials] = useState<{ id: string; name: string }[]>([])
+  const [stemShapes, setStemShapes] = useState<{ id: string; name: string }[]>([])
+
+  // Fetch materials and stem shapes on component mount
+  useEffect(() => {
+    getMaterials().then(setMaterials)
+    getStemShapes().then(setStemShapes)
+  }, [])
 
   // Handle wheel events to ensure vertical scrolling works
   useEffect(() => {
@@ -1576,6 +1613,8 @@ export default function BulkUploadPage() {
                     onRemove={removeParsedSwitch}
                     onManufacturerSubmitted={handleManufacturerSubmitted}
                     isManufacturerSubmitted={switchItem.manufacturer ? submittedManufacturers.has(switchItem.manufacturer) : false}
+                    materials={materials}
+                    stemShapes={stemShapes}
                     invalidRowRef={(el) => {
                       if (el && switchItem.manufacturer && !switchItem.manufacturerValid && !submittedManufacturers.has(switchItem.manufacturer)) {
                         invalidRowRefs.current.set(index, el)
