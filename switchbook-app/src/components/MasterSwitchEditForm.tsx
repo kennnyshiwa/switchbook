@@ -635,7 +635,6 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
                   {material.name}
                 </option>
               ))}
-              <option value="POM">POM</option>
             </select>
           </div>
         </div>

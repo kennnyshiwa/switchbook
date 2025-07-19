@@ -25,6 +25,10 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
   const manufacturerValue = watch('manufacturer')
   const technologyValue = watch('technology')
   const typeValue = watch('type')
+  const topHousingValue = watch('topHousing')
+  const bottomHousingValue = watch('bottomHousing')
+  const stemValue = watch('stem')
+  const stemShapeValue = watch('stemShape')
   const showMagneticFields = technologyValue === 'MAGNETIC'
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY'
   const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY'
@@ -490,7 +494,6 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
                 {material.name}
               </option>
             ))}
-            <option value="POM">POM</option>
           </select>
           {errors.stem && (
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.stem.message}</p>

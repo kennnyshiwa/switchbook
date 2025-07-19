@@ -500,7 +500,6 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
                   {material.name}
                 </option>
               ))}
-              <option value="POM">POM</option>
             </select>
           </div>
         </div>
