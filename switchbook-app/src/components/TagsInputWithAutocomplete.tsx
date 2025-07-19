@@ -21,6 +21,7 @@ export default function TagsInputWithAutocomplete({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+  const [isSelectingSuggestion, setIsSelectingSuggestion] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -99,9 +100,12 @@ export default function TagsInputWithAutocomplete({
 
   // Handle blur event to add any pending tag
   const handleBlur = () => {
-    if (inputValue.trim()) {
-      addTag(inputValue)
-    }
+    // Don't add tag if we're clicking on a suggestion
+    setTimeout(() => {
+      if (!isSelectingSuggestion && inputValue.trim()) {
+        addTag(inputValue)
+      }
+    }, 150)
   }
 
   const removeTag = (indexToRemove: number) => {
@@ -109,7 +113,11 @@ export default function TagsInputWithAutocomplete({
   }
 
   const selectSuggestion = (suggestion: string) => {
+    setIsSelectingSuggestion(true)
     addTag(suggestion)
+    setTimeout(() => {
+      setIsSelectingSuggestion(false)
+    }, 200)
   }
 
   return (
@@ -159,7 +167,10 @@ export default function TagsInputWithAutocomplete({
             <button
               key={suggestion}
               type="button"
-              onClick={() => selectSuggestion(suggestion)}
+              onMouseDown={(e) => {
+                e.preventDefault() // Prevent blur
+                selectSuggestion(suggestion)
+              }}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 ${
                 index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-600' : ''
               }`}

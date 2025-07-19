@@ -7,9 +7,10 @@ interface ImageUploadProps {
   switchId: string
   onImageUploaded: (image: any) => void
   disabled?: boolean
+  buttonMode?: boolean
 }
 
-export default function ImageUpload({ switchId, onImageUploaded, disabled = false }: ImageUploadProps) {
+export default function ImageUpload({ switchId, onImageUploaded, disabled = false, buttonMode = false }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -123,6 +124,36 @@ export default function ImageUpload({ switchId, onImageUploaded, disabled = fals
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+  }
+
+  if (buttonMode) {
+    return (
+      <div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={IMAGE_CONFIG.allowedMimeTypes.join(',')}
+          onChange={handleFileSelect}
+          disabled={disabled || isUploading}
+          className="hidden"
+          id="image-upload-button"
+        />
+        <label
+          htmlFor="image-upload-button"
+          className={`inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer ${
+            disabled || isUploading ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          {isUploading ? `Uploading... ${uploadProgress}%` : 'Upload Images'}
+        </label>
+        {error && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+        )}
+      </div>
+    )
   }
 
   return (

@@ -11,6 +11,46 @@ interface RouteParams {
   params: Promise<{ id: string }>
 }
 
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await auth()
+    const { id } = await params
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    const switchItem = await prisma.switch.findFirst({
+      where: {
+        id,
+        userId: session.user.id,
+      },
+      include: {
+        images: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    })
+
+    if (!switchItem) {
+      return NextResponse.json(
+        { error: "Switch not found" },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(switchItem)
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch switch" },
+      { status: 500 }
+    )
+  }
+}
+
 async function updateSwitchHandler(request: NextRequest, { params }: RouteParams) {
   let body: unknown
   try {
