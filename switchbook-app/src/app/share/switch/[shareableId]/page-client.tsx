@@ -161,10 +161,12 @@ export default function ShareMasterSwitchPageClient() {
             <ForceCurvesButton
               switchName={masterSwitch.name}
               manufacturer={masterSwitch.manufacturer}
+              variant="button"
             />
             <SwitchScoresButton
               switchName={masterSwitch.name}
               manufacturer={masterSwitch.manufacturer}
+              variant="button"
             />
           </div>
 

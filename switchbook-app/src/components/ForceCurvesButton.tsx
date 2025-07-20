@@ -50,9 +50,10 @@ export default function ForceCurvesButton({
             foundMatches = []
           }
         } else {
-          // Fallback to cache checking for backwards compatibility
+          // For public/unauthenticated viewing, or when cache is not available,
+          // directly check for force curves
           try {
-            // Use API endpoint to check cache ONLY
+            // First try the cache API endpoint
             const cacheResponse = await fetch(`/api/force-curve-check?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`)
             
             if (cacheResponse.ok) {
@@ -74,13 +75,21 @@ export default function ForceCurvesButton({
                 // Fallback case
                 foundMatches = []
               }
+            } else if (cacheResponse.status === 401 || cacheResponse.status === 403) {
+              // Unauthorized - this is likely a public page
+              // Directly check GitHub for force curves
+              foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
             } else {
-              // If cache check fails, don't make individual API calls
+              // Other errors - don't make individual API calls
               foundMatches = []
             }
           } catch (cacheError) {
-            // If cache check fails, don't make individual API calls
-            foundMatches = []
+            // If cache check fails, try direct GitHub check for public pages
+            try {
+              foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
+            } catch (githubError) {
+              foundMatches = []
+            }
           }
         }
         
