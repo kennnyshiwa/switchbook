@@ -24,6 +24,7 @@ model User {
   dismissedNotifications  DismissedNotification[]
   forceCurveFeedback      ForceCurveFeedback[]
   forceCurvePreferences   ForceCurvePreference[]
+  switchScoreFeedback     SwitchScoreFeedback[]
   manufacturers           Manufacturer[]
   approvedMasterSwitches  MasterSwitch[]          @relation("ApprovedBy")
   submittedMasterSwitches MasterSwitch[]          @relation("SubmittedBy")
@@ -161,6 +162,21 @@ model ForceCurveFeedback {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([switchName, manufacturer])
+}
+
+model SwitchScoreFeedback {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  switchName      String
+  manufacturer    String?
+  incorrectMatch  String
+  feedbackType    String   // 'incorrect_match' or 'no_score_exists'
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([switchName, manufacturer])
+  @@unique([switchName, manufacturer, incorrectMatch])
 }
 
 model Account {

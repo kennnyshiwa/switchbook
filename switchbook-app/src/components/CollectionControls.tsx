@@ -86,6 +86,7 @@ export interface ActiveFilters {
   bottomOutMagneticFluxMin?: number
   bottomOutMagneticFluxMax?: number
   hasForceCurves?: boolean
+  hasSwitchScores?: boolean
 }
 
 interface CollectionControlsProps {
@@ -131,7 +132,7 @@ export default function CollectionControls({
     let processedValue: string | boolean | undefined = value === '' ? undefined : value
     
     // Handle boolean fields
-    if (field === 'hasForceCurves' || field === 'progressiveSpring' || field === 'doubleStage') {
+    if (field === 'hasForceCurves' || field === 'hasSwitchScores' || field === 'progressiveSpring' || field === 'doubleStage') {
       processedValue = value === '' ? undefined : value === 'true'
     }
     
@@ -805,6 +806,21 @@ export default function CollectionControls({
                 <option value="">All Switches</option>
                 <option value="true">With Force Curves</option>
                 <option value="false">Without Force Curves</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Switch Scorecards
+              </label>
+              <select
+                value={activeFilters.hasSwitchScores === undefined ? '' : activeFilters.hasSwitchScores ? 'true' : 'false'}
+                onChange={(e) => handleFilterChange('hasSwitchScores', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Switches</option>
+                <option value="true">With Scorecards</option>
+                <option value="false">Without Scorecards</option>
               </select>
             </div>
 

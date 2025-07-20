@@ -7,6 +7,7 @@ import { MasterSwitch, SwitchImage, User } from '@prisma/client'
 import Image from 'next/image'
 import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switchTypes'
 import ForceCurvesButton from '@/components/ForceCurvesButton'
+import SwitchScoresButton from '@/components/SwitchScoresButton'
 
 interface MasterSwitchWithRelations extends MasterSwitch {
   submittedBy: User
@@ -156,8 +157,12 @@ export default function ShareMasterSwitchPageClient() {
           </div>
 
           {/* Force Curves Button */}
-          <div className="mb-6">
+          <div className="mb-6 space-y-2">
             <ForceCurvesButton
+              switchName={`${masterSwitch.manufacturer} ${masterSwitch.name}`}
+              manufacturer={masterSwitch.manufacturer}
+            />
+            <SwitchScoresButton
               switchName={`${masterSwitch.manufacturer} ${masterSwitch.name}`}
               manufacturer={masterSwitch.manufacturer}
             />

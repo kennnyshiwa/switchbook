@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
+import SwitchScoresButton from './SwitchScoresButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 import ImageCarousel from './ImageCarousel'
@@ -401,6 +402,18 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
                 isAuthenticated={true}
                 forceCurvesCached={forceCurvesCached}
                 savedPreference={savedPreference}
+              />
+            </div>
+          )}
+
+          {/* Switch Scorecard Button */}
+          {showForceCurves && (
+            <div className="mt-2">
+              <SwitchScoresButton 
+                switchName={switchItem.name}
+                manufacturer={switchItem.manufacturer}
+                variant="button"
+                className="w-full justify-center"
               />
             </div>
           )}

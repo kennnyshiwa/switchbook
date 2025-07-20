@@ -7,6 +7,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
 import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
+import ForceCurvesButton from '@/components/ForceCurvesButton'
+import SwitchScoresButton from '@/components/SwitchScoresButton'
 
 interface MasterSwitchDetail {
   id: string
@@ -453,6 +455,20 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
           )}
 
           <div className="p-6 space-y-6">
+            {/* External Resources */}
+            <div className="flex flex-wrap gap-2">
+              <ForceCurvesButton 
+                switchName={switchData.name}
+                manufacturer={switchData.manufacturer}
+                variant="button"
+              />
+              <SwitchScoresButton 
+                switchName={switchData.name}
+                manufacturer={switchData.manufacturer}
+                variant="button"
+              />
+            </div>
+
             {/* Basic Information */}
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">

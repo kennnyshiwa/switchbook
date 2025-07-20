@@ -5,6 +5,7 @@ import { Switch, ClickType } from '@prisma/client'
 import { SWITCH_TYPE_COLORS, SWITCH_TECHNOLOGY_COLORS } from '@/constants/switchTypes'
 import { deleteSwitch } from '@/utils/switchActions'
 import ForceCurvesButton from './ForceCurvesButton'
+import SwitchScoresButton from './SwitchScoresButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 
@@ -349,14 +350,21 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center space-x-2">
                     {showForceCurves && (
-                      <ForceCurvesButton 
-                        switchName={switchItem.name}
-                        manufacturer={switchItem.manufacturer}
-                        variant="icon"
-                        isAuthenticated={true}
-                        forceCurvesCached={forceCurveCache?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`) ?? false}
-                        savedPreference={forceCurvePreferencesMap?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`)}
-                      />
+                      <>
+                        <ForceCurvesButton 
+                          switchName={switchItem.name}
+                          manufacturer={switchItem.manufacturer}
+                          variant="icon"
+                          isAuthenticated={true}
+                          forceCurvesCached={forceCurveCache?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`) ?? false}
+                          savedPreference={forceCurvePreferencesMap?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`)}
+                        />
+                        <SwitchScoresButton 
+                          switchName={switchItem.name}
+                          manufacturer={switchItem.manufacturer}
+                          variant="icon"
+                        />
+                      </>
                     )}
                     <button
                       onClick={() => onEdit(switchItem)}

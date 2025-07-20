@@ -9,6 +9,7 @@ import AddSwitchModal from './AddSwitchModal'
 import EditSwitchModal from './EditSwitchModal'
 import CollectionControls, { SortOption, ViewMode, FilterOptions, ActiveFilters } from './CollectionControls'
 import { findForceCurveData } from '@/utils/forceCurves'
+import { hasSwitchScoreData } from '@/utils/switchScores'
 
 interface SwitchImage {
   id: string
@@ -432,6 +433,24 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         } else {
           // Show only switches that do NOT have force curves
           filtered = forceCurveChecks.filter(result => !result.hasForceCurves).map(result => result.switch)
+        }
+      }
+
+      // Apply switch scorecards filter (async)
+      if (activeFilters.hasSwitchScores !== undefined) {
+        const switchScoreChecks = await Promise.all(
+          filtered.map(async (s) => ({
+            switch: s,
+            hasSwitchScores: await hasSwitchScoreData(s.name, s.manufacturer || undefined)
+          }))
+        )
+        
+        if (activeFilters.hasSwitchScores) {
+          // Show only switches that have scorecards
+          filtered = switchScoreChecks.filter(result => result.hasSwitchScores).map(result => result.switch)
+        } else {
+          // Show only switches that do NOT have scorecards
+          filtered = switchScoreChecks.filter(result => !result.hasSwitchScores).map(result => result.switch)
         }
       }
 
