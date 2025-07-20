@@ -298,8 +298,43 @@ export async function POST(req: NextRequest) {
     console.error('Master switch submission error:', error)
     
     if (error instanceof z.ZodError) {
+      // Create user-friendly error messages for each validation issue
+      const fieldErrors = error.errors.map(err => {
+        const field = err.path.join('.')
+        let message = ''
+        
+        switch (field) {
+          case 'name':
+            message = 'Switch name is required'
+            break
+          case 'manufacturer':
+            message = 'Manufacturer is required. If unknown, please enter "Unknown"'
+            break
+          case 'submissionNotes':
+            message = err.code === 'too_small' 
+              ? 'Submission notes must be at least 10 characters. Please explain why this switch should be added to the database'
+              : 'Submission notes are required'
+            break
+          case 'imageUrl':
+            message = 'Image URL must be a valid URL (starting with http:// or https://)'
+            break
+          default:
+            message = err.message
+        }
+        
+        return { field, message }
+      })
+      
+      const errorMessage = fieldErrors.length === 1 
+        ? fieldErrors[0].message
+        : `Please fix the following issues: ${fieldErrors.map(e => e.message).join(', ')}`
+      
       return NextResponse.json(
-        { error: 'Invalid submission data', details: error.errors },
+        { 
+          error: errorMessage,
+          fieldErrors,
+          details: error.errors 
+        },
         { status: 400 }
       )
     }
