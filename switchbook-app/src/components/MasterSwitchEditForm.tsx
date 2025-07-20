@@ -78,10 +78,15 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   );
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
   const [stemShapes, setStemShapes] = useState<{ id: string; name: string }[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   useEffect(() => {
-    getMaterials().then(setMaterials);
-    getStemShapes().then(setStemShapes);
+    Promise.all([
+      getMaterials().then(setMaterials),
+      getStemShapes().then(setStemShapes)
+    ]).then(() => {
+      setDataLoaded(true);
+    });
   }, []);
   
   // Clean initial data - convert null to empty string or undefined for form
@@ -195,6 +200,15 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   // Form validation check
   if (Object.keys(errors).length > 0) {
     // Validation errors present
+  }
+
+  // Don't render form until materials and stem shapes are loaded
+  if (!dataLoaded) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    );
   }
 
   return (
