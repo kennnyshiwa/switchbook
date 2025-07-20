@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import { Switch } from '@prisma/client'
+import { Switch, ForceCurvePreference } from '@prisma/client'
 import Image from 'next/image'
 import CollectionStats from '@/components/CollectionStats'
 import SwitchCard from '@/components/SwitchCard'
@@ -14,7 +14,7 @@ export default function SharePage() {
   const params = useParams()
   const shareableId = params.shareableId as string
   
-  const [user, setUser] = useState<{ username: string; switches: Switch[] } | null>(null)
+  const [user, setUser] = useState<{ username: string; switches: Switch[]; showForceCurves: boolean; forceCurvePreferences: ForceCurvePreference[] } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -412,7 +412,7 @@ export default function SharePage() {
                         switch={switchItem}
                         onEdit={() => {}}
                         onDelete={() => {}}
-                        showForceCurves={false}
+                        showForceCurves={user.showForceCurves}
                       />
                     ))}
                   </div>
@@ -421,7 +421,7 @@ export default function SharePage() {
                     switches={filteredSwitches}
                     onEdit={() => {}}
                     onDelete={() => {}}
-                    showForceCurves={false}
+                    showForceCurves={user.showForceCurves}
                   />
                 )}
               </>

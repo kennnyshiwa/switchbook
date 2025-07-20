@@ -159,11 +159,11 @@ export default function ShareMasterSwitchPageClient() {
           {/* Force Curves Button */}
           <div className="mb-6 space-y-2">
             <ForceCurvesButton
-              switchName={`${masterSwitch.manufacturer} ${masterSwitch.name}`}
+              switchName={masterSwitch.name}
               manufacturer={masterSwitch.manufacturer}
             />
             <SwitchScoresButton
-              switchName={`${masterSwitch.manufacturer} ${masterSwitch.name}`}
+              switchName={masterSwitch.name}
               manufacturer={masterSwitch.manufacturer}
             />
           </div>

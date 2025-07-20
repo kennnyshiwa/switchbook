@@ -12,6 +12,7 @@ export async function GET(
       where: { shareableId },
       select: {
         username: true,
+        showForceCurves: true,
         switches: {
           orderBy: { createdAt: "desc" },
           include: {
@@ -19,7 +20,8 @@ export async function GET(
               orderBy: { order: 'asc' }
             }
           }
-        }
+        },
+        forceCurvePreferences: true
       }
     })
 
