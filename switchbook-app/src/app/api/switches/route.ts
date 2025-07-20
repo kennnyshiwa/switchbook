@@ -104,8 +104,70 @@ async function createSwitchHandler(request: NextRequest) {
     return NextResponse.json(newSwitch)
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // Create user-friendly error messages for each validation issue
+      const fieldErrors = error.errors.map(err => {
+        const field = err.path.join('.')
+        let message = ''
+        
+        switch (field) {
+          case 'name':
+            message = 'Switch name is required'
+            break
+          case 'manufacturer':
+            message = 'Manufacturer field cannot exceed 100 characters'
+            break
+          case 'notes':
+            message = 'Notes cannot exceed 500 characters'
+            break
+          case 'personalNotes':
+            message = 'Personal notes cannot exceed 500 characters'
+            break
+          case 'markings':
+            message = 'Markings cannot exceed 500 characters'
+            break
+          case 'actuationForce':
+          case 'bottomOutForce':
+          case 'tactileForce':
+            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 1000 grams`
+            break
+          case 'preTravel':
+          case 'bottomOut':
+          case 'tactilePosition':
+            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 10 mm`
+            break
+          case 'initialMagneticFlux':
+          case 'bottomOutMagneticFlux':
+            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 10000`
+            break
+          case 'personalTags':
+            if (err.code === 'too_big' && err.message.includes('50')) {
+              message = 'Each tag cannot exceed 50 characters'
+            } else {
+              message = err.message
+            }
+            break
+          default:
+            // For enum fields, provide clearer messages
+            if (err.code === 'invalid_enum_value') {
+              message = `Invalid ${field}. Please select from the available options`
+            } else {
+              message = err.message
+            }
+        }
+        
+        return { field, message }
+      })
+      
+      const errorMessage = fieldErrors.length === 1 
+        ? fieldErrors[0].message
+        : `Please fix the following issues: ${fieldErrors.map(e => e.message).join(', ')}`
+      
       return NextResponse.json(
-        { error: "Invalid input", details: error.errors },
+        { 
+          error: errorMessage,
+          fieldErrors,
+          details: error.errors 
+        },
         { status: 400 }
       )
     }
