@@ -185,8 +185,9 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       setValue('stemShape', syncedSwitch.stemShape || '')
       setValue('markings', syncedSwitch.markings || '')
       
-      // Preserve local images when syncing
-      onSwitchUpdated({ ...syncedSwitch, images: localImages })
+      // Preserve local images when syncing - check if API returned images
+      const updatedSwitch = syncedSwitch.images ? syncedSwitch : { ...syncedSwitch, images: localImages }
+      onSwitchUpdated(updatedSwitch)
       setSyncStatus(prev => prev ? { ...prev, hasUpdates: false, isModified: false } : null)
     } catch (error) {
       setError('Failed to sync with master database. Please try again.')
@@ -354,8 +355,9 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         
         if (syncResponse.ok) {
           const syncData = await syncResponse.json()
-          // Update with the synced data (notes already moved to personalNotes if needed)
-          onSwitchUpdated(syncData.switch)
+          // Update with the synced data but preserve local images if API doesn't include them
+          const updatedSwitch = syncData.switch.images ? syncData.switch : { ...syncData.switch, images: localImages }
+          onSwitchUpdated(updatedSwitch)
           
           // Update form to reflect the synced data
           setValue('notes', syncData.switch.notes || '')

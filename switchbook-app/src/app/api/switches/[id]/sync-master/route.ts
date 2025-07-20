@@ -81,6 +81,11 @@ export async function POST(
         isModified: false,
         modifiedFields: [],
         masterSwitchVersion: userSwitch.masterSwitch.version,
+      },
+      include: {
+        images: {
+          orderBy: { order: 'asc' }
+        }
       }
     })
 
