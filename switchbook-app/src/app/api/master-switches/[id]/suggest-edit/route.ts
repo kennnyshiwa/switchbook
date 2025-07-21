@@ -85,9 +85,6 @@ export async function POST(
     const { id } = await params
     const body = await req.json()
     
-    // Debug logging
-    console.log('Received edit suggestion body:', JSON.stringify(body, null, 2))
-    
     let validated;
     try {
       validated = editSuggestionSchema.parse(body);
