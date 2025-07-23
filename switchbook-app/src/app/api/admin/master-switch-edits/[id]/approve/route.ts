@@ -55,7 +55,8 @@ export async function POST(
       'magnetOrientation', 'magnetPosition', 'magnetPolarity', 'initialForce', 
       'initialMagneticFlux', 'bottomOutMagneticFlux', 'pcbThickness', 
       'frankenTop', 'frankenBottom', 'frankenStem', 'clickType',
-      'progressiveSpring', 'doubleStage'
+      'progressiveSpring', 'doubleStage', 'topHousingColor', 'bottomHousingColor',
+      'stemColor', 'stemShape', 'markings'
     ]
 
     for (const field of fieldsToUpdate) {
