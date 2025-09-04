@@ -8,6 +8,7 @@ import ForceCurvesButton from './ForceCurvesButton'
 import SwitchScoresButton from './SwitchScoresButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
+import FrankenIndicator from './FrankenIndicator'
 
 interface SwitchImage {
   id: string
@@ -157,6 +158,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                           M
                         </span>
                       )}
+                      {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
+                        <FrankenIndicator className="inline-flex items-center justify-center w-5 h-5 bg-gray-500 text-white text-xs font-bold rounded-full" />
+                      )}
                     </div>
                   ) : (
                     <div>
@@ -169,6 +173,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                           >
                             M
                           </span>
+                        )}
+                        {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
+                          <FrankenIndicator className="inline-flex items-center justify-center w-5 h-5 bg-gray-500 text-white text-xs font-bold rounded-full" />
                         )}
                       </div>
                       {switchItem.chineseName && (

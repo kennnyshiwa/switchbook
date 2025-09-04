@@ -87,6 +87,7 @@ export interface ActiveFilters {
   bottomOutMagneticFluxMax?: number
   hasForceCurves?: boolean
   hasSwitchScores?: boolean
+  frankenStatus?: 'franken' | 'non-franken' | 'all'
 }
 
 interface CollectionControlsProps {
@@ -821,6 +822,21 @@ export default function CollectionControls({
                 <option value="">All Switches</option>
                 <option value="true">With Scorecards</option>
                 <option value="false">Without Scorecards</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Frankenswitch
+              </label>
+              <select
+                value={activeFilters.frankenStatus || 'all'}
+                onChange={(e) => handleFilterChange('frankenStatus', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="all">All Switches</option>
+                <option value="franken">Frankenswitches Only</option>
+                <option value="non-franken">Non-Franken Only</option>
               </select>
             </div>
 

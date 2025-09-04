@@ -10,6 +10,7 @@ import SwitchScoresButton from './SwitchScoresButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 import ImageCarousel from './ImageCarousel'
+import FrankenIndicator from './FrankenIndicator'
 
 interface SwitchImage {
   id: string
@@ -81,6 +82,9 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
                       M
                     </span>
                   )}
+                  {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
+                    <FrankenIndicator />
+                  )}
                 </h3>
               </>
             ) : (
@@ -94,6 +98,9 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
                     >
                       M
                     </span>
+                  )}
+                  {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
+                    <FrankenIndicator />
                   )}
                 </h3>
                 {switchItem.chineseName && (

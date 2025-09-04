@@ -418,6 +418,17 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         filtered = filtered.filter(s => s.doubleStage === activeFilters.doubleStage)
       }
 
+      // Apply Franken filter
+      if (activeFilters.frankenStatus && activeFilters.frankenStatus !== 'all') {
+        if (activeFilters.frankenStatus === 'franken') {
+          // Show only Frankenswitches
+          filtered = filtered.filter(s => s.frankenTop || s.frankenBottom || s.frankenStem)
+        } else if (activeFilters.frankenStatus === 'non-franken') {
+          // Show only non-Frankenswitches
+          filtered = filtered.filter(s => !s.frankenTop && !s.frankenBottom && !s.frankenStem)
+        }
+      }
+
       // Apply force curves filter (async)
       if (activeFilters.hasForceCurves !== undefined) {
         const forceCurveChecks = await Promise.all(
