@@ -26,8 +26,7 @@ export default async function DashboardPage() {
         orderBy: { createdAt: "desc" },
         include: {
           images: {
-            orderBy: { order: 'asc' },
-            take: 1  // Only load the primary image initially
+            orderBy: { order: 'asc' }
           }
         }
       },
