@@ -15,11 +15,16 @@ export async function POST(
 
     const { id } = await params
     
-    // Get the master switch
+    // Get the master switch with its linked images
     const masterSwitch = await prisma.masterSwitch.findFirst({
       where: {
         id: id,
         status: MasterSwitchStatus.APPROVED
+      },
+      include: {
+        images: {
+          orderBy: { order: 'asc' }
+        }
       }
     })
 
@@ -130,8 +135,35 @@ export async function POST(
       return [switch_]
     })
 
-    // If master switch has an imageUrl, create a linked image for the user's switch
-    if (masterSwitch.imageUrl) {
+    // Copy master switch images to the user's switch
+    if (masterSwitch.images && masterSwitch.images.length > 0) {
+      // Create linked images for all master switch images
+      const imageCreates = masterSwitch.images.map((image, index) => 
+        prisma.switchImage.create({
+          data: {
+            switchId: newSwitch.id,
+            url: image.url,
+            type: image.type,
+            order: index,
+            caption: image.caption,
+            width: image.width,
+            height: image.height,
+            size: image.size
+          }
+        })
+      )
+      
+      const createdImages = await Promise.all(imageCreates)
+      
+      // Set the first image as primary
+      if (createdImages[0]) {
+        await prisma.switch.update({
+          where: { id: newSwitch.id },
+          data: { primaryImageId: createdImages[0].id }
+        })
+      }
+    } else if (masterSwitch.imageUrl) {
+      // Fallback to imageUrl if no images are linked
       const switchImage = await prisma.switchImage.create({
         data: {
           switchId: newSwitch.id,

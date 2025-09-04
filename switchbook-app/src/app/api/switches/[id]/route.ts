@@ -242,12 +242,15 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       )
     }
 
-    // Verify the switch belongs to the user
+    // Verify the switch belongs to the user and get its images
     const switchItem = await prisma.switch.findFirst({
       where: {
         id,
         userId: session.user.id,
       },
+      include: {
+        images: true
+      }
     })
 
     if (!switchItem) {
@@ -257,12 +260,47 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       )
     }
 
+    // Before deleting the switch, preserve images that are linked to master switches
+    if (switchItem.images && switchItem.images.length > 0) {
+      // Update images that have a masterSwitchId to remove only the switchId
+      // This preserves them for the master switch
+      const imagesToPreserve = switchItem.images.filter(img => img.masterSwitchId)
+      
+      if (imagesToPreserve.length > 0) {
+        await prisma.switchImage.updateMany({
+          where: {
+            id: {
+              in: imagesToPreserve.map(img => img.id)
+            }
+          },
+          data: {
+            switchId: null // Remove the switch reference but keep the master switch reference
+          }
+        })
+      }
+
+      // Delete images that are ONLY linked to this switch (no masterSwitchId)
+      const imagesToDelete = switchItem.images.filter(img => !img.masterSwitchId)
+      
+      if (imagesToDelete.length > 0) {
+        await prisma.switchImage.deleteMany({
+          where: {
+            id: {
+              in: imagesToDelete.map(img => img.id)
+            }
+          }
+        })
+      }
+    }
+
+    // Now delete the switch
     await prisma.switch.delete({
       where: { id },
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error('Error deleting switch:', error)
     return NextResponse.json(
       { error: "Failed to delete switch" },
       { status: 500 }

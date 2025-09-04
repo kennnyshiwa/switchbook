@@ -1,9 +1,18 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
 import { linkify } from '@/utils/linkify'
+import ImageCarousel from './ImageCarousel'
+
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+}
 
 interface MasterSwitch {
   id: string
@@ -24,6 +33,7 @@ interface MasterSwitch {
   springLength?: string
   notes?: string
   imageUrl?: string
+  images?: SwitchImage[]
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -131,8 +141,17 @@ export default function MasterSwitchDetailsPopup({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Image */}
-            {switchItem.imageUrl && (
+            {/* Images */}
+            {(switchItem.images && switchItem.images.length > 0) ? (
+              <div className="md:col-span-2">
+                <ImageCarousel 
+                  images={switchItem.images} 
+                  alt={switchItem.name}
+                  isHovered={true}
+                  className="w-full h-64 bg-gray-100 dark:bg-gray-900 rounded-lg"
+                />
+              </div>
+            ) : switchItem.imageUrl ? (
               <div className="md:col-span-2">
                 <img
                   src={switchItem.imageUrl}
@@ -140,7 +159,7 @@ export default function MasterSwitchDetailsPopup({
                   className="w-full h-64 object-contain bg-gray-100 dark:bg-gray-900 rounded-lg"
                 />
               </div>
-            )}
+            ) : null}
 
             {/* Basic Info */}
             <div className="space-y-4">

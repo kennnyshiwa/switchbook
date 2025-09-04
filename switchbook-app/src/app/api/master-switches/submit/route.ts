@@ -261,25 +261,58 @@ export async function POST(req: NextRequest) {
     // If a source switch ID was provided, link it to the new master switch
     if (validated.sourceSwitchId) {
       try {
-        // Verify the switch belongs to the current user
+        // Verify the switch belongs to the current user and fetch with images
         const userSwitch = await prisma.switch.findFirst({
           where: {
             id: validated.sourceSwitchId,
             userId: session.user.id
+          },
+          include: {
+            images: {
+              orderBy: { order: 'asc' }
+            }
           }
         })
 
-        if (userSwitch && !userSwitch.masterSwitchId) {
-          // Link the user's switch to the newly created master switch
-          await prisma.switch.update({
-            where: { id: validated.sourceSwitchId },
-            data: {
-              masterSwitchId: masterSwitch.id,
-              masterSwitchVersion: 1,
-              isModified: false,
-              modifiedFields: Prisma.JsonNull
+        if (userSwitch) {
+          // Link the user's switch to the newly created master switch if not already linked
+          if (!userSwitch.masterSwitchId) {
+            await prisma.switch.update({
+              where: { id: validated.sourceSwitchId },
+              data: {
+                masterSwitchId: masterSwitch.id,
+                masterSwitchVersion: 1,
+                isModified: false,
+                modifiedFields: Prisma.JsonNull
+              }
+            })
+          }
+
+          // Copy user's switch images to master switch
+          // This allows the images to be shared with the master switch
+          if (userSwitch.images && userSwitch.images.length > 0) {
+            const imageUpdates = userSwitch.images.map(image => 
+              prisma.switchImage.update({
+                where: { id: image.id },
+                data: {
+                  masterSwitchId: masterSwitch.id
+                }
+              })
+            )
+            
+            await Promise.all(imageUpdates)
+            
+            // Set the first image as primary if no imageUrl is set
+            if (!validated.imageUrl && userSwitch.images[0]) {
+              await prisma.masterSwitch.update({
+                where: { id: masterSwitch.id },
+                data: {
+                  primaryImageId: userSwitch.images[0].id,
+                  imageUrl: userSwitch.images[0].url
+                }
+              })
             }
-          })
+          }
         }
       } catch (linkError) {
         console.error('Failed to link source switch to master switch:', linkError)

@@ -201,6 +201,9 @@ export async function GET(request: Request) {
             username: true,
           }
         },
+        images: {
+          orderBy: { order: 'asc' },
+        },
         _count: {
           select: {
             userSwitches: true

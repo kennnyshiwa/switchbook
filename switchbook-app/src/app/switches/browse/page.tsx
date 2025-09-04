@@ -11,6 +11,14 @@ import AnimatedCounter from '@/components/AnimatedCounter'
 import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
 import MasterSwitchDetailsPopup from '@/components/MasterSwitchDetailsPopup'
 
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+}
+
 interface MasterSwitch {
   id: string
   name: string
@@ -30,6 +38,7 @@ interface MasterSwitch {
   springLength?: string
   notes?: string
   imageUrl?: string
+  images?: SwitchImage[]
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -1388,7 +1397,15 @@ export default function BrowseMasterSwitchesPage() {
                     className="group cursor-pointer"
                   >
                     <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-2 border-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200">
-                      {switchItem.imageUrl ? (
+                      {(switchItem.images && switchItem.images.length > 0) ? (
+                        <img
+                          src={switchItem.images[0].url}
+                          alt={switchItem.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : switchItem.imageUrl ? (
                         <img
                           src={switchItem.imageUrl}
                           alt={switchItem.name}

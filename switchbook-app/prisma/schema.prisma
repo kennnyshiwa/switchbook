@@ -338,7 +338,7 @@ model SwitchImage {
   size           Int?
   uploadedAt     DateTime      @default(now())
   masterSwitch   MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
-  switch         Switch?       @relation(fields: [switchId], references: [id], onDelete: Cascade)
+  switch         Switch?       @relation(fields: [switchId], references: [id], onDelete: SetNull)
 
   @@index([switchId])
   @@index([masterSwitchId])

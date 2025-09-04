@@ -39,6 +39,9 @@ export async function GET(
             username: true,
           }
         },
+        images: {
+          orderBy: { order: 'asc' }
+        },
         _count: {
           select: {
             userSwitches: true

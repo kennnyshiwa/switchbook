@@ -9,6 +9,15 @@ import { formatDistanceToNow } from 'date-fns'
 import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
 import ForceCurvesButton from '@/components/ForceCurvesButton'
 import SwitchScoresButton from '@/components/SwitchScoresButton'
+import ImageCarousel from '@/components/ImageCarousel'
+
+interface SwitchImage {
+  id: string
+  url: string
+  type: 'UPLOADED' | 'LINKED'
+  order: number
+  caption?: string | null
+}
 
 interface MasterSwitchDetail {
   id: string
@@ -38,6 +47,7 @@ interface MasterSwitchDetail {
   manufacturer?: string
   notes?: string
   imageUrl?: string
+  images?: SwitchImage[]
   topHousing?: string
   bottomHousing?: string
   stem?: string
@@ -444,7 +454,16 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
         {/* Main Content */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {/* Image Section */}
-          {switchData.imageUrl && (
+          {(switchData.images && switchData.images.length > 0) ? (
+            <div className="p-6 bg-gray-100 dark:bg-gray-900">
+              <ImageCarousel 
+                images={switchData.images} 
+                alt={switchData.name}
+                isHovered={true}
+                className="w-full h-96"
+              />
+            </div>
+          ) : switchData.imageUrl ? (
             <div className="relative h-96 bg-gray-100 dark:bg-gray-900">
               <img
                 src={switchData.imageUrl}
@@ -452,7 +471,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
                 className="w-full h-full object-contain"
               />
             </div>
-          )}
+          ) : null}
 
           <div className="p-6 space-y-6">
             {/* External Resources */}
