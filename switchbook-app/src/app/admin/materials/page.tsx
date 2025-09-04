@@ -80,11 +80,20 @@ export default function AdminMaterialsPage() {
       })
 
       if (response.ok) {
+        const result = await response.json()
         setMaterials(materials.map(material => 
           material.id === id ? { ...material, name: editingName.trim() } : material
         ))
         setEditingId(null)
         setEditingName('')
+        
+        // If there was a cascade update, show feedback
+        if (result.cascadeUpdate) {
+          const { oldName, newName, totalUpdated } = result.cascadeUpdate
+          if (totalUpdated > 0) {
+            alert(`Successfully updated material name from "${oldName}" to "${newName}".\n\n${totalUpdated} switch records were automatically updated.`)
+          }
+        }
       } else {
         const error = await response.json()
         alert(error.error || 'Failed to update material')
