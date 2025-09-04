@@ -159,7 +159,7 @@ export default function AddSwitchModal({ userId, onClose, onSwitchAdded }: AddSw
         }
 
         try {
-          const response = await fetch('/api/switches/images', {
+          const response = await fetch(`/api/switches/${switchId}/images`, {
             method: 'POST',
             body: formData,
           })
