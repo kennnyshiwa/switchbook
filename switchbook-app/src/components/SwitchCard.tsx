@@ -11,6 +11,7 @@ import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 import ImageCarousel from './ImageCarousel'
 import FrankenIndicator from './FrankenIndicator'
+import SwitchShareButton from './SwitchShareButton'
 
 interface SwitchImage {
   id: string
@@ -72,35 +73,35 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
           <div className="flex-1 pr-2">
             {!switchItem.name && switchItem.chineseName ? (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  {switchItem.chineseName}
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <span>{switchItem.chineseName}</span>
                   {switchItem.masterSwitchId && (
                     <span 
-                      className="inline-flex items-center justify-center w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full"
+                      className="inline-flex items-center justify-center w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full ml-2 align-middle"
                       title="Linked to Master Database"
                     >
                       M
                     </span>
                   )}
                   {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
-                    <FrankenIndicator />
+                    <FrankenIndicator className="inline-flex items-center justify-center w-6 h-6 bg-gray-500 text-white text-xs font-bold rounded-full ml-1 align-middle" />
                   )}
                 </h3>
               </>
             ) : (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  {switchItem.name}
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <span>{switchItem.name}</span>
                   {switchItem.masterSwitchId && (
                     <span 
-                      className="inline-flex items-center justify-center w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full"
+                      className="inline-flex items-center justify-center w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full ml-2 align-middle"
                       title="Linked to Master Database"
                     >
                       M
                     </span>
                   )}
                   {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
-                    <FrankenIndicator />
+                    <FrankenIndicator className="inline-flex items-center justify-center w-6 h-6 bg-gray-500 text-white text-xs font-bold rounded-full ml-1 align-middle" />
                   )}
                 </h3>
                 {switchItem.chineseName && (
@@ -109,7 +110,13 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
               </>
             )}
           </div>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
+            <SwitchShareButton 
+              switchId={switchItem.id}
+              shareableId={switchItem.shareableId}
+              iconOnly={true}
+              className="text-indigo-600 hover:text-indigo-800"
+            />
             <button
               onClick={() => onEdit(switchItem)}
               className="text-blue-600 hover:text-blue-800"

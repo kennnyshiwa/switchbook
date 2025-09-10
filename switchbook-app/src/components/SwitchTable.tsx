@@ -9,6 +9,7 @@ import SwitchScoresButton from './SwitchScoresButton'
 import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 import FrankenIndicator from './FrankenIndicator'
+import SwitchShareButton from './SwitchShareButton'
 
 interface SwitchImage {
   id: string
@@ -148,34 +149,34 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
               <tr key={switchItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                 <td className="px-6 py-4 whitespace-nowrap">
                   {!switchItem.name && switchItem.chineseName ? (
-                    <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                      {switchItem.chineseName}
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <span>{switchItem.chineseName}</span>
                       {switchItem.masterSwitchId && (
                         <span 
-                          className="inline-flex items-center justify-center w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full"
+                          className="inline-flex items-center justify-center w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full ml-2 align-middle"
                           title="Linked to Master Database"
                         >
                           M
                         </span>
                       )}
                       {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
-                        <FrankenIndicator className="inline-flex items-center justify-center w-5 h-5 bg-gray-500 text-white text-xs font-bold rounded-full" />
+                        <FrankenIndicator className="inline-flex items-center justify-center w-5 h-5 bg-gray-500 text-white text-xs font-bold rounded-full ml-1 align-middle" />
                       )}
                     </div>
                   ) : (
                     <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                        {switchItem.name}
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        <span>{switchItem.name}</span>
                         {switchItem.masterSwitchId && (
                           <span 
-                            className="inline-flex items-center justify-center w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full"
+                            className="inline-flex items-center justify-center w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full ml-2 align-middle"
                             title="Linked to Master Database"
                           >
                             M
                           </span>
                         )}
                         {(switchItem.frankenTop || switchItem.frankenBottom || switchItem.frankenStem) && (
-                          <FrankenIndicator className="inline-flex items-center justify-center w-5 h-5 bg-gray-500 text-white text-xs font-bold rounded-full" />
+                          <FrankenIndicator className="inline-flex items-center justify-center w-5 h-5 bg-gray-500 text-white text-xs font-bold rounded-full ml-1 align-middle" />
                         )}
                       </div>
                       {switchItem.chineseName && (
@@ -373,6 +374,12 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                         />
                       </>
                     )}
+                    <SwitchShareButton 
+                      switchId={switchItem.id}
+                      shareableId={switchItem.shareableId}
+                      iconOnly={true}
+                      className="text-indigo-600 hover:text-indigo-800"
+                    />
                     <button
                       onClick={() => onEdit(switchItem)}
                       className="text-blue-600 hover:text-blue-800"

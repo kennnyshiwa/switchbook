@@ -88,6 +88,7 @@ model Switch {
   stemColor             String?
   stemShape             String?
   topHousingColor       String?
+  shareableId           String?           @unique
   masterSwitch          MasterSwitch?     @relation(fields: [masterSwitchId], references: [id])
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   images                SwitchImage[]
