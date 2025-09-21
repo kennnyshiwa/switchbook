@@ -34,11 +34,6 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - uploads:/app/public/uploads:ro
 
-networks:
-  switchbook-network:
-    external: true
-    name: switchbook-app_switchbook-network
-
 volumes:
   switchesdb_data:
     driver: local
