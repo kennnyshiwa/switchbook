@@ -8,6 +8,7 @@ import SwitchTable from './SwitchTable'
 import AddSwitchModal from './AddSwitchModal'
 import EditSwitchModal from './EditSwitchModal'
 import CollectionControls, { SortOption, ViewMode, FilterOptions, ActiveFilters } from './CollectionControls'
+import CompareForceCurvesButton from './CompareForceCurvesButton'
 import { findForceCurveData } from '@/utils/forceCurves'
 import { hasSwitchScoreData } from '@/utils/switchScores'
 
@@ -40,6 +41,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   const [sortOption, setSortOption] = useState<SortOption>('recent')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({})
+  const [selectedSwitches, setSelectedSwitches] = useState<Set<string>>(new Set())
 
   // Load view mode from localStorage on mount
   useEffect(() => {
@@ -69,6 +71,25 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
   const handleSwitchDeleted = (switchId: string) => {
     setSwitches(switches.filter(s => s.id !== switchId))
+    // Also remove from selection if deleted
+    setSelectedSwitches(prev => {
+      const newSelection = new Set(prev)
+      newSelection.delete(switchId)
+      return newSelection
+    })
+  }
+
+  const handleSwitchSelection = (switchId: string) => {
+    setSelectedSwitches(prev => {
+      const newSelection = new Set(prev)
+      if (newSelection.has(switchId)) {
+        newSelection.delete(switchId)
+      } else if (newSelection.size < 5) {
+        // Max 5 switches can be selected
+        newSelection.add(switchId)
+      }
+      return newSelection
+    })
   }
 
   // Cache for force curve results to avoid repeated API calls
@@ -598,6 +619,56 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           currentView={viewMode}
           filterOptions={filterOptions}
         />
+        {selectedSwitches.size > 0 && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <CompareForceCurvesButton
+                selectedSwitches={Array.from(selectedSwitches).map(id => {
+                  const sw = switches.find(s => s.id === id)!
+                  return {
+                    id: sw.id,
+                    name: sw.name,
+                    manufacturer: sw.manufacturer
+                  }
+                })}
+              />
+              <button
+                onClick={() => setSelectedSwitches(new Set())}
+                className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              >
+                Clear Selection
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Array.from(selectedSwitches).map(id => {
+                const sw = switches.find(s => s.id === id)
+                if (!sw) return null
+                return (
+                  <div
+                    key={id}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-md text-sm"
+                  >
+                    <span>{sw.name}</span>
+                    <button
+                      onClick={() => handleSwitchSelection(id)}
+                      className="ml-1 hover:text-blue-600 dark:hover:text-blue-400"
+                      title="Remove from selection"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
+              {selectedSwitches.size === 5 && (
+                <span className="text-sm text-orange-600 dark:text-orange-400 italic">
+                  (Maximum 5 switches selected)
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       
       {isFiltering ? (
@@ -627,6 +698,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
                 showForceCurves={showForceCurves}
                 forceCurvesCached={hasForceCurvesCached}
                 savedPreference={savedPreference}
+                isSelected={selectedSwitches.has(switchItem.id)}
+                onSelectionChange={() => handleSwitchSelection(switchItem.id)}
               />
             )
           })}
@@ -639,6 +712,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           showForceCurves={showForceCurves}
           forceCurveCache={forceCurveCache}
           forceCurvePreferencesMap={forceCurvePreferencesMap}
+          selectedSwitches={selectedSwitches}
+          onSelectionChange={handleSwitchSelection}
         />
       )}
 

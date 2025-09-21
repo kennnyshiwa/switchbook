@@ -34,9 +34,11 @@ interface SwitchCardProps {
   showForceCurves: boolean
   forceCurvesCached?: boolean
   savedPreference?: { folder: string; url: string }
+  isSelected?: boolean
+  onSelectionChange?: () => void
 }
 
-function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, forceCurvesCached, savedPreference }: SwitchCardProps) {
+function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, forceCurvesCached, savedPreference, isSelected, onSelectionChange }: SwitchCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
@@ -54,12 +56,23 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
 
   return (
     <>
-      <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden relative"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         <div className="relative h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+          {onSelectionChange && (isHovered || isSelected) && (
+            <div className="absolute top-2 left-2 z-10">
+              <input
+                type="checkbox"
+                checked={isSelected || false}
+                onChange={onSelectionChange}
+                onClick={(e) => e.stopPropagation()}
+                className="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+              />
+            </div>
+          )}
           <ImageCarousel
             images={switchItem.images || []}
             alt={switchItem.name}

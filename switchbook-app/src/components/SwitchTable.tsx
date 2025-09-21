@@ -32,9 +32,11 @@ interface SwitchTableProps {
   showForceCurves: boolean
   forceCurveCache?: Map<string, boolean>
   forceCurvePreferencesMap?: Map<string, { folder: string; url: string }>
+  selectedSwitches?: Set<string>
+  onSelectionChange?: (switchId: string) => void
 }
 
-function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCache, forceCurvePreferencesMap }: SwitchTableProps) {
+function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCache, forceCurvePreferencesMap, selectedSwitches, onSelectionChange }: SwitchTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (switchItem: ExtendedSwitch) => {
@@ -55,6 +57,11 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
+              {onSelectionChange && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <span className="sr-only">Select</span>
+                </th>
+              )}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Switch
               </th>
@@ -147,6 +154,16 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {switches.map((switchItem) => (
               <tr key={switchItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                {onSelectionChange && (
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedSwitches?.has(switchItem.id) || false}
+                      onChange={() => onSelectionChange(switchItem.id)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                    />
+                  </td>
+                )}
                 <td className="px-6 py-4 whitespace-nowrap">
                   {!switchItem.name && switchItem.chineseName ? (
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
