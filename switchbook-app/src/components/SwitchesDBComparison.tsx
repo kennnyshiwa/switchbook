@@ -75,9 +75,12 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
     // In development, you can set NEXT_PUBLIC_SWITCHESDB_URL=http://localhost:3002
     let switchesdbHost = process.env.NEXT_PUBLIC_SWITCHESDB_URL || '/switchesdb'
 
-    // Ensure HTTPS in production
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && !switchesdbHost.startsWith('http')) {
-      switchesdbHost = `${window.location.origin}${switchesdbHost}`
+    // Always use absolute HTTPS URL in production
+    if (typeof window !== 'undefined') {
+      if (window.location.protocol === 'https:' && !switchesdbHost.startsWith('http')) {
+        // Force HTTPS URL
+        switchesdbHost = `https://${window.location.host}${switchesdbHost}`
+      }
     }
 
     const url = `${switchesdbHost}/#${switchParams}`
