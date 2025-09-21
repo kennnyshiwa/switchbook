@@ -70,8 +70,10 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
       })
       .join(',')
 
-    // Use localhost:3002 for local development, or configure via env variable
-    const switchesdbHost = process.env.NEXT_PUBLIC_SWITCHESDB_URL || 'http://localhost:3002'
+    // Use relative URL so nginx can proxy to the correct container
+    // In production, nginx will proxy /switchesdb to the switchesdb container
+    // In development, you can set NEXT_PUBLIC_SWITCHESDB_URL=http://localhost:3002
+    const switchesdbHost = process.env.NEXT_PUBLIC_SWITCHESDB_URL || '/switchesdb'
     const url = `${switchesdbHost}/#${switchParams}`
 
     setIframeUrl(url)
