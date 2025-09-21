@@ -70,9 +70,8 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
       })
       .join(',')
 
-    // Use environment variable for development, hardcode production URL
-    const switchesdbHost = process.env.NEXT_PUBLIC_SWITCHESDB_URL || 'https://switchbook.app/switchesdb'
-    const url = `${switchesdbHost}/#${switchParams}`
+    // Always use HTTPS production URL to avoid mixed content issues
+    const url = `https://switchbook.app/switchesdb/#${switchParams}`
 
     setIframeUrl(url)
     setIsLoading(false)
@@ -140,7 +139,11 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
                 src={iframeUrl}
                 className="w-full h-full border-0"
                 title="SwitchesDB Force Curve Comparison"
-                onLoad={() => setIsLoading(false)}
+                onLoad={() => {
+                  setIsLoading(false)
+                  console.log('Iframe loaded, actual src:', document.querySelector('iframe')?.src)
+                }}
+                onError={(e) => console.error('Iframe error:', e)}
               />
               {/* Show the URL for debugging/reference */}
               <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
