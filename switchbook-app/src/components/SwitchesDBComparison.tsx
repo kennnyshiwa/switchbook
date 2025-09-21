@@ -70,22 +70,10 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
       })
       .join(',')
 
-    // Use relative URL so nginx can proxy to the correct container
-    // In production, nginx will proxy /switchesdb to the switchesdb container
-    // In development, you can set NEXT_PUBLIC_SWITCHESDB_URL=http://localhost:3002
-    let switchesdbHost = process.env.NEXT_PUBLIC_SWITCHESDB_URL || '/switchesdb'
-
-    // Always use absolute HTTPS URL in production
-    if (typeof window !== 'undefined') {
-      if (window.location.protocol === 'https:' && !switchesdbHost.startsWith('http')) {
-        // Force HTTPS URL
-        switchesdbHost = `https://${window.location.host}${switchesdbHost}`
-      }
-    }
-
+    // Use environment variable for development, hardcode production URL
+    const switchesdbHost = process.env.NEXT_PUBLIC_SWITCHESDB_URL || 'https://switchbook.app/switchesdb'
     const url = `${switchesdbHost}/#${switchParams}`
 
-    console.log('SwitchesDB URL:', url) // Debug logging
     setIframeUrl(url)
     setIsLoading(false)
   }, [selectedSwitches, switchSources])
