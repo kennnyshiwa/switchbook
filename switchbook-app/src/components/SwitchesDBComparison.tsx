@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface SwitchesDBComparisonProps {
@@ -31,6 +31,7 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
   const [iframeUrl, setIframeUrl] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [switchSources, setSwitchSources] = useState<{ [key: string]: string }>({})
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
     // Initialize sources for each switch with intelligent defaults
@@ -71,11 +72,36 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
       .join(',')
 
     // Always use HTTPS production URL to avoid mixed content issues
-    const url = `https://switchbook.app/switchesdb/#${switchParams}`
+    // Ensure the URL is properly formed with trailing slash
+    const baseUrl = 'https://switchbook.app/switchesdb/'
+    const url = `${baseUrl}#${switchParams}`
+    console.log('Generated URL:', url)
 
     setIframeUrl(url)
     setIsLoading(false)
   }, [selectedSwitches, switchSources])
+
+  // Set iframe src directly after mount to avoid SSR issues
+  useEffect(() => {
+    if (iframeRef.current && iframeUrl) {
+      // Force HTTPS by setting src directly
+      const httpsUrl = iframeUrl.replace(/^http:/, 'https:')
+      console.log('Setting iframe src to:', httpsUrl)
+      iframeRef.current.src = httpsUrl
+
+      // Check what actually loaded after a delay
+      setTimeout(() => {
+        if (iframeRef.current) {
+          console.log('Iframe actual src after load:', iframeRef.current.src)
+          try {
+            console.log('Iframe content location:', iframeRef.current.contentWindow?.location.href)
+          } catch (e) {
+            console.log('Cannot access iframe content (cross-origin)')
+          }
+        }
+      }, 2000)
+    }
+  }, [iframeUrl])
 
   const handleSourceChange = (switchId: string, source: string) => {
     setSwitchSources(prev => ({
@@ -136,14 +162,9 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
           ) : iframeUrl ? (
             <>
               <iframe
-                src={iframeUrl}
+                ref={iframeRef}
                 className="w-full h-full border-0"
                 title="SwitchesDB Force Curve Comparison"
-                onLoad={() => {
-                  setIsLoading(false)
-                  console.log('Iframe loaded, actual src:', document.querySelector('iframe')?.src)
-                }}
-                onError={(e) => console.error('Iframe error:', e)}
               />
               {/* Show the URL for debugging/reference */}
               <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
