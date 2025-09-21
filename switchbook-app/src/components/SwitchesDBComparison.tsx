@@ -76,6 +76,7 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
     const switchesdbHost = process.env.NEXT_PUBLIC_SWITCHESDB_URL || '/switchesdb'
     const url = `${switchesdbHost}/#${switchParams}`
 
+    console.log('SwitchesDB URL:', url) // Debug logging
     setIframeUrl(url)
     setIsLoading(false)
   }, [selectedSwitches, switchSources])

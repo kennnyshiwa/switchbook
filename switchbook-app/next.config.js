@@ -36,7 +36,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; frame-src 'self' http://localhost:3002 /switchesdb; frame-ancestors 'self'; object-src 'none'; base-uri 'self';",
+            value: "default-src 'self'; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; frame-src 'self' http://localhost:3002 https://switchbook.app; frame-ancestors 'self'; object-src 'none'; base-uri 'self';",
           },
         ],
       },
