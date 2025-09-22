@@ -101,11 +101,11 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
                 <select
                   value={switchSources[sw.id] || 'TG'}
                   onChange={(e) => handleSourceChange(sw.id, e.target.value)}
-                  className="bg-transparent border-0 text-gray-900 dark:text-white focus:ring-0 text-xs cursor-pointer"
+                  className="bg-white dark:bg-gray-800 border-0 text-gray-900 dark:text-white focus:ring-0 text-xs cursor-pointer rounded px-1"
                 >
-                  <option value="TG">ThereminGoat</option>
-                  <option value="HT">Haata</option>
-                  <option value="BP">BluePylons</option>
+                  <option value="TG" className="bg-white dark:bg-gray-800">ThereminGoat</option>
+                  <option value="HT" className="bg-white dark:bg-gray-800">Haata</option>
+                  <option value="BP" className="bg-white dark:bg-gray-800">BluePylons</option>
                 </select>
               </div>
             ))}
