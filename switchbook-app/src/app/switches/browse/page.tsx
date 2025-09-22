@@ -10,6 +10,7 @@ import debounce from 'lodash/debounce'
 import AnimatedCounter from '@/components/AnimatedCounter'
 import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
 import MasterSwitchDetailsPopup from '@/components/MasterSwitchDetailsPopup'
+import SwitchesDBComparison from '@/components/SwitchesDBComparison'
 
 interface SwitchImage {
   id: string
@@ -73,6 +74,9 @@ export default function BrowseMasterSwitchesPage() {
   const [deletingSwitch, setDeletingSwitch] = useState<string | null>(null)
   const [linkDialogSwitch, setLinkDialogSwitch] = useState<{ id: string; name: string } | null>(null)
   const [selectedSwitch, setSelectedSwitch] = useState<MasterSwitch | null>(null)
+  const [isComparisonMode, setIsComparisonMode] = useState(false)
+  const [selectedForComparison, setSelectedForComparison] = useState<Set<string>>(new Set())
+  const [showComparisonModal, setShowComparisonModal] = useState(false)
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -708,6 +712,33 @@ export default function BrowseMasterSwitchesPage() {
     }
   }
 
+  const handleSwitchClick = (switchItem: MasterSwitch) => {
+    if (isComparisonMode) {
+      setSelectedForComparison(prev => {
+        const newSet = new Set(prev)
+        if (newSet.has(switchItem.id)) {
+          newSet.delete(switchItem.id)
+        } else {
+          newSet.add(switchItem.id)
+        }
+        return newSet
+      })
+    } else {
+      setSelectedSwitch(switchItem)
+    }
+  }
+
+  const toggleComparisonMode = () => {
+    if (isComparisonMode && selectedForComparison.size > 0) {
+      // Show comparison modal when exiting comparison mode with selections
+      setShowComparisonModal(true)
+    }
+    setIsComparisonMode(!isComparisonMode)
+    if (!isComparisonMode) {
+      setSelectedForComparison(new Set())
+    }
+  }
+
   const deleteSwitch = async (switchId: string) => {
     if (!confirm('Are you sure you want to delete this master switch? This action cannot be undone.')) {
       return
@@ -779,6 +810,22 @@ export default function BrowseMasterSwitchesPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={toggleComparisonMode}
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  isComparisonMode
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-600 text-white hover:bg-gray-700'
+                }`}
+                title="Compare force curves"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                {isComparisonMode ? `Compare (${selectedForComparison.size})` : 'Compare Curves'}
+              </button>
               <Link
                 href="/switches/submit"
                 className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
@@ -797,6 +844,35 @@ export default function BrowseMasterSwitchesPage() {
             </div>
           </div>
         </div>
+
+        {/* Comparison Mode Notice */}
+        {isComparisonMode && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-blue-800 dark:text-blue-200">
+                  Click on switches to select them for force curve comparison.
+                  {selectedForComparison.size > 0 && (
+                    <span className="font-semibold ml-1">
+                      ({selectedForComparison.size} selected)
+                    </span>
+                  )}
+                </p>
+              </div>
+              {selectedForComparison.size >= 2 && (
+                <button
+                  onClick={() => setShowComparisonModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  View Comparison
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
@@ -1393,10 +1469,31 @@ export default function BrowseMasterSwitchesPage() {
                 {switches.map((switchItem) => (
                   <div
                     key={switchItem.id}
-                    onClick={() => setSelectedSwitch(switchItem)}
-                    className="group cursor-pointer"
+                    onClick={() => handleSwitchClick(switchItem)}
+                    className="group cursor-pointer relative"
                   >
-                    <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-2 border-2 border-transparent hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200">
+                    {isComparisonMode && (
+                      <div className={`absolute top-2 right-2 z-10 rounded-full p-1 transition-opacity ${
+                        selectedForComparison.has(switchItem.id)
+                          ? 'bg-green-500 text-white opacity-100'
+                          : 'bg-gray-600 text-white opacity-0 group-hover:opacity-60'
+                      }`}>
+                        {selectedForComparison.has(switchItem.id) ? (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
+                    <div className={`relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden mb-2 border-2 transition-all duration-200 ${
+                      isComparisonMode && selectedForComparison.has(switchItem.id)
+                        ? 'border-green-500 dark:border-green-400'
+                        : 'border-transparent hover:border-blue-500 dark:hover:border-blue-400'
+                    }`}>
                       {(switchItem.images && switchItem.images.length > 0) ? (
                         <img
                           src={switchItem.images[0].url}
@@ -1500,6 +1597,25 @@ export default function BrowseMasterSwitchesPage() {
           isAddingToWishlist={addingToWishlist === selectedSwitch.id}
           isDeletingSwitch={deletingSwitch === selectedSwitch.id}
           isAdmin={session?.user?.role === 'ADMIN'}
+        />
+      )}
+
+      {/* Force Curve Comparison Modal */}
+      {showComparisonModal && selectedForComparison.size > 0 && (
+        <SwitchesDBComparison
+          selectedSwitches={Array.from(selectedForComparison).map(id => {
+            const sw = switches.find(s => s.id === id)
+            return {
+              id,
+              name: sw?.name || '',
+              manufacturer: sw?.manufacturer || null
+            }
+          })}
+          onClose={() => {
+            setShowComparisonModal(false)
+            setIsComparisonMode(false)
+            setSelectedForComparison(new Set())
+          }}
         />
       )}
     </div>
