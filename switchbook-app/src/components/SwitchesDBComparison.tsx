@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface SwitchesDBComparisonProps {
@@ -12,26 +12,10 @@ interface SwitchesDBComparisonProps {
   onClose: () => void
 }
 
-// Map switch names to SwitchesDB format
-function formatSwitchForDB(switchName: string, manufacturer?: string | null): string {
-  // SwitchesDB uses format like "Aflion Blush~TG.csv"
-  // Sources: TG = ThereminGoat, HT = Haata, BP = BluePylons (OSCM)
-
-  // Just use the switch name, not the manufacturer
-  // The switch name often already includes the manufacturer
-  const cleanName = switchName.replace(/\s+/g, '%20')
-
-  // For now, default to ThereminGoat source as it's the most comprehensive
-  // In the future, we could check which source has the switch data
-  // or allow users to select the source
-  return `${cleanName}~TG.csv`
-}
-
 export default function SwitchesDBComparison({ selectedSwitches, onClose }: SwitchesDBComparisonProps) {
   const [iframeUrl, setIframeUrl] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [switchSources, setSwitchSources] = useState<{ [key: string]: string }>({})
-  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
     // Initialize sources for each switch with intelligent defaults
@@ -71,37 +55,14 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
       })
       .join(',')
 
-    // Always use HTTPS production URL to avoid mixed content issues
-    // Ensure the URL is properly formed with trailing slash
-    const baseUrl = 'https://switchbook.app/switchesdb/'
+    // Use subdomain for SwitchesDB to avoid iframe issues
+    const baseUrl = 'https://switchesdb.switchbook.app/'
     const url = `${baseUrl}#${switchParams}`
     console.log('Generated URL:', url)
 
     setIframeUrl(url)
     setIsLoading(false)
   }, [selectedSwitches, switchSources])
-
-  // Set iframe src directly after mount to avoid SSR issues
-  useEffect(() => {
-    if (iframeRef.current && iframeUrl) {
-      // Force HTTPS by setting src directly
-      const httpsUrl = iframeUrl.replace(/^http:/, 'https:')
-      console.log('Setting iframe src to:', httpsUrl)
-      iframeRef.current.src = httpsUrl
-
-      // Check what actually loaded after a delay
-      setTimeout(() => {
-        if (iframeRef.current) {
-          console.log('Iframe actual src after load:', iframeRef.current.src)
-          try {
-            console.log('Iframe content location:', iframeRef.current.contentWindow?.location.href)
-          } catch (e) {
-            console.log('Cannot access iframe content (cross-origin)')
-          }
-        }
-      }, 2000)
-    }
-  }, [iframeUrl])
 
   const handleSourceChange = (switchId: string, source: string) => {
     setSwitchSources(prev => ({
@@ -162,9 +123,10 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
           ) : iframeUrl ? (
             <>
               <iframe
-                ref={iframeRef}
+                src={iframeUrl}
                 className="w-full h-full border-0"
                 title="SwitchesDB Force Curve Comparison"
+                sandbox="allow-scripts allow-same-origin allow-forms"
               />
               {/* Show the URL for debugging/reference */}
               <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
