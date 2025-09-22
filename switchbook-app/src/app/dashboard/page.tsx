@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import Image from "next/image"
 import Link from "next/link"
 import SwitchCollection from "@/components/SwitchCollection"
 import CollectionStats from "@/components/CollectionStats"
@@ -45,12 +44,10 @@ export default async function DashboardPage() {
           <div className="flex items-center space-x-4">
             {/* Logo */}
             <Link href="/dashboard" className="flex-shrink-0">
-              <Image
+              <img
                 className="h-16 w-auto"
                 src="/logo.png"
                 alt="Switchbook"
-                width={64}
-                height={64}
               />
             </Link>
             <div>

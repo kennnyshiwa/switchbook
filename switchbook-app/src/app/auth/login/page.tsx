@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -71,13 +70,10 @@ function LoginContent() {
         <div>
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <Image
+            <img
               className="h-20 w-auto"
               src="/logo.png"
               alt="Switchbook"
-              width={80}
-              height={80}
-              priority
             />
           </div>
           

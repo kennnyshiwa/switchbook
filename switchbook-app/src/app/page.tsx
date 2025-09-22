@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -54,13 +53,10 @@ export default async function HomePage() {
           <div className="text-center">
             {/* Logo */}
             <div className="flex justify-center mb-8">
-              <Image
+              <img
                 className="h-24 w-auto"
                 src="/logo.png"
                 alt="Switchbook"
-                width={96}
-                height={96}
-                priority
               />
             </div>
             
@@ -180,11 +176,10 @@ export default async function HomePage() {
                 className="w-full flex items-center px-6 py-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
               >
                 <div className="w-10 h-10 mr-4 flex items-center justify-center flex-shrink-0">
-                  <Image
+                  <img
                     src="/switch-odd-01 (2).svg"
                     alt="SwitchOddities"
-                    width={40}
-                    height={40}
+                    className="w-10 h-10"
                   />
                 </div>
                 <div className="text-left flex-1">
@@ -201,12 +196,10 @@ export default async function HomePage() {
                 className="w-full flex items-center px-6 py-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-900 transition-colors duration-200"
               >
                 <div className="w-10 h-10 mr-4 flex items-center justify-center flex-shrink-0">
-                  <Image
+                  <img
                     src="/theremingoat.jpg"
                     alt="ThereminGoat"
-                    width={40}
-                    height={40}
-                    className="rounded-full"
+                    className="w-10 h-10 rounded-full"
                   />
                 </div>
                 <div className="text-left flex-1">

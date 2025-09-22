@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Image from "next/image"
 import Link from "next/link"
 import HamburgerMenu from "@/components/HamburgerMenu"
 import WishlistCollection from "@/components/WishlistCollection"
@@ -88,12 +87,10 @@ export default function WishlistPage() {
           <div className="flex items-center space-x-4">
             {/* Logo */}
             <Link href="/dashboard" className="flex-shrink-0">
-              <Image
+              <img
                 className="h-16 w-auto"
                 src="/logo.png"
                 alt="Switchbook"
-                width={200}
-                height={64}
               />
             </Link>
             <div>
