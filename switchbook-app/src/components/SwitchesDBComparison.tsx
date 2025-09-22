@@ -126,7 +126,7 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
                 src={iframeUrl}
                 className="w-full h-full border-0"
                 title="SwitchesDB Force Curve Comparison"
-                sandbox="allow-scripts allow-same-origin allow-forms"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
               />
               {/* Show the URL for debugging/reference */}
               <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
