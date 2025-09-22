@@ -2,8 +2,6 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    loader: 'default',
-    loaderFile: './src/lib/image-loader.js',
     remotePatterns: [
       {
         protocol: 'https',

@@ -47,9 +47,11 @@ services:
       # OAuth
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
-      
+
       # Node
       NODE_ENV: production
+      # Force HTTPS URLs
+      NEXT_PUBLIC_BASE_URL: https://switchbook.app
     volumes:
       # Persist uploaded images
       - uploads:/app/public/uploads
