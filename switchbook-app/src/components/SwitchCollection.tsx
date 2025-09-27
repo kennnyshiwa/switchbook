@@ -9,6 +9,7 @@ import AddSwitchModal from './AddSwitchModal'
 import EditSwitchModal from './EditSwitchModal'
 import CollectionControls, { SortOption, ViewMode, FilterOptions, ActiveFilters } from './CollectionControls'
 import CompareForceCurvesButton from './CompareForceCurvesButton'
+import ForceCurveLookupButton from './ForceCurveLookupButton'
 import { findForceCurveData } from '@/utils/forceCurves'
 import { hasSwitchScoreData } from '@/utils/switchScores'
 
@@ -591,6 +592,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
             Your Switches ({switches.length}{(searchTerm || Object.values(activeFilters).some(Boolean)) && ` • ${filteredSwitches.length} shown`})
           </h2>
           <div className="flex space-x-3">
+            <ForceCurveLookupButton />
             <Link
               href="/dashboard/bulk-upload"
               className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
