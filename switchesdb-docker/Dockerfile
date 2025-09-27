@@ -38,6 +38,9 @@ RUN echo "Scraping HaaTa data (this may take a while)..." && \
 # Patch charts.cljs to remove force limit (make it unlimited)
 RUN sed -i 's/:range \[0 120\]/:range [0 250]/' src/switchesdb/charts.cljs
 
+# Add resizable side panel functionality
+RUN sed -i '/\.side-panel {/,/^}/{ s/z-index: 1;/z-index: 1;\n    resize: horizontal;\n    overflow: auto;\n    min-width: 15em;\n    max-width: 40em;/ }' resources/public/styles.css
+
 # Prepare and build the static files
 RUN make prepare && \
     make update && \
