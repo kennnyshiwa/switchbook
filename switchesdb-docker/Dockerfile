@@ -36,7 +36,7 @@ RUN echo "Scraping HaaTa data (this may take a while)..." && \
     bb haata || echo "HaaTa scraping completed or skipped"
 
 # Patch charts.cljs to remove force limit (make it unlimited)
-RUN sed -i 's/:range \[0 120\]/:range [0 nil]/' src/switchesdb/charts.cljs
+RUN sed -i 's/:range \[0 120\]/:range [0 250]/' src/switchesdb/charts.cljs
 
 # Prepare and build the static files
 RUN make prepare && \
