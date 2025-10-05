@@ -14,7 +14,12 @@ cd /app
 echo "📦 Updating ThereminGoat force curves..."
 if [ -d "resources/theremingoat" ]; then
     cd resources/theremingoat
-    git pull origin main || git pull origin master || echo "Note: Could not pull updates"
+    # Clean up any untracked files that might block the update
+    git clean -fd 2>/dev/null || true
+    # Reset any local changes
+    git reset --hard 2>/dev/null || true
+    # Now try to pull updates (only try main branch)
+    git pull origin main || echo "Note: Could not pull updates"
     cd /app
     echo "✅ ThereminGoat data checked"
 else
@@ -26,7 +31,12 @@ fi
 echo "📦 Updating OSCM data..."
 if [ -d "resources/oscm" ]; then
     cd resources/oscm
-    git pull origin main || git pull origin master || echo "Note: Could not pull updates"
+    # Clean up any untracked files that might block the update
+    git clean -fd 2>/dev/null || true
+    # Reset any local changes
+    git reset --hard 2>/dev/null || true
+    # Now try to pull updates (only try main branch, no master fallback)
+    git pull origin main || echo "Note: Could not pull updates"
     cd /app
     echo "✅ OSCM data checked"
 else
