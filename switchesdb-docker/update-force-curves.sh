@@ -19,7 +19,8 @@ if [ -d "resources/theremingoat" ]; then
     # Reset any local changes
     git reset --hard 2>/dev/null || true
     # Now try to pull updates (only try main branch)
-    git pull origin main || echo "Note: Could not pull updates"
+    # Use --rebase to handle divergent branches automatically
+    git pull --rebase origin main || git pull --ff-only origin main || echo "Note: Could not pull updates"
     cd /app
     echo "✅ ThereminGoat data checked"
 else
@@ -36,7 +37,8 @@ if [ -d "resources/oscm" ]; then
     # Reset any local changes
     git reset --hard 2>/dev/null || true
     # Now try to pull updates (only try main branch, no master fallback)
-    git pull origin main || echo "Note: Could not pull updates"
+    # Use --rebase to handle divergent branches automatically
+    git pull --rebase origin main || git pull --ff-only origin main || echo "Note: Could not pull updates"
     cd /app
     echo "✅ OSCM data checked"
 else

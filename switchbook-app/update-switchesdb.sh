@@ -31,7 +31,7 @@ run_docker exec switchesdb chmod +x /tmp/update-force-curves.sh
 
 # Execute the update script inside the container
 echo "📊 Running update script..."
-run_docker exec -it switchesdb /tmp/update-force-curves.sh
+run_docker exec switchesdb /tmp/update-force-curves.sh
 
 echo ""
 echo "🔄 Rebuilding SwitchesDB with updated data..."
