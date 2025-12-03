@@ -19,10 +19,16 @@ export function getImageUrl(url: string | null | undefined): string | null {
   if (!url || url.trim() === '') {
     return null
   }
-  
+
+  // Enforce HTTPS protocol for external URLs
+  let processedUrl = url
+  if (processedUrl.startsWith('http://')) {
+    processedUrl = processedUrl.replace('http://', 'https://')
+  }
+
   // Check if the URL is expired (for Notion URLs)
-  if (url.includes('exp=')) {
-    const expMatch = url.match(/exp=(\d+)/)
+  if (processedUrl.includes('exp=')) {
+    const expMatch = processedUrl.match(/exp=(\d+)/)
     if (expMatch) {
       const expirationTime = parseInt(expMatch[1]) * 1000 // Convert to milliseconds
       if (Date.now() > expirationTime) {
@@ -30,13 +36,13 @@ export function getImageUrl(url: string | null | undefined): string | null {
       }
     }
   }
-  
+
   // Use proxy for problematic domains
-  if (needsProxy(url)) {
-    return `/api/proxy-image?url=${encodeURIComponent(url)}`
+  if (needsProxy(processedUrl)) {
+    return `/api/proxy-image?url=${encodeURIComponent(processedUrl)}`
   }
-  
-  return url
+
+  return processedUrl
 }
 
 /**

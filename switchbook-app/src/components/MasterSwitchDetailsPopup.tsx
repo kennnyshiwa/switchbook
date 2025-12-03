@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
 import { linkify } from '@/utils/linkify'
+import { getImageUrl } from '@/utils/imageHelpers'
 import ImageCarousel from './ImageCarousel'
 
 interface SwitchImage {
@@ -151,10 +152,10 @@ export default function MasterSwitchDetailsPopup({
                   className="w-full h-64 bg-gray-100 dark:bg-gray-900 rounded-lg"
                 />
               </div>
-            ) : switchItem.imageUrl ? (
+            ) : switchItem.imageUrl && getImageUrl(switchItem.imageUrl) ? (
               <div className="md:col-span-2">
                 <img
-                  src={switchItem.imageUrl}
+                  src={getImageUrl(switchItem.imageUrl) || ''}
                   alt={switchItem.name}
                   className="w-full h-64 object-contain bg-gray-100 dark:bg-gray-900 rounded-lg"
                 />

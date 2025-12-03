@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { getImageUrl } from '@/utils/imageHelpers'
 
 interface WishlistItem {
   id: string
@@ -70,7 +71,8 @@ export default function WishlistDetailsPopup({
   const isCustom = !item.masterSwitch
   const name = item.customName || item.masterSwitch?.name || 'Unnamed Switch'
   const manufacturer = item.customManufacturer || item.masterSwitch?.manufacturer
-  const imageUrl = item.masterSwitch?.imageUrl || item.masterSwitch?.images?.[0]?.url
+  const rawImageUrl = item.masterSwitch?.imageUrl || item.masterSwitch?.images?.[0]?.url
+  const imageUrl = getImageUrl(rawImageUrl)
   const notes = item.customNotes || item.masterSwitch?.notes
 
   return (
