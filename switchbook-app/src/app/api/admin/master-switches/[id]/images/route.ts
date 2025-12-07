@@ -96,7 +96,12 @@ export async function POST(
     let processedFile = file
     if (file.type === 'image/heic' || file.type === 'image/heif') {
       processedBuffer = await convertHeicToJpeg(buffer)
-      processedFile = new File([processedBuffer], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+      // Create a new File from the converted buffer using ArrayBuffer
+      const arrayBuffer = processedBuffer.buffer.slice(
+        processedBuffer.byteOffset,
+        processedBuffer.byteOffset + processedBuffer.byteLength
+      ) as ArrayBuffer
+      processedFile = new File([arrayBuffer], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
         type: 'image/jpeg'
       })
     }
