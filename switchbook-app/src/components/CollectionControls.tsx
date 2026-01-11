@@ -24,6 +24,7 @@ export interface FilterOptions {
   topHousings: string[]
   bottomHousings: string[]
   stems: string[]
+  stemShapes: string[]
   topHousingColors: string[]
   bottomHousingColors: string[]
   stemColors: string[]
@@ -55,6 +56,7 @@ export interface ActiveFilters {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  stemShape?: string
   topHousingColor?: string
   bottomHousingColor?: string
   stemColor?: string
@@ -394,6 +396,24 @@ export default function CollectionControls({
                 {filterOptions.stems.map(stem => (
                   <option key={stem} value={stem}>
                     {stem}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Stem Shape
+              </label>
+              <select
+                value={activeFilters.stemShape || ''}
+                onChange={(e) => handleFilterChange('stemShape', e.target.value)}
+                className="block w-full pl-3 pr-8 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+              >
+                <option value="">All Stem Shapes</option>
+                {filterOptions.stemShapes.map(stemShape => (
+                  <option key={stemShape} value={stemShape}>
+                    {stemShape}
                   </option>
                 ))}
               </select>

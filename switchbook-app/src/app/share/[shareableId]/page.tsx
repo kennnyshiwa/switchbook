@@ -69,6 +69,7 @@ export default function SharePage() {
       topHousings: [],
       bottomHousings: [],
       stems: [],
+      stemShapes: [],
       topHousingColors: [],
       bottomHousingColors: [],
       stemColors: [],
@@ -100,6 +101,7 @@ export default function SharePage() {
     const topHousings = [...new Set(switches.map(s => s.topHousing).filter(Boolean) as string[])].sort()
     const bottomHousings = [...new Set(switches.map(s => s.bottomHousing).filter(Boolean) as string[])].sort()
     const stems = [...new Set(switches.map(s => s.stem).filter(Boolean) as string[])].sort()
+    const stemShapes = [...new Set(switches.map(s => s.stemShape).filter(Boolean) as string[])].sort()
     const topHousingColors = [...new Set(switches.map(s => s.topHousingColor).filter(Boolean) as string[])].sort()
     const bottomHousingColors = [...new Set(switches.map(s => s.bottomHousingColor).filter(Boolean) as string[])].sort()
     const stemColors = [...new Set(switches.map(s => s.stemColor).filter(Boolean) as string[])].sort()
@@ -138,6 +140,7 @@ export default function SharePage() {
       topHousings,
       bottomHousings,
       stems,
+      stemShapes,
       topHousingColors,
       bottomHousingColors,
       stemColors,
@@ -215,6 +218,9 @@ export default function SharePage() {
     }
     if (activeFilters.stem) {
       filtered = filtered.filter(s => s.stem === activeFilters.stem)
+    }
+    if (activeFilters.stemShape) {
+      filtered = filtered.filter(s => s.stemShape === activeFilters.stemShape)
     }
     if (activeFilters.topHousingColor) {
       filtered = filtered.filter(s => s.topHousingColor === activeFilters.topHousingColor)
