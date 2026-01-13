@@ -7,10 +7,7 @@ RUN apk add --no-cache \
     make \
     bash \
     curl \
-    nginx \
-    python3 \
-    py3-pip \
-    perl
+    nginx
 
 # Install Babashka
 RUN curl -sLO https://raw.githubusercontent.com/babashka/babashka/master/install && \
@@ -41,15 +38,10 @@ RUN git config --global http.postBuffer 524288000 && \
 # - Chart dimensions set to 1000x500 (in src/switchesdb/charts.cljs)
 # - Resizable side panel CSS (in resources/public/styles.css)
 
-# Prepare and update the static files (this creates resources/public/data)
+# Parse all data sources (ThereminGoat, Haata, BluePylons, BuddyOG) and build
+# The native Clojure parser handles all sources including BuddyOG
 RUN make prepare && \
     make update
-
-# Copy and run BuddyOG processing script
-# This converts BuddyOG format to SwitchesDB format and updates metadata.edn
-COPY process-buddyog.sh /tmp/process-buddyog.sh
-RUN chmod +x /tmp/process-buddyog.sh && \
-    /tmp/process-buddyog.sh
 
 # Build the static files
 RUN make build
