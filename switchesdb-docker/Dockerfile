@@ -9,7 +9,8 @@ RUN apk add --no-cache \
     curl \
     nginx \
     python3 \
-    py3-pip
+    py3-pip \
+    perl
 
 # Install Babashka
 RUN curl -sLO https://raw.githubusercontent.com/babashka/babashka/master/install && \
@@ -19,10 +20,10 @@ RUN curl -sLO https://raw.githubusercontent.com/babashka/babashka/master/install
 
 WORKDIR /app
 
-# Clone SwitchesDB repository
-RUN git clone https://github.com/heralden/switchesdb.git .
+# Clone SwitchesDB repository (from fork with permanent patches)
+RUN git clone https://github.com/kennnyshiwa/switchesdb.git .
 
-# Initialize git submodules (ThereminGoat and OSCM data)
+# Initialize git submodules (ThereminGoat, OSCM, and BuddyOG data)
 # Handle large repos with increased timeouts
 RUN git config --global http.postBuffer 524288000 && \
     git config --global http.lowSpeedLimit 0 && \
@@ -31,24 +32,27 @@ RUN git config --global http.postBuffer 524288000 && \
     git submodule update --init --remote --progress || true \
     git submodule update --remote
 
-# Run initial data preparation
-RUN echo "Scraping HaaTa data (this may take a while)..." && \
-    bb haata || echo "HaaTa scraping completed or skipped"
+# NOTE: HaaTa data is now pre-cached in the repository (resources/haata)
+# Plotly deprecated chart-studio.plotly.com so scraping no longer works
+# The haata files were backed up and committed to the fork
 
-# Patch charts.cljs to remove force limit (make it unlimited)
-RUN sed -i 's/:range \[0 120\]/:range [0 250]/' src/switchesdb/charts.cljs
+# NOTE: Patches are now permanent in the fork (kennnyshiwa/switchesdb):
+# - Force range extended to 0-250 (in src/switchesdb/charts.cljs)
+# - Chart dimensions set to 1000x500 (in src/switchesdb/charts.cljs)
+# - Resizable side panel CSS (in resources/public/styles.css)
 
-# Update chart dimensions to 1000x500
-RUN sed -i 's/:width "container"/:width 1000/' src/switchesdb/charts.cljs && \
-    sed -i 's/:height 300/:height 500/' src/switchesdb/charts.cljs
-
-# Add resizable side panel functionality
-RUN sed -i '/\.side-panel {/,/^}/{ s/z-index: 1;/z-index: 1;\n    resize: horizontal;\n    overflow: auto;\n    min-width: 15em;\n    max-width: 40em;/ }' resources/public/styles.css
-
-# Prepare and build the static files
+# Prepare and update the static files (this creates resources/public/data)
 RUN make prepare && \
-    make update && \
-    make build
+    make update
+
+# Copy and run BuddyOG processing script
+# This converts BuddyOG format to SwitchesDB format and updates metadata.edn
+COPY process-buddyog.sh /tmp/process-buddyog.sh
+RUN chmod +x /tmp/process-buddyog.sh && \
+    /tmp/process-buddyog.sh
+
+# Build the static files
+RUN make build
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf

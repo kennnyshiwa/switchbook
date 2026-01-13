@@ -8,6 +8,7 @@ cd /app
 # The SwitchesDB repository has submodules at:
 # - /app/resources/theremingoat (ThereminGoat force curves)
 # - /app/resources/oscm (OSCM data)
+# - /app/resources/buddyog (BuddyOG Topre force curves)
 # Plus Haata data scraped from plotly
 
 # Update ThereminGoat submodule
@@ -44,6 +45,23 @@ if [ -d "resources/oscm" ]; then
 else
     echo "⚠️  OSCM submodule not found, initializing..."
     git submodule update --init resources/oscm || echo "Failed to init OSCM"
+fi
+
+# Update BuddyOG submodule
+echo "📦 Updating BuddyOG Topre force curves..."
+if [ -d "resources/buddyog" ]; then
+    cd resources/buddyog
+    # Clean up any untracked files that might block the update
+    git clean -fd 2>/dev/null || true
+    # Reset any local changes
+    git reset --hard 2>/dev/null || true
+    # Now try to pull updates
+    git pull --rebase origin main || git pull --ff-only origin main || echo "Note: Could not pull updates"
+    cd /app
+    echo "✅ BuddyOG data checked"
+else
+    echo "⚠️  BuddyOG submodule not found, initializing..."
+    git submodule update --init resources/buddyog || echo "Failed to init BuddyOG"
 fi
 
 # Haata data is scraped during the build process
@@ -89,6 +107,46 @@ if [ -d "resources/theremingoat" ]; then
     echo "✅ ThereminGoat conversion complete"
 fi
 
+echo ""
+echo "🔄 Processing BuddyOG data for SwitchesDB..."
+if [ -d "resources/buddyog" ]; then
+    echo "Converting BuddyOG files to SwitchesDB format..."
+
+    # Clear old BO files first from BOTH locations
+    rm -f resources/data/*~BO.csv 2>/dev/null
+    rm -f resources/public/data/*~BO.csv 2>/dev/null
+
+    # Process each subdirectory in BuddyOG
+    for dir in resources/buddyog/*/; do
+        if [ -d "$dir" ]; then
+            switch_name=$(basename "$dir")
+
+            # Skip hidden directories and non-switch directories
+            if [ "${switch_name:0:1}" = "." ]; then
+                continue
+            fi
+
+            # Find all DataLog CSV files and process each one
+            datalog_num=1
+            for csv_file in "$dir"DataLog_*.csv; do
+                if [ -f "$csv_file" ]; then
+                    # Format number with leading zero (01, 02, etc.)
+                    num_formatted=$(printf "%02d" $datalog_num)
+                    # Replace spaces with underscores for the target name
+                    target_name=$(echo "$switch_name" | sed 's/ /_/g; s/(/_/g; s/)/_/g')
+                    # Copy to resources/data with numbered suffix
+                    cp "$csv_file" "resources/data/${target_name}_${num_formatted}~BO.csv"
+                    echo "  ✓ $switch_name DataLog_$datalog_num -> ${target_name}_${num_formatted}~BO.csv"
+                    datalog_num=$((datalog_num + 1))
+                fi
+            done
+        fi
+    done
+    echo "✅ BuddyOG conversion complete"
+else
+    echo "⚠️  BuddyOG directory not found"
+fi
+
 # Preserve existing Haata files from the build
 if [ -d "resources/public/data" ]; then
     echo "Preserving existing Haata data from build..."
@@ -116,13 +174,18 @@ echo ""
 THEREMINGOAT_COUNT=$(find /app/resources/data -name "*TG.csv" -type f 2>/dev/null | wc -l)
 OSCM_COUNT=$(find /app/resources/data -name "*OSCM*.json" -o -name "*OSCM*.csv" -type f 2>/dev/null | wc -l)
 HAATA_COUNT=$(find /app/resources/data -name "*HA.csv" -type f 2>/dev/null | wc -l)
+BUDDYOG_COUNT=$(find /app/resources/data -name "*BO.csv" -type f 2>/dev/null | wc -l)
 
 echo "📊 Available force curves prepared for SwitchesDB:"
 echo "   - ThereminGoat: $THEREMINGOAT_COUNT CSV files"
 echo "   - OSCM: $OSCM_COUNT data files"
 echo "   - Haata: $HAATA_COUNT CSV files"
+echo "   - BuddyOG: $BUDDYOG_COUNT CSV files"
 echo ""
 
 # List some example files
 echo "📝 Sample ThereminGoat files:"
 find /app/resources/data -name "*TG.csv" -type f | head -5
+echo ""
+echo "📝 Sample BuddyOG files:"
+find /app/resources/data -name "*BO.csv" -type f | head -5

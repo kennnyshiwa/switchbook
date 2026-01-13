@@ -28,6 +28,10 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
       if (switchNameLower.includes('alps') || switchNameLower.includes('skcm')) {
         // Alps switches are typically in Haata
         defaultSources[sw.id] = 'HT'
+      } else if (switchNameLower.includes('topre') || switchNameLower.includes('bke') ||
+                 switchNameLower.includes('niz') || switchNameLower.includes('dynacaps')) {
+        // Topre/Topre-clone switches are in BuddyOG
+        defaultSources[sw.id] = 'BO'
       } else {
         // Default to ThereminGoat as it has the most comprehensive collection
         defaultSources[sw.id] = 'TG'
@@ -106,6 +110,7 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
                   <option value="TG" className="bg-white dark:bg-gray-800">ThereminGoat</option>
                   <option value="HT" className="bg-white dark:bg-gray-800">Haata</option>
                   <option value="BP" className="bg-white dark:bg-gray-800">BluePylons</option>
+                  <option value="BO" className="bg-white dark:bg-gray-800">BuddyOG (Topre)</option>
                 </select>
               </div>
             ))}
@@ -156,7 +161,7 @@ export default function SwitchesDBComparison({ selectedSwitches, onClose }: Swit
         {/* Footer with tips */}
         <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <div className="text-xs text-gray-600 dark:text-gray-400">
-            <strong>Tip:</strong> The graph shows force-distance curves from ThereminGoat, Haata, and OSCM databases.
+            <strong>Tip:</strong> The graph shows force-distance curves from ThereminGoat, Haata, BluePylons, and BuddyOG (Topre) databases.
             Use the controls in the graph to zoom, pan, and toggle different curves.
           </div>
         </div>
