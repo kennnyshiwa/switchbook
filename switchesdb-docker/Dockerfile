@@ -20,7 +20,7 @@ WORKDIR /app
 # Clone SwitchesDB repository (from fork with permanent patches)
 RUN git clone https://github.com/kennnyshiwa/switchesdb.git .
 
-# Initialize git submodules (ThereminGoat, OSCM, and BuddyOG data)
+# Initialize git submodules (ThereminGoat, OSCM data)
 # Handle large repos with increased timeouts
 RUN git config --global http.postBuffer 524288000 && \
     git config --global http.lowSpeedLimit 0 && \
@@ -38,8 +38,8 @@ RUN git config --global http.postBuffer 524288000 && \
 # - Chart dimensions set to 1000x500 (in src/switchesdb/charts.cljs)
 # - Resizable side panel CSS (in resources/public/styles.css)
 
-# Parse all data sources (ThereminGoat, Haata, BluePylons, BuddyOG) and build
-# The native Clojure parser handles all sources including BuddyOG
+# Parse all data sources (ThereminGoat, Haata, BluePylons) and build
+# The native Clojure parser handles all sources
 RUN make prepare && \
     make update
 
