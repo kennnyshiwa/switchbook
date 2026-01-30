@@ -20,11 +20,6 @@ WORKDIR /app
 # Clone SwitchesDB repository (from fork with permanent patches)
 RUN git clone https://github.com/kennnyshiwa/switchesdb.git .
 
-# Remove buddyog submodule (no longer used)
-RUN git submodule deinit -f resources/buddyog 2>/dev/null || true && \
-    git rm -rf resources/buddyog 2>/dev/null || true && \
-    rm -rf .git/modules/resources/buddyog 2>/dev/null || true
-
 # Initialize git submodules (ThereminGoat, OSCM data)
 # Handle large repos with increased timeouts
 RUN git config --global http.postBuffer 524288000 && \
