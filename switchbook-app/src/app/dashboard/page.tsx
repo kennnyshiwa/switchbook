@@ -24,8 +24,11 @@ export default async function DashboardPage() {
       switches: {
         orderBy: { createdAt: "desc" },
         include: {
+          // Load only the primary image for dashboard list performance.
+          // Full image set is fetched lazily when editing a switch.
           images: {
-            orderBy: { order: 'asc' }
+            orderBy: { order: 'asc' },
+            take: 1
           }
         }
       },

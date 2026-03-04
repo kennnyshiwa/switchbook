@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Switch, ForceCurvePreference } from '@prisma/client'
 import Link from 'next/link'
 import SwitchCard from './SwitchCard'
@@ -43,6 +43,10 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({})
   const [selectedSwitches, setSelectedSwitches] = useState<Set<string>>(new Set())
+  const [visibleCount, setVisibleCount] = useState(60)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const PAGE_SIZE = 60
 
   // Load view mode from localStorage on mount
   useEffect(() => {
@@ -78,6 +82,25 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       newSelection.delete(switchId)
       return newSelection
     })
+  }
+
+  const handleEditSwitch = async (switchData: ExtendedSwitch) => {
+    // If we only have one dashboard image loaded, lazily fetch full switch details
+    // so edit modal and image manager retain existing behavior.
+    if ((switchData.images?.length || 0) <= 1) {
+      try {
+        const response = await fetch(`/api/switches/${switchData.id}`)
+        if (response.ok) {
+          const fullSwitch = await response.json()
+          setEditingSwitch(fullSwitch)
+          return
+        }
+      } catch (error) {
+        // Fallback to existing switch data if detail fetch fails
+      }
+    }
+
+    setEditingSwitch(switchData)
   }
 
   const handleSwitchSelection = (switchId: string) => {
@@ -539,6 +562,46 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     filterSwitches()
   }, [switches, searchTerm, sortOption, activeFilters, switchHasForceCurves])
 
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [searchTerm, sortOption, activeFilters, viewMode, PAGE_SIZE])
+
+  const loadMore = useCallback(() => {
+    if (isLoadingMore || visibleCount >= filteredSwitches.length) return
+
+    setIsLoadingMore(true)
+    setVisibleCount(prev => Math.min(prev + PAGE_SIZE, filteredSwitches.length))
+
+    // Keep spinner visible briefly so users notice loading feedback
+    window.setTimeout(() => setIsLoadingMore(false), 150)
+  }, [filteredSwitches.length, isLoadingMore, visibleCount, PAGE_SIZE])
+
+  useEffect(() => {
+    if (!loadMoreRef.current || visibleCount >= filteredSwitches.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore()
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '120px'
+      }
+    )
+
+    const ref = loadMoreRef.current
+    observer.observe(ref)
+
+    return () => {
+      observer.unobserve(ref)
+      observer.disconnect()
+    }
+  }, [filteredSwitches.length, loadMore, visibleCount])
+
+  const visibleSwitches = filteredSwitches.slice(0, visibleCount)
+
   if (switches.length === 0) {
     return (
       <>
@@ -692,7 +755,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSwitches.map((switchItem) => {
+          {visibleSwitches.map((switchItem) => {
             const key = `${switchItem.name}|${switchItem.manufacturer || ''}`
             const hasForceCurvesCached = forceCurveCache.get(key) ?? false
             const savedPreference = forceCurvePreferencesMap.get(key)
@@ -701,7 +764,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
                 key={switchItem.id}
                 switch={switchItem}
                 onDelete={handleSwitchDeleted}
-                onEdit={setEditingSwitch}
+                onEdit={handleEditSwitch}
                 showForceCurves={showForceCurves}
                 forceCurvesCached={hasForceCurvesCached}
                 savedPreference={savedPreference}
@@ -713,15 +776,38 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         </div>
       ) : (
         <SwitchTable
-          switches={filteredSwitches}
+          switches={visibleSwitches}
           onDelete={handleSwitchDeleted}
-          onEdit={setEditingSwitch}
+          onEdit={handleEditSwitch}
           showForceCurves={showForceCurves}
           forceCurveCache={forceCurveCache}
           forceCurvePreferencesMap={forceCurvePreferencesMap}
           selectedSwitches={selectedSwitches}
           onSelectionChange={handleSwitchSelection}
         />
+      )}
+
+      {visibleCount < filteredSwitches.length && (
+        <div ref={loadMoreRef} className="mt-8 text-center border-t border-gray-200 dark:border-gray-700 pt-6">
+          {isLoadingMore ? (
+            <div className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400" />
+              <span>Loading more switches...</span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <button
+                onClick={loadMore}
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Load More Switches
+              </button>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Showing {visibleSwitches.length} of {filteredSwitches.length}
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       {showAddModal && (
