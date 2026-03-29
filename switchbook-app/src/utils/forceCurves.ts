@@ -17,7 +17,7 @@ interface GitHubTreeResponse {
 // Cache for switch folders to avoid repeated API calls
 let switchFoldersCache: string[] | null = null
 let cacheTimestamp: number | null = null
-const CACHE_DURATION = 1000 * 60 * 60 // 1 hour
+const CACHE_DURATION = 1000 * 60 * 60 * 24 // 24 hours
 
 /**
  * Fetch all switch folder names from the ThereminGoat repository
@@ -34,7 +34,8 @@ export async function fetchSwitchFolders(): Promise<string[]> {
       {
         headers: {
           'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'Switchbook-App'
+          'User-Agent': 'Switchbook-App',
+          ...(process.env.GITHUB_TOKEN ? { 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}` } : {})
         }
       }
     )
