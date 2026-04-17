@@ -4,7 +4,7 @@ export const SWITCH_TYPE_COLORS = {
   CLICKY: 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200',
   SILENT_LINEAR: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
   SILENT_TACTILE: 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200',
-  MOUSE: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200',
+  MOUSE: 'bg-lime-100 text-lime-800 dark:bg-lime-800 dark:text-lime-200',
 } as const;
 
 export const SWITCH_TECHNOLOGY_COLORS = {

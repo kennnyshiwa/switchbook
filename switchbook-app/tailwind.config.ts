@@ -24,6 +24,7 @@ const config: Config = {
     'bg-blue-100', 'text-blue-800', 'dark:bg-blue-800', 'dark:text-blue-200',
     'bg-gray-100', 'text-gray-800', 'dark:bg-gray-700', 'dark:text-gray-200',
     'bg-purple-100', 'text-purple-800', 'dark:bg-purple-800', 'dark:text-purple-200',
+    'bg-lime-100', 'text-lime-800', 'dark:bg-lime-800', 'dark:text-lime-200',
   ],
   plugins: [],
 }
