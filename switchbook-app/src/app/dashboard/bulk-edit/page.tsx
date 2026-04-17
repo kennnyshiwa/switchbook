@@ -826,6 +826,7 @@ export default function BulkEditPage() {
             <option value="CLICKY">Clicky</option>
             <option value="SILENT_LINEAR">Silent Linear</option>
             <option value="SILENT_TACTILE">Silent Tactile</option>
+            <option value="MOUSE">Mouse</option>
           </select>
         ),
       },

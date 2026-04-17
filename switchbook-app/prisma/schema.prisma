@@ -375,6 +375,7 @@ enum SwitchType {
   CLICKY
   SILENT_LINEAR
   SILENT_TACTILE
+  MOUSE
 }
 
 enum SwitchTechnology {

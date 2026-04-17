@@ -13,7 +13,7 @@ const editSuggestionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
   chineseName: z.string().optional().nullable().or(z.literal('')),
   manufacturer: z.string().min(1, 'Manufacturer is required'),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().nullable(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE', 'MOUSE']).optional().nullable(),
   technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().nullable(),
   compatibility: z.string().optional().nullable().or(z.literal('')),
   
@@ -315,6 +315,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
               <option value="CLICKY">Clicky</option>
               <option value="SILENT_LINEAR">Silent Linear</option>
               <option value="SILENT_TACTILE">Silent Tactile</option>
+              <option value="MOUSE">Mouse</option>
             </select>
           </div>
 

@@ -13,7 +13,7 @@ const masterSwitchSubmissionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
   chineseName: z.string().optional(),
   manufacturer: z.string().min(1, 'Manufacturer is required'),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().or(z.literal('')),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE', 'MOUSE']).optional().or(z.literal('')),
   technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().or(z.literal('')),
   compatibility: z.string().optional(),
   
@@ -234,6 +234,7 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               <option value="CLICKY">Clicky</option>
               <option value="SILENT_LINEAR">Silent Linear</option>
               <option value="SILENT_TACTILE">Silent Tactile</option>
+              <option value="MOUSE">Mouse</option>
             </select>
           </div>
 

@@ -22,7 +22,7 @@ const editSuggestionSchema = z.object({
     if (val === null || val === undefined) return '';
     return String(val);
   }, z.string().min(1, 'Manufacturer is required')),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().nullable(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE', 'MOUSE']).optional().nullable(),
   technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().nullable(),
   magnetOrientation: optionalString,
   magnetPosition: optionalString,

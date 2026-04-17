@@ -10,7 +10,7 @@ const submissionSchema = z.object({
   name: z.string().min(1),
   chineseName: z.string().optional().nullable(),
   manufacturer: z.string().min(1),
-  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE']).optional().nullable(),
+  type: z.enum(['LINEAR', 'TACTILE', 'CLICKY', 'SILENT_LINEAR', 'SILENT_TACTILE', 'MOUSE']).optional().nullable(),
   technology: z.enum(['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']).optional().nullable(),
   compatibility: z.string().optional().nullable(),
   

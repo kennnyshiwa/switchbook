@@ -104,6 +104,7 @@ export default function SwitchForm({ register, errors, setValue, watch, showFran
           <option value="CLICKY">Clicky</option>
           <option value="SILENT_LINEAR">Silent Linear</option>
           <option value="SILENT_TACTILE">Silent Tactile</option>
+          <option value="MOUSE">Mouse</option>
         </select>
         {errors.type && (
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.type.message}</p>

@@ -309,6 +309,7 @@ const SwitchTableRow = memo(({
           <option value="CLICKY">CLICKY</option>
           <option value="SILENT_LINEAR">SILENT_LINEAR</option>
           <option value="SILENT_TACTILE">SILENT_TACTILE</option>
+          <option value="MOUSE">MOUSE</option>
         </select>
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
@@ -1022,6 +1023,7 @@ export default function BulkUploadPage() {
               'CLICKY': 'CLICKY',
               'SILENT_LINEAR': 'SILENT_LINEAR',
               'SILENT_TACTILE': 'SILENT_TACTILE',
+              'MOUSE': 'MOUSE',
               'SILENTLINEAR': 'SILENT_LINEAR',
               'SILENTTACTILE': 'SILENT_TACTILE',
             } as const
@@ -1296,7 +1298,7 @@ export default function BulkUploadPage() {
               <ul className="text-blue-800 dark:text-blue-200 space-y-1">
                 <li>• Use commas to separate columns</li>
                 <li>• Include headers in the first row</li>
-                <li>• Switch Type (if provided) must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, or SILENT_TACTILE (case-insensitive)</li>
+                <li>• Switch Type (if provided) must be: LINEAR, TACTILE, CLICKY, SILENT_LINEAR, SILENT_TACTILE, or MOUSE (case-insensitive)</li>
                 <li>• Technology (if provided) must be: MECHANICAL, OPTICAL, MAGNETIC, INDUCTIVE, or ELECTRO_CAPACITIVE (case-insensitive)</li>
                 <li>• Magnetic Pole Orientation (if provided) must be: Horizontal or Vertical (case-insensitive)</li>
                 <li>• Magnet Position (if provided) must be: Center or Off-Center (case-insensitive)</li>

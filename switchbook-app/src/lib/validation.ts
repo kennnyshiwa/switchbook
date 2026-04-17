@@ -19,7 +19,7 @@ export const loginSchema = z.object({
 export const switchSchema = z.object({
   name: z.string().min(1, "Switch name is required").max(100),
   chineseName: z.string().max(100).optional().or(z.literal("")),
-  type: z.enum(["LINEAR", "TACTILE", "CLICKY", "SILENT_LINEAR", "SILENT_TACTILE"]).optional().or(z.literal("")),
+  type: z.enum(["LINEAR", "TACTILE", "CLICKY", "SILENT_LINEAR", "SILENT_TACTILE", "MOUSE"]).optional().or(z.literal("")),
   technology: z.enum(["MECHANICAL", "OPTICAL", "MAGNETIC", "INDUCTIVE", "ELECTRO_CAPACITIVE"]).optional().or(z.literal("")),
   magnetOrientation: z.string().max(200).optional().or(z.literal("")),
   magnetPosition: z.string().max(200).optional().or(z.literal("")),
