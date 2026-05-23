@@ -10,6 +10,7 @@ import EditSwitchModal from './EditSwitchModal'
 import CollectionControls, { SortOption, ViewMode, FilterOptions, ActiveFilters } from './CollectionControls'
 import CompareForceCurvesButton from './CompareForceCurvesButton'
 import ForceCurveLookupButton from './ForceCurveLookupButton'
+import VirtualSwitchGrid from './VirtualSwitchGrid'
 import { findForceCurveData } from '@/utils/forceCurves'
 import { hasSwitchScoreData } from '@/utils/switchScores'
 
@@ -754,26 +755,16 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           </p>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleSwitches.map((switchItem) => {
-            const key = `${switchItem.name}|${switchItem.manufacturer || ''}`
-            const hasForceCurvesCached = forceCurveCache.get(key) ?? false
-            const savedPreference = forceCurvePreferencesMap.get(key)
-            return (
-              <SwitchCard
-                key={switchItem.id}
-                switch={switchItem}
-                onDelete={handleSwitchDeleted}
-                onEdit={handleEditSwitch}
-                showForceCurves={showForceCurves}
-                forceCurvesCached={hasForceCurvesCached}
-                savedPreference={savedPreference}
-                isSelected={selectedSwitches.has(switchItem.id)}
-                onSelectionChange={() => handleSwitchSelection(switchItem.id)}
-              />
-            )
-          })}
-        </div>
+        <VirtualSwitchGrid
+          switches={filteredSwitches}
+          onDelete={handleSwitchDeleted}
+          onEdit={handleEditSwitch}
+          showForceCurves={showForceCurves}
+          forceCurveCache={forceCurveCache}
+          forceCurvePreferencesMap={forceCurvePreferencesMap}
+          selectedSwitches={selectedSwitches}
+          onSelectionChange={handleSwitchSelection}
+        />
       ) : (
         <SwitchTable
           switches={visibleSwitches}
@@ -787,28 +778,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         />
       )}
 
-      {visibleCount < filteredSwitches.length && (
-        <div ref={loadMoreRef} className="mt-8 text-center border-t border-gray-200 dark:border-gray-700 pt-6">
-          {isLoadingMore ? (
-            <div className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400" />
-              <span>Loading more switches...</span>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <button
-                onClick={loadMore}
-                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Load More Switches
-              </button>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Showing {visibleSwitches.length} of {filteredSwitches.length}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      
 
       {showAddModal && (
         <AddSwitchModal

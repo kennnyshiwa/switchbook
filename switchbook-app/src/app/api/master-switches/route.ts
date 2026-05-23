@@ -7,7 +7,10 @@ import { MasterSwitchStatus, Prisma } from '@prisma/client'
 // Query params schema
 const querySchema = z.object({
   page: z.string().optional().default('1').transform(Number),
-  limit: z.string().optional().default('50').transform(Number),
+  limit: z.string().optional().default('50').transform((val) => {
+    if (val === '0' || val === 'all') return 0; // 0 means fetch all
+    return Number(val);
+  }),
   search: z.string().optional(),
   manufacturer: z.string().optional(),
   type: z.string().optional(),
@@ -52,9 +55,6 @@ const querySchema = z.object({
 export async function GET(request: Request) {
   try {
     const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
@@ -192,8 +192,8 @@ export async function GET(request: Request) {
     const masterSwitches = await prisma.masterSwitch.findMany({
       where,
       orderBy: { [sort]: order },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: limit ? (page - 1) * limit : 0,
+      take: limit || undefined,
       include: {
         submittedBy: {
           select: {
@@ -213,30 +213,34 @@ export async function GET(request: Request) {
     })
 
     // Check which master switches the user already has in their collection
-    const userSwitches = await prisma.switch.findMany({
-      where: {
-        userId: session.user.id,
-        masterSwitchId: {
-          in: masterSwitches.map(ms => ms.id)
-        }
-      },
-      select: {
-        masterSwitchId: true
-      }
-    })
+    const userSwitches = session?.user?.id
+      ? await prisma.switch.findMany({
+          where: {
+            userId: session.user.id,
+            masterSwitchId: {
+              in: masterSwitches.map(ms => ms.id)
+            }
+          },
+          select: {
+            masterSwitchId: true
+          }
+        })
+      : []
 
     // Check which master switches are in the user's wishlist
-    const wishlistItems = await prisma.wishlist.findMany({
-      where: {
-        userId: session.user.id,
-        masterSwitchId: {
-          in: masterSwitches.map(ms => ms.id)
-        }
-      },
-      select: {
-        masterSwitchId: true
-      }
-    })
+    const wishlistItems = session?.user?.id
+      ? await prisma.wishlist.findMany({
+          where: {
+            userId: session.user.id,
+            masterSwitchId: {
+              in: masterSwitches.map(ms => ms.id)
+            }
+          },
+          select: {
+            masterSwitchId: true
+          }
+        })
+      : []
 
     const userSwitchIds = new Set(userSwitches.map(s => s.masterSwitchId))
     const wishlistSwitchIds = new Set(wishlistItems.map(w => w.masterSwitchId).filter(Boolean))
@@ -253,7 +257,7 @@ export async function GET(request: Request) {
       switches: enrichedSwitches,
       pagination: {
         total: totalCount,
-        pages: Math.ceil(totalCount / limit),
+        pages: limit ? Math.ceil(totalCount / limit) : 1,
         current: page,
         limit
       }

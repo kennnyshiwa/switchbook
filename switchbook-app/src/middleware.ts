@@ -2,19 +2,24 @@ import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 
 export default auth((req) => {
+  const pathname = req.nextUrl.pathname
   const isLoggedIn = !!req.auth
   const userRole = req.auth?.user?.role
-  const isAuthPage = req.nextUrl.pathname.startsWith("/auth")
-  const isPublicSharePage = req.nextUrl.pathname.startsWith("/share")
-  const isApiRoute = req.nextUrl.pathname.startsWith("/api")
-  const isAuthApiRoute = req.nextUrl.pathname.startsWith("/api/auth")
-  const isPublicShareApi = req.nextUrl.pathname.startsWith("/api/share")
-  const isDashboard = req.nextUrl.pathname.startsWith("/dashboard")
-  const isAdminRoute = req.nextUrl.pathname.startsWith("/admin")
-  const isSettingsPage = req.nextUrl.pathname.startsWith("/settings")
+  const isAuthPage = pathname.startsWith("/auth")
+  const isPublicSharePage = pathname.startsWith("/share")
+  const isApiRoute = pathname.startsWith("/api")
+  const isAuthApiRoute = pathname.startsWith("/api/auth")
+  const isPublicShareApi = pathname.startsWith("/api/share")
+  const isDashboard = pathname.startsWith("/dashboard")
+  const isAdminRoute = pathname.startsWith("/admin")
+  const isSettingsPage = pathname.startsWith("/settings")
+  const isPublicMasterSwitchApi =
+    ["GET", "HEAD", "OPTIONS"].includes(req.method) &&
+    (pathname === "/api/master-switches" ||
+      /^\/api\/master-switches\/[^/]+$/.test(pathname))
 
-  // Allow public share pages and their API routes
-  if (isPublicSharePage || isPublicShareApi) {
+  // Allow public pages/APIs used for logged-out discovery.
+  if (isPublicSharePage || isPublicShareApi || isPublicMasterSwitchApi) {
     return NextResponse.next()
   }
 
@@ -24,7 +29,7 @@ export default auth((req) => {
   }
 
   // Allow API routes (but require auth for non-public APIs)
-  if (isApiRoute && !isPublicShareApi && !isAuthApiRoute && !isLoggedIn) {
+  if (isApiRoute && !isPublicShareApi && !isAuthApiRoute && !isPublicMasterSwitchApi && !isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
