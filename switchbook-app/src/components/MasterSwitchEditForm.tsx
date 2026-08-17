@@ -4,9 +4,60 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import ManufacturerAutocomplete from './ManufacturerAutocomplete';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getMaterials } from '@/utils/materials';
 import { getStemShapes } from '@/utils/stemShapes';
+import { IMAGE_CONFIG } from '@/lib/image-config';
+
+interface SwitchImage {
+  id: string;
+  url: string;
+  type: 'UPLOADED' | 'LINKED';
+  order: number;
+  caption?: string | null;
+  thumbnailUrl?: string;
+  mediumUrl?: string;
+}
+
+interface MasterSwitchFormData {
+  id: string;
+  name?: string;
+  notes?: string | null;
+  chineseName?: string | null;
+  compatibility?: string | null;
+  springWeight?: string | null;
+  springLength?: string | null;
+  topHousing?: string | null;
+  bottomHousing?: string | null;
+  stem?: string | null;
+  magnetOrientation?: string | null;
+  magnetPosition?: string | null;
+  magnetPolarity?: string | null;
+  pcbThickness?: string | null;
+  imageUrl?: string | null;
+  topHousingColor?: string | null;
+  bottomHousingColor?: string | null;
+  stemColor?: string | null;
+  stemShape?: string | null;
+  markings?: string | null;
+  initialForce?: number | null;
+  actuationForce?: number | null;
+  tactileForce?: number | null;
+  tactilePosition?: number | null;
+  bottomOutForce?: number | null;
+  progressiveSpring?: boolean | null;
+  doubleStage?: boolean | null;
+  clickType?: 'CLICK_LEAF' | 'CLICK_BAR' | 'CLICK_JACKET' | null;
+  preTravel?: number | null;
+  bottomOut?: number | null;
+  initialMagneticFlux?: number | null;
+  bottomOutMagneticFlux?: number | null;
+  technology?: 'MECHANICAL' | 'OPTICAL' | 'MAGNETIC' | 'INDUCTIVE' | 'ELECTRO_CAPACITIVE' | null;
+  type?: 'LINEAR' | 'TACTILE' | 'CLICKY' | 'SILENT_LINEAR' | 'SILENT_TACTILE' | 'MOUSE' | null;
+  manufacturer?: string;
+  primaryImageId?: string | null;
+  images?: SwitchImage[];
+}
 
 function isValidMasterSwitchImageValue(value: string) {
   if (value.startsWith('/uploads/')) {
@@ -86,7 +137,7 @@ type EditSuggestionData = z.infer<typeof editSuggestionSchema> & {
 };
 
 interface MasterSwitchEditFormProps {
-  currentData: any;
+  currentData: MasterSwitchFormData;
   onSubmit: (data: EditSuggestionData) => Promise<void>;
   isSubmitting: boolean;
 }
@@ -99,6 +150,26 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
   const [stemShapes, setStemShapes] = useState<{ id: string; name: string }[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [showExternalImageField, setShowExternalImageField] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const currentPrimaryImageUrl = useMemo(() => {
+    if (currentData.primaryImageId && currentData.images?.length) {
+      const primaryImage = currentData.images.find((image) => image.id === currentData.primaryImageId);
+      if (primaryImage?.url) {
+        return primaryImage.url;
+      }
+    }
+
+    if (currentData.images?.length) {
+      return currentData.images[0].url;
+    }
+
+    return currentData.imageUrl || '';
+  }, [currentData]);
   
   useEffect(() => {
     Promise.all([
@@ -110,9 +181,11 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   }, []);
   
   // Clean initial data - convert null to empty string or undefined for form
-  const cleanedInitialData = {
-    ...currentData,
-    // Convert null strings to empty strings
+  const cleanedInitialData: EditSuggestionData = {
+    name: currentData.name || '',
+    manufacturer: currentData.manufacturer || '',
+    type: currentData.type || null,
+    technology: currentData.technology || null,
     chineseName: currentData.chineseName || '',
     compatibility: currentData.compatibility || '',
     springWeight: currentData.springWeight || '',
@@ -125,25 +198,25 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     magnetPolarity: currentData.magnetPolarity || '',
     pcbThickness: currentData.pcbThickness || '',
     notes: currentData.notes || '',
-    imageUrl: currentData.imageUrl || '',
+    imageUrl: currentPrimaryImageUrl,
     topHousingColor: currentData.topHousingColor || '',
     bottomHousingColor: currentData.bottomHousingColor || '',
     stemColor: currentData.stemColor || '',
     stemShape: currentData.stemShape || '',
     markings: currentData.markings || '',
-    // Keep numbers as is (they can be null/undefined)
-    initialForce: currentData.initialForce,
-    actuationForce: currentData.actuationForce,
-    tactileForce: currentData.tactileForce,
-    tactilePosition: currentData.tactilePosition || undefined,
-    bottomOutForce: currentData.bottomOutForce,
+    initialForce: currentData.initialForce ?? undefined,
+    actuationForce: currentData.actuationForce ?? undefined,
+    tactileForce: currentData.tactileForce ?? undefined,
+    tactilePosition: currentData.tactilePosition ?? undefined,
+    bottomOutForce: currentData.bottomOutForce ?? undefined,
     progressiveSpring: currentData.progressiveSpring || false,
     doubleStage: currentData.doubleStage || false,
     clickType: currentData.clickType || null,
-    preTravel: currentData.preTravel,
-    bottomOut: currentData.bottomOut,
-    initialMagneticFlux: currentData.initialMagneticFlux,
-    bottomOutMagneticFlux: currentData.bottomOutMagneticFlux,
+    preTravel: currentData.preTravel ?? undefined,
+    bottomOut: currentData.bottomOut ?? undefined,
+    initialMagneticFlux: currentData.initialMagneticFlux ?? undefined,
+    bottomOutMagneticFlux: currentData.bottomOutMagneticFlux ?? undefined,
+    editReason: '',
   };
   
   const {
@@ -153,20 +226,25 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
     setValue,
     watch,
     getValues,
+    setError,
+    clearErrors,
   } = useForm<EditSuggestionData>({
     resolver: zodResolver(editSuggestionSchema),
     defaultValues: {
       ...cleanedInitialData,
-      editReason: '',
     },
   });
 
   const manufacturerValue = watch('manufacturer');
   const technologyValue = watch('technology');
   const typeValue = watch('type');
+  const watchedImageUrl = watch('imageUrl') || '';
   const showTactileForce = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY';
   const showTactilePosition = typeValue === 'TACTILE' || typeValue === 'SILENT_TACTILE' || typeValue === 'CLICKY';
   const showClickType = typeValue === 'CLICKY';
+
+  const imagePreviewUrl = watchedImageUrl || currentPrimaryImageUrl;
+  const hasReplacementImage = watchedImageUrl !== currentPrimaryImageUrl;
 
   // Show magnetic fields when magnetic technology is selected
   if (technologyValue === 'MAGNETIC' && !showMagneticFields) {
@@ -188,6 +266,88 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
         return newSet;
       });
     }
+  };
+
+  const handleSuggestedImageUpdate = (value: string) => {
+    setValue('imageUrl', value, { shouldDirty: true, shouldValidate: true });
+    handleFieldChange('imageUrl', value);
+  };
+
+  const uploadSuggestedImage = async (file: File) => {
+    setImageUploadError(null);
+
+    const allowedTypes = IMAGE_CONFIG.allowedMimeTypes as readonly string[];
+    if (!allowedTypes.includes(file.type)) {
+      const message = 'Invalid file type. Please upload a JPEG, PNG, WebP, or HEIC image.';
+      setImageUploadError(message);
+      setError('imageUrl', { type: 'manual', message });
+      return;
+    }
+
+    if (file.size > IMAGE_CONFIG.maxFileSize) {
+      const message = `File size must not exceed ${IMAGE_CONFIG.maxFileSize / 1024 / 1024}MB`;
+      setImageUploadError(message);
+      setError('imageUrl', { type: 'manual', message });
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setImageUploadProgress(0);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          setImageUploadProgress(Math.round((event.loaded * 100) / event.total));
+        }
+      });
+
+      const response = await new Promise<Response>((resolve, reject) => {
+        xhr.addEventListener('load', () => {
+          resolve(new Response(xhr.responseText, {
+            status: xhr.status,
+            statusText: xhr.statusText,
+            headers: { 'Content-Type': 'application/json' },
+          }));
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+        xhr.open('POST', `/api/master-switches/${currentData.id}/suggest-edit/image`);
+        xhr.send(formData);
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'Upload failed');
+      }
+
+      clearErrors('imageUrl');
+      handleSuggestedImageUpdate(payload.url);
+
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed';
+      setImageUploadError(message);
+      setError('imageUrl', { type: 'manual', message });
+    } finally {
+      setIsUploadingImage(false);
+      setImageUploadProgress(0);
+    }
+  };
+
+  const handleImageFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    await uploadSuggestedImage(file);
   };
 
   // Clean data before submission
@@ -232,7 +392,7 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit as any)} className="space-y-6">
       {/* Current vs Edited Indicator */}
       {changedFields.size > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -885,26 +1045,116 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
             />
           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Image URL
-            </label>
-            <input
-              {...register('imageUrl')}
-              onChange={(e) => {
-                register('imageUrl').onChange(e);
-                handleFieldChange('imageUrl', e.target.value);
-              }}
-              type="text"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="https://example.com/switch-image.jpg or /uploads/..."
-            />
-            {errors.imageUrl && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Switch Image
+              </label>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                See the current image, then upload a replacement or add one if it is missing.
+              </p>
+            </div>
+
+            {imagePreviewUrl ? (
+              <div className="flex flex-col gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {hasReplacementImage ? 'Suggested replacement image' : 'Current image'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 break-all">
+                      {imagePreviewUrl}
+                    </p>
+                  </div>
+                  {hasReplacementImage && (
+                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+                      Pending suggestion
+                    </span>
+                  )}
+                </div>
+                <div className="overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-900">
+                  <img
+                    src={imagePreviewUrl}
+                    alt={`${currentData.name || 'Switch'} preview`}
+                    className="h-48 w-full object-contain"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-6 text-sm text-gray-500 dark:text-gray-400">
+                No image is currently attached to this master switch.
+              </div>
             )}
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              Provide an external image URL or keep an existing uploaded image path.
-            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept={IMAGE_CONFIG.allowedMimeTypes.join(',')}
+                onChange={handleImageFileSelect}
+                disabled={isUploadingImage}
+                className="hidden"
+                id="master-switch-suggestion-image-upload"
+              />
+              <label
+                htmlFor="master-switch-suggestion-image-upload"
+                className={`inline-flex cursor-pointer items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 ${
+                  isUploadingImage ? 'cursor-not-allowed opacity-50' : ''
+                }`}
+              >
+                {isUploadingImage
+                  ? `Uploading... ${imageUploadProgress}%`
+                  : imagePreviewUrl
+                    ? 'Replace Image'
+                    : 'Upload Image'}
+              </label>
+              {hasReplacementImage && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearErrors('imageUrl');
+                    setImageUploadError(null);
+                    handleSuggestedImageUpdate(currentPrimaryImageUrl);
+                  }}
+                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                >
+                  Revert to Current
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowExternalImageField((value) => !value)}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                {showExternalImageField ? 'Hide URL Field' : 'Use Image URL Instead'}
+              </button>
+            </div>
+
+            {showExternalImageField && (
+              <div>
+                <input
+                  {...register('imageUrl')}
+                  onChange={(e) => {
+                    register('imageUrl').onChange(e);
+                    handleFieldChange('imageUrl', e.target.value);
+                    setImageUploadError(null);
+                  }}
+                  type="text"
+                  className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
+                  placeholder="https://example.com/switch-image.jpg or /uploads/..."
+                />
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                  Optional fallback if you want to link an external image manually.
+                </p>
+              </div>
+            )}
+
+            {errors.imageUrl && (
+              <p className="text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
+            )}
+            {!errors.imageUrl && imageUploadError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{imageUploadError}</p>
+            )}
           </div>
           
           <div>

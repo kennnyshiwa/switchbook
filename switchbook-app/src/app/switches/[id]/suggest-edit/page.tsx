@@ -9,11 +9,13 @@ import { MasterSwitchEditForm } from '@/components/MasterSwitchEditForm';
 interface MasterSwitchData {
   id: string;
   name: string;
+  imageUrl?: string | null;
+  primaryImageId?: string | null;
   chineseName?: string;
   manufacturer: string;
   brand?: string;
-  type?: string;
-  technology?: string;
+  type?: 'LINEAR' | 'TACTILE' | 'CLICKY' | 'SILENT_LINEAR' | 'SILENT_TACTILE' | 'MOUSE' | null;
+  technology?: 'MECHANICAL' | 'OPTICAL' | 'MAGNETIC' | 'INDUCTIVE' | 'ELECTRO_CAPACITIVE' | null;
   compatibility?: string;
   actuationForce?: number;
   bottomOutForce?: number;
@@ -31,6 +33,15 @@ interface MasterSwitchData {
   productUrl?: string;
   notes?: string;
   status: string;
+  images?: Array<{
+    id: string;
+    url: string;
+    type: 'UPLOADED' | 'LINKED';
+    order: number;
+    caption?: string | null;
+    thumbnailUrl?: string;
+    mediumUrl?: string;
+  }>;
 }
 
 export default function SuggestEditPage({ params }: { params: Promise<{ id: string }> }) {
