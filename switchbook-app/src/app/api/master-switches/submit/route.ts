@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { Prisma, SwitchTechnology, SwitchType } from '@prisma/client'
 import { z } from 'zod'
 import { sendAdminNewSubmissionEmail } from '@/lib/email'
+import { rehostRemoteImage } from '@/lib/remote-image'
 
 // Schema for master switch submission
 const submissionSchema = z.object({
@@ -188,8 +189,8 @@ export async function POST(req: NextRequest) {
         name: validated.name,
         chineseName: validated.chineseName || null,
         manufacturer: validated.manufacturer,
-        type: validated.type || null,
-        technology: validated.technology || null,
+        type: (validated.type as SwitchType | null | undefined) ?? null,
+        technology: (validated.technology as SwitchTechnology | null | undefined) ?? null,
         compatibility: validated.compatibility || null,
         initialForce: validated.initialForce || null,
         actuationForce: validated.actuationForce || null,
@@ -257,6 +258,37 @@ export async function POST(req: NextRequest) {
     ).catch(error => {
       console.error('Failed to send admin notification emails:', error)
     })
+
+    if (validated.imageUrl) {
+      try {
+        const rehostedImage = await rehostRemoteImage(
+          validated.imageUrl,
+          `master-switches/${masterSwitch.id}`
+        )
+
+        const createdImage = await prisma.switchImage.create({
+          data: {
+            masterSwitchId: masterSwitch.id,
+            url: rehostedImage.url,
+            type: 'UPLOADED',
+            order: 0,
+            width: rehostedImage.width,
+            height: rehostedImage.height,
+            size: rehostedImage.size,
+          },
+        })
+
+        await prisma.masterSwitch.update({
+          where: { id: masterSwitch.id },
+          data: {
+            imageUrl: rehostedImage.url,
+            primaryImageId: createdImage.id,
+          },
+        })
+      } catch (error) {
+        console.error('Failed to rehost submitted master switch image:', error)
+      }
+    }
 
     // If a source switch ID was provided, link it to the new master switch
     if (validated.sourceSwitchId) {

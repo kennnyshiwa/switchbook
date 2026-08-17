@@ -11,6 +11,19 @@ const optionalString = z.preprocess((val) => {
   return String(val);
 }, z.string().nullable().optional());
 
+function isValidMasterSwitchImageValue(value: string) {
+  if (value.startsWith('/uploads/')) {
+    return true
+  }
+
+  try {
+    new URL(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
 // Schema for edit suggestion - using preprocessors to handle various input types
 const editSuggestionSchema = z.object({
   name: z.preprocess((val) => {
@@ -46,13 +59,13 @@ const editSuggestionSchema = z.object({
   imageUrl: z.preprocess((val) => {
     if (val === null || val === undefined || val === '') return null;
     if (typeof val === 'string' && val.trim() !== '') {
-      // Validate URL format
-      try {
-        new URL(val);
-        return val;
-      } catch {
-        throw new Error('Invalid URL format');
+      const normalized = val.trim()
+
+      if (!isValidMasterSwitchImageValue(normalized)) {
+        throw new Error('Invalid image URL or upload path');
       }
+
+      return normalized;
     }
     return null;
   }, z.string().nullable().optional()),

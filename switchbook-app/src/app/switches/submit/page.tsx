@@ -20,6 +20,7 @@ export default function SubmitMasterSwitchPage() {
   const [duplicateWarning, setDuplicateWarning] = useState<{
     similarSwitches: SimilarSwitch[];
     pendingData: any;
+    pendingUploads: File[];
   } | null>(null);
 
   if (status === 'loading') {
@@ -49,7 +50,24 @@ export default function SubmitMasterSwitchPage() {
     );
   }
 
-  const handleSubmit = async (data: any, confirmNotDuplicate = false) => {
+  const uploadPendingImages = async (masterSwitchId: string, pendingUploads: File[]) => {
+    for (const file of pendingUploads) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`/api/master-switches/${masterSwitchId}/images`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `Failed to upload ${file.name}`);
+      }
+    }
+  };
+
+  const handleSubmit = async (data: any, pendingUploads: File[] = [], confirmNotDuplicate = false) => {
     setIsSubmitting(true);
     try {
       const submissionData = confirmNotDuplicate 
@@ -70,7 +88,8 @@ export default function SubmitMasterSwitchPage() {
         // Duplicate warning - show similar switches
         setDuplicateWarning({
           similarSwitches: responseData.similarSwitches,
-          pendingData: data
+          pendingData: data,
+          pendingUploads,
         });
         setIsSubmitting(false);
         return;
@@ -78,6 +97,10 @@ export default function SubmitMasterSwitchPage() {
       
       if (!response.ok) {
         throw new Error(responseData.error || 'Failed to submit master switch');
+      }
+
+      if (pendingUploads.length > 0) {
+        await uploadPendingImages(responseData.id, pendingUploads);
       }
 
       router.push(`/switches/${responseData.id}?submitted=true`);
@@ -91,7 +114,7 @@ export default function SubmitMasterSwitchPage() {
   
   const handleConfirmSubmission = () => {
     if (duplicateWarning) {
-      handleSubmit(duplicateWarning.pendingData, true);
+      handleSubmit(duplicateWarning.pendingData, duplicateWarning.pendingUploads, true);
       setDuplicateWarning(null);
     }
   };

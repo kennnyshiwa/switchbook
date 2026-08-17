@@ -7,6 +7,7 @@ import ManufacturerAutocomplete from './ManufacturerAutocomplete';
 import { useState, useEffect } from 'react';
 import { getMaterials } from '@/utils/materials';
 import { getStemShapes } from '@/utils/stemShapes';
+import { IMAGE_CONFIG } from '@/lib/image-config';
 
 // Schema for master switch submission
 const masterSwitchSubmissionSchema = z.object({
@@ -64,7 +65,7 @@ const masterSwitchSubmissionSchema = z.object({
 type MasterSwitchSubmissionData = z.infer<typeof masterSwitchSubmissionSchema>;
 
 interface MasterSwitchSubmissionFormProps {
-  onSubmit: (data: MasterSwitchSubmissionData) => Promise<void>;
+  onSubmit: (data: MasterSwitchSubmissionData, pendingUploads: File[]) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -72,6 +73,8 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
   const [showMagneticFields, setShowMagneticFields] = useState(false);
   const [materials, setMaterials] = useState<{ id: string; name: string }[]>([]);
   const [stemShapes, setStemShapes] = useState<{ id: string; name: string }[]>([]);
+  const [pendingUploads, setPendingUploads] = useState<{ id: string; file: File; previewUrl: string }[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   
   useEffect(() => {
     getMaterials().then(setMaterials);
@@ -110,7 +113,51 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
       imageUrl: data.imageUrl && data.imageUrl.trim() !== '' ? data.imageUrl.trim() : undefined,
     };
     
-    onSubmit(cleanedData);
+    onSubmit(cleanedData, pendingUploads.map((upload) => upload.file));
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const allowedMimeTypes = IMAGE_CONFIG.allowedMimeTypes as readonly string[];
+    const nextUploads: { id: string; file: File; previewUrl: string }[] = [];
+
+    for (const file of files) {
+      if (!allowedMimeTypes.includes(file.type)) {
+        setUploadError('Invalid file type. Please upload a JPEG, PNG, WebP, or HEIC image.');
+        continue;
+      }
+
+      if (file.size > IMAGE_CONFIG.maxFileSize) {
+        setUploadError(`File size must not exceed ${IMAGE_CONFIG.maxFileSize / 1024 / 1024}MB.`);
+        continue;
+      }
+
+      nextUploads.push({
+        id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    }
+
+    if (nextUploads.length > 0) {
+      setUploadError(null);
+      setPendingUploads((current) => [...current, ...nextUploads].slice(0, IMAGE_CONFIG.maxImagesPerSwitch));
+    }
+
+    event.target.value = '';
+  };
+
+  const removePendingUpload = (uploadId: string) => {
+    setPendingUploads((current) => {
+      const removedUpload = current.find((upload) => upload.id === uploadId);
+      if (removedUpload) {
+        URL.revokeObjectURL(removedUpload.previewUrl);
+      }
+
+      return current.filter((upload) => upload.id !== uploadId);
+    });
   };
 
   const manufacturerValue = watch('manufacturer');
@@ -686,8 +733,57 @@ export function MasterSwitchSubmissionForm({ onSubmit, isSubmitting }: MasterSwi
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
             )}
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Provide a URL to an image of the switch. Uploads are not available for master switches.
+              Provide a URL to an image of the switch. Linked images are rehosted locally after submission.
             </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Upload Images
+            </label>
+            <label className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 cursor-pointer">
+              <input
+                type="file"
+                multiple
+                accept={IMAGE_CONFIG.allowedMimeTypes.join(',')}
+                onChange={handleFileSelect}
+                className="sr-only"
+                disabled={pendingUploads.length >= IMAGE_CONFIG.maxImagesPerSwitch}
+              />
+              Select Images
+            </label>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Upload up to {IMAGE_CONFIG.maxImagesPerSwitch} images. They&apos;ll attach to the pending master switch after the form is submitted.
+            </p>
+            {uploadError && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{uploadError}</p>
+            )}
+
+            {pendingUploads.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                {pendingUploads.map((upload) => (
+                  <div key={upload.id} className="relative group">
+                    <div className="aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
+                      <img
+                        src={upload.previewUrl}
+                        alt={upload.file.name}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removePendingUpload(upload.id)}
+                      className="absolute top-2 right-2 rounded-full bg-red-600 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      Remove
+                    </button>
+                    <p className="mt-1 truncate text-xs text-gray-600 dark:text-gray-400">
+                      {upload.file.name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <div>

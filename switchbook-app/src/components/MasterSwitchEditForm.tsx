@@ -8,6 +8,19 @@ import { useState, useEffect } from 'react';
 import { getMaterials } from '@/utils/materials';
 import { getStemShapes } from '@/utils/stemShapes';
 
+function isValidMasterSwitchImageValue(value: string) {
+  if (value.startsWith('/uploads/')) {
+    return true;
+  }
+
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Schema for edit suggestion - matching the submission form
 const editSuggestionSchema = z.object({
   name: z.string().min(1, 'Switch name is required'),
@@ -48,7 +61,14 @@ const editSuggestionSchema = z.object({
   
   // Additional info
   notes: z.string().optional().nullable().or(z.literal('')),
-  imageUrl: z.union([z.string().url('Invalid URL'), z.literal(''), z.null()]).optional(),
+  imageUrl: z.union([
+    z.string().refine(
+      (value) => value === '' || isValidMasterSwitchImageValue(value),
+      'Invalid image URL or upload path'
+    ),
+    z.literal(''),
+    z.null(),
+  ]).optional(),
   
   // Color and shape fields
   topHousingColor: z.string().optional().nullable().or(z.literal('')),
@@ -875,15 +895,15 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
                 register('imageUrl').onChange(e);
                 handleFieldChange('imageUrl', e.target.value);
               }}
-              type="url"
+              type="text"
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500"
-              placeholder="https://example.com/switch-image.jpg"
+              placeholder="https://example.com/switch-image.jpg or /uploads/..."
             />
             {errors.imageUrl && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.imageUrl.message}</p>
             )}
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-              Provide a URL to an image of the switch. Uploads are not available for master switches.
+              Provide an external image URL or keep an existing uploaded image path.
             </p>
           </div>
           

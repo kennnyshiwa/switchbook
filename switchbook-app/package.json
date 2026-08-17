@@ -14,7 +14,8 @@
     "postinstall": "npx prisma generate",
     "script:analyze-duplicates": "tsx scripts/analyze-duplicate-images.ts",
     "script:deduplicate-images": "tsx scripts/deduplicate-images.ts",
-    "script:migrate-images-safe": "tsx scripts/migrate-image-urls-safe.ts"
+    "script:migrate-images-safe": "tsx scripts/migrate-image-urls-safe.ts",
+    "script:rehost-master-images": "tsx scripts/rehost-master-switch-images.ts"
   },
   "keywords": [],
   "author": "",
