@@ -1,0 +1,157 @@
+{
+  "master-complete-desktop": {
+    "heading": "Visual Jade",
+    "headingText": "Visual JadeM",
+    "manufacturer": "DetailsManufacturer: Switchbook Labs",
+    "masterBadge": true,
+    "image": true,
+    "fallback": false,
+    "sections": [
+      "DetailsManufacturer: Switchbook Labs",
+      "IdentityCompatibility: MX-compatible; 3-pin and 5-pin platesClick Type: CLICK_JACKET",
+      "Materials & ConstructionTop Housing: PolycarbonateBottom Housing: NylonStem: POMTop Housing Color: Crystal ClearBottom Housing Color: Royal PurpleStem Color: Jade GreenStem Shape: BoxMarkings: SBL 2026",
+      "SpringSpring Weight: 62gSpring Length: 20mmDouble-stage Spring: NoProgressive Spring: Yes",
+      "ForceInitial Force: 30gActuation Force: 42gTactile Force: 50gBottom-out Force: 62g",
+      "TravelPre-travel: 1.8mmTactile Position: 1.6mmTotal Travel: 3.5mm",
+      "MagneticMagnet Orientation: NorthMagnet Position: CenteredMagnet Polarity: NPCB Thickness: 1.6mmInitial Magnetic Flux: 35mTBottom-out Magnetic Flux: 700mT",
+      "NotesDeterministic local visual fixture. No database or production API is used."
+    ],
+    "personal": null,
+    "colors": [
+      "Top Housing Color: Crystal Clear",
+      "Bottom Housing Color: Royal Purple",
+      "Stem Color: Jade Green"
+    ],
+    "links": [
+      "/auth/login",
+      "/auth/register",
+      "/auth/register"
+    ]
+  },
+  "user-complete-desktop": {
+    "heading": "Visual Jade",
+    "headingText": "Visual Jade",
+    "manufacturer": "DetailsManufacturer: Switchbook Labs",
+    "masterBadge": false,
+    "image": true,
+    "fallback": false,
+    "sections": [
+      "DetailsManufacturer: Switchbook Labs",
+      "IdentityCompatibility: MX-compatible; 3-pin and 5-pin platesClick Type: CLICK_JACKET",
+      "Materials & ConstructionTop Housing: PolycarbonateBottom Housing: NylonStem: POMTop Housing Color: Crystal ClearBottom Housing Color: Royal PurpleStem Color: Jade GreenStem Shape: BoxMarkings: SBL 2026",
+      "SpringSpring Weight: 62gSpring Length: 20mmDouble-stage Spring: NoProgressive Spring: Yes",
+      "ForceInitial Force: 30gActuation Force: 42gTactile Force: 50gBottom-out Force: 62g",
+      "TravelPre-travel: 1.8mmTactile Position: 1.6mmTotal Travel: 3.5mm",
+      "MagneticMagnet Orientation: NorthMagnet Position: CenteredMagnet Polarity: NPCB Thickness: 1.6mmInitial Magnetic Flux: 35mTBottom-out Magnetic Flux: 700mT",
+      "NotesDeterministic local visual fixture. No database or production API is used.",
+      "Personal Collection DetailsPersonal Tags: fixture, visualModified: NoPersonal NotesUser-only details stay below canonical statistics."
+    ],
+    "personal": "Personal Collection DetailsPersonal Tags: fixture, visualModified: NoPersonal NotesUser-only details stay below canonical statistics.",
+    "colors": [
+      "Top Housing Color: Crystal Clear",
+      "Bottom Housing Color: Royal Purple",
+      "Stem Color: Jade Green"
+    ],
+    "links": [
+      "/auth/login",
+      "/auth/register",
+      "/auth/register"
+    ]
+  },
+  "master-complete-mobile": {
+    "heading": "Visual Jade",
+    "headingText": "Visual JadeM",
+    "manufacturer": "DetailsManufacturer: Switchbook Labs",
+    "masterBadge": true,
+    "image": true,
+    "fallback": false,
+    "sections": [
+      "DetailsManufacturer: Switchbook Labs",
+      "IdentityCompatibility: MX-compatible; 3-pin and 5-pin platesClick Type: CLICK_JACKET",
+      "Materials & ConstructionTop Housing: PolycarbonateBottom Housing: NylonStem: POMTop Housing Color: Crystal ClearBottom Housing Color: Royal PurpleStem Color: Jade GreenStem Shape: BoxMarkings: SBL 2026",
+      "SpringSpring Weight: 62gSpring Length: 20mmDouble-stage Spring: NoProgressive Spring: Yes",
+      "ForceInitial Force: 30gActuation Force: 42gTactile Force: 50gBottom-out Force: 62g",
+      "TravelPre-travel: 1.8mmTactile Position: 1.6mmTotal Travel: 3.5mm",
+      "MagneticMagnet Orientation: NorthMagnet Position: CenteredMagnet Polarity: NPCB Thickness: 1.6mmInitial Magnetic Flux: 35mTBottom-out Magnetic Flux: 700mT",
+      "NotesDeterministic local visual fixture. No database or production API is used."
+    ],
+    "personal": null,
+    "colors": [
+      "Top Housing Color: Crystal Clear",
+      "Bottom Housing Color: Royal Purple",
+      "Stem Color: Jade Green"
+    ],
+    "links": [
+      "/auth/login",
+      "/auth/register",
+      "/auth/register"
+    ]
+  },
+  "user-complete-mobile": {
+    "heading": "Visual Jade",
+    "headingText": "Visual Jade",
+    "manufacturer": "DetailsManufacturer: Switchbook Labs",
+    "masterBadge": false,
+    "image": true,
+    "fallback": false,
+    "sections": [
+      "DetailsManufacturer: Switchbook Labs",
+      "IdentityCompatibility: MX-compatible; 3-pin and 5-pin platesClick Type: CLICK_JACKET",
+      "Materials & ConstructionTop Housing: PolycarbonateBottom Housing: NylonStem: POMTop Housing Color: Crystal ClearBottom Housing Color: Royal PurpleStem Color: Jade GreenStem Shape: BoxMarkings: SBL 2026",
+      "SpringSpring Weight: 62gSpring Length: 20mmDouble-stage Spring: NoProgressive Spring: Yes",
+      "ForceInitial Force: 30gActuation Force: 42gTactile Force: 50gBottom-out Force: 62g",
+      "TravelPre-travel: 1.8mmTactile Position: 1.6mmTotal Travel: 3.5mm",
+      "MagneticMagnet Orientation: NorthMagnet Position: CenteredMagnet Polarity: NPCB Thickness: 1.6mmInitial Magnetic Flux: 35mTBottom-out Magnetic Flux: 700mT",
+      "NotesDeterministic local visual fixture. No database or production API is used.",
+      "Personal Collection DetailsPersonal Tags: fixture, visualModified: NoPersonal NotesUser-only details stay below canonical statistics."
+    ],
+    "personal": "Personal Collection DetailsPersonal Tags: fixture, visualModified: NoPersonal NotesUser-only details stay below canonical statistics.",
+    "colors": [
+      "Top Housing Color: Crystal Clear",
+      "Bottom Housing Color: Royal Purple",
+      "Stem Color: Jade Green"
+    ],
+    "links": [
+      "/auth/login",
+      "/auth/register",
+      "/auth/register"
+    ]
+  },
+  "master-sparse-desktop": {
+    "heading": "Sparse Sample",
+    "headingText": "Sparse SampleM",
+    "manufacturer": null,
+    "masterBadge": true,
+    "image": false,
+    "fallback": true,
+    "sections": [
+      "SpringDouble-stage Spring: No"
+    ],
+    "personal": null,
+    "colors": [],
+    "links": [
+      "/auth/login",
+      "/auth/register",
+      "/auth/register"
+    ]
+  },
+  "user-sparse-desktop": {
+    "heading": "Sparse Sample",
+    "headingText": "Sparse Sample",
+    "manufacturer": null,
+    "masterBadge": false,
+    "image": false,
+    "fallback": true,
+    "sections": [
+      "SpringDouble-stage Spring: No",
+      "Personal Collection DetailsPersonal Tags: fixture, visualModified: NoPersonal NotesUser-only details stay below canonical statistics."
+    ],
+    "personal": "Personal Collection DetailsPersonal Tags: fixture, visualModified: NoPersonal NotesUser-only details stay below canonical statistics.",
+    "colors": [],
+    "links": [
+      "/auth/login",
+      "/auth/register",
+      "/auth/register"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+1e666d5af95c84ab111378a0381c532f52dc4d1929cb990d99f645d2c43c9dbb  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/README.md
+038e7de3d62d1fc1ad9254aeb738d6d1385405a599e63595b8dcc377685d3fa5  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/dom-evidence.json
+b556856dd1ad70426be0e28a95803e4ec7d79b83a188d05253e80906fdbfcdbd  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/master-complete-desktop.png
+16c101b7c045f81f58f6248479269dcc8d66910364f8b285511e274b8028e2ea  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/master-complete-mobile.png
+e64b37dcaa01cb9efabf85b579fa9ca59fa5071febd959f2c833be3f6b822e2d  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/master-sparse-desktop.png
+f8a3a9322164fa85e05b8a12fe8b779d261d9b48afdc3344ae98908890a585d0  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/user-complete-desktop.png
+025a33910ae0d01b86d8d3b2986285d2f3741915b2792f3991088c63311dd31e  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/user-complete-mobile.png
+80c4e409c9a5b022c45ccf325945bd529fea3593ec7c3ba033a00bc649f76dd2  evidence/SWITCHBOOK-SHARE-20260823-001/follow-up/iteration-1/user-sparse-desktop.png

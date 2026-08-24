@@ -49,7 +49,6 @@ export function CanonicalShareImage({ share }: { share: ShareModel }) {
 }
 
 export default function CanonicalSwitchShare({ share }: { share: ShareModel }) {
-  const fullName = `${share.manufacturer ? `${share.manufacturer} ` : ''}${share.name}`
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -61,8 +60,8 @@ export default function CanonicalSwitchShare({ share }: { share: ShareModel }) {
           <header className="border-b border-gray-200 p-6 dark:border-gray-700">
             <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
               <div>
-                <h1 className="flex flex-wrap items-center gap-3 text-2xl font-bold text-gray-900 dark:text-white">
-                  {fullName}
+                <h1 data-testid="switch-name" className="flex flex-wrap items-center gap-3 text-2xl font-bold text-gray-900 dark:text-white">
+                  {share.name}
                   {share.sourceKind === 'master' && <span data-testid="master-badge" title="Master Database Record" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-bold text-white">M</span>}
                   {share.isFranken && <span title="Franken switch" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-500 text-sm font-bold text-white">F</span>}
                 </h1>
@@ -78,6 +77,7 @@ export default function CanonicalSwitchShare({ share }: { share: ShareModel }) {
           <div className="grid gap-6 p-6 md:grid-cols-2">
             <CanonicalShareImage share={share} />
             <div className="space-y-6">
+              {share.manufacturer && <section data-testid="manufacturer-stat"><h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Details</h3><dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2"><div className="text-sm"><dt className="inline font-medium text-gray-700 dark:text-gray-300">Manufacturer: </dt><dd className="inline text-gray-600 dark:text-gray-400">{share.manufacturer}</dd></div></dl></section>}
               {share.sections.map(section => <section key={section.title}><h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{section.title}</h3><dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">{section.stats.map(stat => <div key={stat.key} className="text-sm"><dt className="inline font-medium text-gray-700 dark:text-gray-300">{stat.label}: </dt><dd className="inline text-gray-600 dark:text-gray-400">{stat.value}</dd></div>)}</dl></section>)}
               {share.notes && <section><h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Notes</h3><p className="whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-400">{share.notes}</p></section>}
               {(share.personalSections.length > 0 || share.personalNotes) && <section className="border-t border-gray-200 pt-5 dark:border-gray-700" data-testid="personal-details"><h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-800 dark:text-blue-200">Personal Collection Details</h3>{share.personalSections.map(section => <dl key={section.title} className="grid grid-cols-1 gap-2 sm:grid-cols-2">{section.stats.map(stat => <div key={stat.key} className="text-sm"><dt className="inline font-medium text-gray-700 dark:text-gray-300">{stat.label}: </dt><dd className="inline text-gray-600 dark:text-gray-400">{stat.value}</dd></div>)}</dl>)}{share.personalNotes && <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20"><h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-800 dark:text-blue-200">Personal Notes</h4><p className="whitespace-pre-wrap text-sm text-blue-700 dark:text-blue-300">{share.personalNotes}</p></div>}</section>}

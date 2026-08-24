@@ -53,6 +53,27 @@ test('purple M badge is based only on source kind, never a user link', () => {
   assert.doesNotMatch(renderToStaticMarkup(React.createElement(CanonicalSwitchShare, { share: linkedUser })), /data-testid="master-badge"/)
 })
 
+test('master and user shares render manufacturer as the same stat and exclude it from the heading', () => {
+  const master = serializeCanonicalSwitchShare('master', complete)
+  const user = serializeCanonicalSwitchShare('user', complete)
+  const masterMarkup = renderToStaticMarkup(React.createElement(CanonicalSwitchShare, { share: master }))
+  const userMarkup = renderToStaticMarkup(React.createElement(CanonicalSwitchShare, { share: user }))
+
+  for (const markup of [masterMarkup, userMarkup]) {
+    assert.match(markup, /data-testid="switch-name"[^>]*>Jade/)
+    assert.doesNotMatch(markup, /data-testid="switch-name"[^>]*>Acme Jade/)
+    assert.match(markup, /data-testid="manufacturer-stat"/)
+    assert.match(markup, /Manufacturer:\s*<\/dt><dd[^>]*>Acme<\/dd>/)
+  }
+})
+
+test('manufacturer stat is omitted when manufacturer is unavailable', () => {
+  const share = serializeCanonicalSwitchShare('user', { name: 'Sparse' })
+  const markup = renderToStaticMarkup(React.createElement(CanonicalSwitchShare, { share }))
+  assert.doesNotMatch(markup, /data-testid="manufacturer-stat"/)
+  assert.match(markup, /data-testid="switch-name"[^>]*>Sparse/)
+})
+
 test('image and same-size fallback are both rendered by the shared image presenter', () => {
   const full = serializeCanonicalSwitchShare('master', complete)
   const sparse = serializeCanonicalSwitchShare('master', { name: 'Sparse' })
