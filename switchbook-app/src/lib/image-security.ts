@@ -2,7 +2,7 @@
  * Image security utilities for validating and sanitizing image URLs
  */
 import { lookup } from 'node:dns/promises'
-import { isIP } from 'node:net'
+import { isIP, type LookupFunction } from 'node:net'
 import { Agent, fetch as undiciFetch, type RequestInit as UndiciRequestInit } from 'undici'
 
 // Blocked hostnames that should never be accessed
@@ -146,6 +146,13 @@ export async function assertPublicImageHost(rawUrl: string) {
 type DnsAnswer = { address: string; family: number }
 type Resolver = (hostname: string) => Promise<DnsAnswer[]>
 
+export function createPinnedLookup(pinned: DnsAnswer): LookupFunction {
+  return (_hostname, options, callback) => {
+    if (options?.all) callback(null, [pinned])
+    else callback(null, pinned.address, pinned.family)
+  }
+}
+
 export async function resolvePublicHost(hostname: string, resolver: Resolver = async host => lookup(host, { all: true, verbatim: true })) {
   const answers = await resolver(hostname)
   if (!answers.length || answers.some(answer => isUnsafeResolvedAddress(answer.address))) {
@@ -159,7 +166,7 @@ export async function pinnedPublicFetch(rawUrl: string, init: RequestInit = {}) 
   const url = new URL(rawUrl)
   const pinned = await resolvePublicHost(url.hostname)
   const dispatcher = new Agent({ connect: {
-    lookup: (_hostname, _options, callback) => callback(null, pinned.address, pinned.family),
+    lookup: createPinnedLookup(pinned),
   } })
   try {
     const response = await undiciFetch(url, { ...(init as UndiciRequestInit), dispatcher })

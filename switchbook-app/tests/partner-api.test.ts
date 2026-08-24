@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { issuePartnerKey, secureEqualHash } from '../src/lib/partner-api/crypto'
 import { proposedSwitchSchema } from '../src/lib/partner-api/schemas'
-import { resolvePublicHost, validateImageUrl } from '../src/lib/image-security'
+import { createPinnedLookup, resolvePublicHost, validateImageUrl } from '../src/lib/image-security'
 import { switchesDbSearchUrl } from '../src/lib/partner-api/config'
 import { openSecret, sealSecret } from '../src/lib/partner-api/crypto'
 import { catalogDisposition } from '../src/lib/partner-api/catalog'
@@ -110,6 +110,16 @@ test('DNS pinning resolves once and rejects any mixed public/private answer set'
   await assert.rejects(() => resolvePublicHost('rebind.example', async () => [
     { address: '8.8.8.8', family: 4 }, { address: '127.0.0.1', family: 4 },
   ]))
+})
+
+test('pinned DNS lookup honors scalar and all-address callback shapes', () => {
+  const lookup = createPinnedLookup({ address: '8.8.8.8', family: 4 })
+  let scalar: unknown[] = []
+  let all: unknown[] = []
+  lookup('images.example', {}, (...args) => { scalar = args })
+  lookup('images.example', { all: true }, (...args) => { all = args })
+  assert.deepEqual(scalar, [null, '8.8.8.8', 4])
+  assert.deepEqual(all, [null, [{ address: '8.8.8.8', family: 4 }]])
 })
 
 test('production composition requires shared Redis and isolated Hydra bootstrap', () => {
