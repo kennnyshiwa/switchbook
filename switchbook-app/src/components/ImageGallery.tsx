@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
+import { bypassImageOptimizer } from '@/lib/image-optimization'
 
 interface SwitchImage {
   id: string
@@ -121,6 +122,7 @@ export default function ImageGallery({
           height={1200}
           className="max-w-full max-h-[85vh] w-auto h-auto object-contain"
           onLoadingComplete={() => setIsLoading(false)}
+          unoptimized={bypassImageOptimizer(currentImage.type)}
           priority
         />
 
@@ -173,6 +175,7 @@ export default function ImageGallery({
                 fill
                 className="object-cover"
                 sizes="64px"
+                unoptimized={bypassImageOptimizer(image.type)}
               />
             </button>
           ))}
