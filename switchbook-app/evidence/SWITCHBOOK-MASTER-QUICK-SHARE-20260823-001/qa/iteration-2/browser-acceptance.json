@@ -1,0 +1,98 @@
+{
+  "expected": "http://127.0.0.1:3010/share/switch/HdVGho4j7-",
+  "clipboard": "http://127.0.0.1:3010/share/switch/HdVGho4j7-",
+  "clipboardExact": true,
+  "icons": {
+    "idle": {
+      "path": "M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.632 4.268C17.886 14.938 17 14.482 17 14c0-.482.114-.938.316-1.342m0 2.684a3 3 0 110-2.684M9 20a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM9 8a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2z",
+      "matchesPersonal": true
+    },
+    "success": {
+      "state": "copied",
+      "aria": "Share link copied",
+      "title": "Share link copied",
+      "path": "M5 13l4 4L19 7",
+      "matchesPersonal": true
+    },
+    "error": {
+      "state": "error",
+      "aria": "Failed to copy share link",
+      "title": "Failed to copy share link",
+      "path": "M6 18L18 6M6 6l12 12",
+      "matchesPersonal": true
+    }
+  },
+  "desktop": {
+    "header": {
+      "x": 336,
+      "y": 50,
+      "width": 768,
+      "height": 105
+    },
+    "name": {
+      "x": 360,
+      "y": 74,
+      "width": 288.640625,
+      "height": 32
+    },
+    "share": {
+      "x": 656.640625,
+      "y": 78,
+      "width": 28,
+      "height": 28
+    },
+    "close": {
+      "x": 1040,
+      "y": 74,
+      "width": 40,
+      "height": 40
+    },
+    "footerShareCount": 0,
+    "footerActions": [
+      "Add to Wishlist",
+      "Add to Collection",
+      "View Full Details",
+      "Link to Collection",
+      "Suggest Edit"
+    ]
+  },
+  "missing": {
+    "headerShareCount": 0,
+    "footerShareCount": 0
+  },
+  "mobile": {
+    "header": {
+      "x": 16,
+      "y": 42.203125,
+      "width": 358,
+      "height": 157
+    },
+    "name": {
+      "x": 40,
+      "y": 66.203125,
+      "width": 222,
+      "height": 64
+    },
+    "share": {
+      "x": 270,
+      "y": 70.203125,
+      "width": 28,
+      "height": 28
+    },
+    "close": {
+      "x": 310,
+      "y": 66.203125,
+      "width": 40,
+      "height": 40
+    },
+    "footerShareCount": 0,
+    "footerActions": [
+      "Add to Wishlist",
+      "Add to Collection",
+      "View Full Details",
+      "Link to Collection",
+      "Suggest Edit"
+    ]
+  },
+  "canonicalProductionStatus": 200
+}

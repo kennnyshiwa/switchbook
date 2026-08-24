@@ -1,6 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
+
+export const SHARE_ICON_PATH = 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.632 4.268C17.886 14.938 17 14.482 17 14c0-.482.114-.938.316-1.342m0 2.684a3 3 0 110-2.684M9 20a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM9 8a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2z'
+export const SHARE_SUCCESS_ICON_PATH = 'M5 13l4 4L19 7'
+export const SHARE_ERROR_ICON_PATH = 'M6 18L18 6M6 6l12 12'
 
 interface SwitchShareButtonProps {
   switchId: string
@@ -70,12 +74,12 @@ export default function SwitchShareButton({
       {message === 'Link copied!' ? (
         // Show checkmark when successfully copied
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SHARE_SUCCESS_ICON_PATH} />
         </svg>
       ) : message === 'Failed to copy link' ? (
         // Show X when failed
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SHARE_ERROR_ICON_PATH} />
         </svg>
       ) : (
         // Show share icon normally
@@ -89,7 +93,7 @@ export default function SwitchShareButton({
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.632 4.268C17.886 14.938 17 14.482 17 14c0-.482.114-.938.316-1.342m0 2.684a3 3 0 110-2.684M9 20a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM9 8a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2z"
+            d={SHARE_ICON_PATH}
           />
         </svg>
       )}

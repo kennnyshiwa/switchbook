@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { SHARE_ERROR_ICON_PATH, SHARE_ICON_PATH, SHARE_SUCCESS_ICON_PATH } from './SwitchShareButton'
 
 interface MasterSwitchShareButtonProps {
   shareableId: string | null | undefined
@@ -12,7 +13,7 @@ export function getMasterSwitchShareUrl(shareableId: string, origin: string) {
 }
 
 export default function MasterSwitchShareButton({ shareableId, className }: MasterSwitchShareButtonProps) {
-  const [copied, setCopied] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   
   if (!shareableId) {
     return null
@@ -26,35 +27,40 @@ export default function MasterSwitchShareButton({ shareableId, className }: Mast
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      // Failed to copy to clipboard
+      setStatus('copied')
+      setTimeout(() => setStatus('idle'), 2000)
+    } catch {
+      setStatus('error')
+      setTimeout(() => setStatus('idle'), 3000)
     }
   }
+
+  const accessibleText = status === 'copied'
+    ? 'Share link copied'
+    : status === 'error'
+      ? 'Failed to copy share link'
+      : 'Copy share link'
 
   return (
     <button
       type="button"
       onClick={handleCopy}
-      aria-label={copied ? 'Share link copied' : 'Copy share link'}
-      className={className || "px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 inline-flex items-center space-x-2"}
+      aria-label={accessibleText}
+      title={accessibleText}
+      data-share-state={status}
+      className={className || "text-indigo-600 hover:text-indigo-800"}
     >
       <svg
         aria-hidden="true"
-        className="w-4 h-4"
+        className="w-5 h-5"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.632 4.268C17.886 14.938 17 14.482 17 14c0-.482.114-.938.316-1.342m0 2.684a3 3 0 110-2.684M9 20a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM9 8a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2z"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
+          status === 'copied' ? SHARE_SUCCESS_ICON_PATH : status === 'error' ? SHARE_ERROR_ICON_PATH : SHARE_ICON_PATH
+        } />
       </svg>
-      <span>{copied ? 'Copied!' : 'Copy Share Link'}</span>
     </button>
   )
 }

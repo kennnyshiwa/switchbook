@@ -4,6 +4,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import MasterSwitchDetailsPopup from '../src/components/MasterSwitchDetailsPopup'
 import MasterSwitchShareButton, { getMasterSwitchShareUrl } from '../src/components/MasterSwitchShareButton'
+import SwitchShareButton, { SHARE_ICON_PATH } from '../src/components/SwitchShareButton'
 
 const noop = () => {}
 
@@ -35,17 +36,34 @@ test('master switch share URL uses the canonical public route', () => {
   )
 })
 
-test('popup places Copy Share Link immediately after View Full Details', () => {
+test('popup places an icon-only copy action in the header and never in the footer', () => {
   const markup = renderPopup('share-123')
-  assert.match(markup, />View Full Details<\/a><button[^>]*aria-label="Copy share link"[^>]*>/)
-  assert.match(markup, />Copy Share Link<\/span>/)
+  const header = markup.slice(markup.indexOf('data-testid="master-switch-popup-header"'), markup.indexOf('data-testid="master-switch-popup-footer"'))
+  const footer = markup.slice(markup.indexOf('data-testid="master-switch-popup-footer"'))
+
+  assert.match(header, /<button[^>]*aria-label="Copy share link"[^>]*title="Copy share link"[^>]*data-share-state="idle"[^>]*><svg/)
+  assert.doesNotMatch(header, /Copy Share Link<\/span>/)
+  assert.doesNotMatch(footer, /aria-label="Copy share link"|data-share-state=/)
+  assert.match(footer, />View Full Details<\/a>/)
   assert.match(markup, />Suggest Edit<\/a>/)
+})
+
+test('master action reuses the personal card share icon path', () => {
+  const masterMarkup = renderToStaticMarkup(
+    React.createElement(MasterSwitchShareButton, { shareableId: 'share-123' })
+  )
+  const personalMarkup = renderToStaticMarkup(
+    React.createElement(SwitchShareButton, { switchId: 'switch-1', shareableId: 'personal-123', iconOnly: true })
+  )
+
+  assert.match(masterMarkup, new RegExp(`d="${SHARE_ICON_PATH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`))
+  assert.match(personalMarkup, new RegExp(`d="${SHARE_ICON_PATH.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`))
 })
 
 test('share button is omitted gracefully when a master switch has no shareable ID', () => {
   const popupMarkup = renderPopup(null)
   assert.match(popupMarkup, />View Full Details<\/a>/)
-  assert.doesNotMatch(popupMarkup, /Copy Share Link/)
+  assert.doesNotMatch(popupMarkup, /aria-label="Copy share link"|data-share-state=/)
 
   const buttonMarkup = renderToStaticMarkup(
     React.createElement(MasterSwitchShareButton, { shareableId: undefined })
