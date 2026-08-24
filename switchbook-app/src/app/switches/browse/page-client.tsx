@@ -23,6 +23,7 @@ interface SwitchImage {
 
 export interface MasterSwitch {
   id: string
+  shareableId?: string | null
   name: string
   chineseName?: string
   type?: SwitchType

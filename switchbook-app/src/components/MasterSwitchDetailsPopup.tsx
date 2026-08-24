@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
 import { SwitchType, SwitchTechnology } from '@prisma/client'
 import { linkify } from '@/utils/linkify'
 import { getImageUrl } from '@/utils/imageHelpers'
 import ImageCarousel from './ImageCarousel'
+import MasterSwitchShareButton from './MasterSwitchShareButton'
 
 interface SwitchImage {
   id: string
@@ -17,6 +18,7 @@ interface SwitchImage {
 
 interface MasterSwitch {
   id: string
+  shareableId?: string | null
   name: string
   chineseName?: string
   type?: SwitchType
@@ -407,8 +409,8 @@ export default function MasterSwitchDetailsPopup({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
-          <div className={`flex items-center gap-3 ${switchItem.inWishlist && !switchItem.inCollection ? 'min-w-[200px] justify-center' : ''}`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className={`flex flex-wrap items-center gap-3 ${switchItem.inWishlist && !switchItem.inCollection ? 'min-w-[200px] justify-center' : ''}`}>
             {switchItem.inCollection && (
               <span className="text-green-600 dark:text-green-400 text-sm flex items-center">
                 <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -448,13 +450,18 @@ export default function MasterSwitchDetailsPopup({
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href={`/switches/${switchItem.id}`}
               className="px-4 py-2 text-sm text-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
             >
               View Full Details
             </Link>
+
+            <MasterSwitchShareButton
+              shareableId={switchItem.shareableId}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 inline-flex items-center gap-2 text-sm transition-colors"
+            />
             
             {!switchItem.inCollection && (
               <button

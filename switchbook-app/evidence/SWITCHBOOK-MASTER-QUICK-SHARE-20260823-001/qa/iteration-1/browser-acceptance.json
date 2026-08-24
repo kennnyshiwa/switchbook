@@ -1,0 +1,87 @@
+{
+  "fixture": {
+    "source": "production API shaped",
+    "shareableId": "HdVGho4j7-"
+  },
+  "expected": "http://127.0.0.1:3010/share/switch/HdVGho4j7-",
+  "actions": [
+    {
+      "text": "",
+      "aria": null,
+      "href": null
+    },
+    {
+      "text": "Add to Wishlist",
+      "aria": null,
+      "href": null
+    },
+    {
+      "text": "Add to Collection",
+      "aria": null,
+      "href": null
+    },
+    {
+      "text": "View Full Details",
+      "aria": null,
+      "href": "/switches/cmswhb6ss05vnnu27ga796qmp"
+    },
+    {
+      "text": "Copy Share Link",
+      "aria": "Copy share link",
+      "href": null
+    },
+    {
+      "text": "Link to Collection",
+      "aria": null,
+      "href": null
+    },
+    {
+      "text": "Suggest Edit",
+      "aria": null,
+      "href": "/switches/cmswhb6ss05vnnu27ga796qmp/suggest-edit"
+    }
+  ],
+  "desktop": {
+    "details": {
+      "x": 604.265625,
+      "y": 842,
+      "width": 140.09375,
+      "height": 36
+    },
+    "copy": {
+      "x": 756.359375,
+      "y": 842,
+      "width": 164.25,
+      "height": 36
+    },
+    "sameRow": true,
+    "immediatelyAfter": true
+  },
+  "missing": {
+    "copyCount": 0,
+    "actions": [
+      "",
+      "Add to Wishlist",
+      "Add to Collection",
+      "View Full Details",
+      "Link to Collection",
+      "Suggest Edit"
+    ]
+  },
+  "mobile": {
+    "details": {
+      "x": 40,
+      "y": 645.796875,
+      "width": 140.09375,
+      "height": 36
+    },
+    "copy": {
+      "x": 40,
+      "y": 693.796875,
+      "width": 164.25,
+      "height": 36
+    },
+    "visible": true,
+    "bothWithinViewport": true
+  }
+}
