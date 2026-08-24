@@ -4,6 +4,10 @@ set -eu
 base_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 compose="docker compose -f $base_dir/e2e-compose.yml -p switchbook-hydra-e2e"
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/switchbook-hydra-e2e.XXXXXX")
+random_secret() { openssl rand -hex 32; }
+export HYDRA_E2E_DB_PASSWORD="${HYDRA_E2E_DB_PASSWORD:-$(random_secret)}"
+export HYDRA_E2E_SYSTEM_SECRET="${HYDRA_E2E_SYSTEM_SECRET:-$(random_secret)}"
+client_secret="${HYDRA_E2E_CLIENT_SECRET:-$(random_secret)}"
 down_services() { $compose down -v --remove-orphans >/dev/null 2>&1 || true; }
 cleanup() { down_services; rm -rf "$tmp_dir"; }
 trap cleanup EXIT INT TERM
@@ -16,7 +20,6 @@ location() { awk 'tolower($0) ~ /^location:/{sub(/^[^:]*:[[:space:]]*/,""); sub(
 challenge_for() { printf %s "$1" | openssl dgst -binary -sha256 | openssl base64 -A | tr '+/' '-_' | tr -d '='; }
 
 client_id=keebvault_e2e
-client_secret=keebvault_e2e_secret
 curl -fsS -X POST http://127.0.0.1:54445/admin/clients -H 'Content-Type: application/json' -d "{\"client_id\":\"$client_id\",\"client_secret\":\"$client_secret\",\"redirect_uris\":[\"http://127.0.0.1:59998/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"scope\":\"openid offline_access catalog:read\",\"token_endpoint_auth_method\":\"client_secret_basic\"}" >/dev/null
 
 authorize() {
@@ -43,7 +46,7 @@ token_status() {
   curl -sS -o "$tmp_dir/token.json" -w '%{http_code}' -u "$client_id:$client_secret" -H 'Content-Type: application/x-www-form-urlencoded' -d "$args" http://127.0.0.1:54444/oauth2/token
 }
 
-verifier='e2e-verifier-abcdefghijklmnopqrstuvwxyz-0123456789-ABCDE'
+verifier=$(openssl rand -base64 48 | tr '+/' '-_' | tr -d '=')
 code=$(authorize "$verifier")
 [ "$(token_status "$code")" = 400 ]
 code=$(authorize "$verifier")

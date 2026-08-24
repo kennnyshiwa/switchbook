@@ -4,6 +4,7 @@ base_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_dir=$(CDPATH= cd -- "$base_dir/../.." && pwd)
 compose="docker compose -f $base_dir/e2e-compose.yml -p switchbook-partner-e2e"
 migration_fixture=$(mktemp -d "${TMPDIR:-/tmp}/switchbook-partner-migrations.XXXXXX")
+export PARTNER_E2E_DB_PASSWORD="${PARTNER_E2E_DB_PASSWORD:-$(openssl rand -hex 32)}"
 cleanup() {
   $compose down -v --remove-orphans >/dev/null 2>&1 || true
   find "$migration_fixture" -depth -delete >/dev/null 2>&1 || true
@@ -22,7 +23,7 @@ for migration in prisma/migrations/*; do
     cp -R "$migration" "$migration_fixture/migrations/"
   fi
 done
-export DATABASE_URL=postgresql://partner_e2e:partner_e2e_password@127.0.0.1:55432/partner_e2e
+export DATABASE_URL="postgresql://partner_e2e:${PARTNER_E2E_DB_PASSWORD}@127.0.0.1:55432/partner_e2e"
 npx prisma migrate deploy --schema "$migration_fixture/schema.prisma" >/dev/null
 $compose exec -T postgres psql -U partner_e2e -d partner_e2e -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 SET session_replication_role = replica;
@@ -39,11 +40,11 @@ npx prisma migrate status >/dev/null
 
 # Clean-install gate: the complete migration history must also build a fresh DB.
 $compose exec -T postgres createdb -U partner_e2e partner_e2e_clean
-export DATABASE_URL=postgresql://partner_e2e:partner_e2e_password@127.0.0.1:55432/partner_e2e_clean
+export DATABASE_URL="postgresql://partner_e2e:${PARTNER_E2E_DB_PASSWORD}@127.0.0.1:55432/partner_e2e_clean"
 npx prisma migrate deploy >/dev/null
 npx prisma migrate status >/dev/null
 
 # Run behavioral concurrency checks against the upgraded database.
-export DATABASE_URL=postgresql://partner_e2e:partner_e2e_password@127.0.0.1:55432/partner_e2e
+export DATABASE_URL="postgresql://partner_e2e:${PARTNER_E2E_DB_PASSWORD}@127.0.0.1:55432/partner_e2e"
 npx prisma generate >/dev/null
 npx tsx tests/idempotency.e2e.ts
