@@ -12,7 +12,11 @@ export function apiErrorMessage(body: unknown, fallback: string): string {
   return fallback
 }
 
+export async function responseJsonBody(response: Response): Promise<unknown> {
+  return response.json().catch(() => null)
+}
+
 export async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
-  const body = await response.json().catch(() => null)
+  const body = await responseJsonBody(response)
   return apiErrorMessage(body, fallback)
 }

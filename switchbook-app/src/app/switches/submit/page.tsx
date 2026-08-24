@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { MasterSwitchSubmissionForm } from '@/components/MasterSwitchSubmissionForm';
-import { apiErrorMessage, responseErrorMessage } from '@/lib/client-api-error';
+import { apiErrorMessage, responseErrorMessage, responseJsonBody } from '@/lib/client-api-error';
 
 interface SimilarSwitch {
   id: string;
@@ -82,12 +82,15 @@ export default function SubmitMasterSwitchPage() {
         body: JSON.stringify(submissionData),
       });
 
-      const responseData = await response.json();
+      const responseData = await responseJsonBody(response);
       
       if (response.status === 409) {
+        if (!responseData || typeof responseData !== 'object' || !Array.isArray((responseData as { similarSwitches?: unknown }).similarSwitches)) {
+          throw new Error(apiErrorMessage(responseData, 'Failed to check for duplicate switches'));
+        }
         // Duplicate warning - show similar switches
         setDuplicateWarning({
-          similarSwitches: responseData.similarSwitches,
+          similarSwitches: (responseData as { similarSwitches: SimilarSwitch[] }).similarSwitches,
           pendingData: data,
           pendingUploads,
         });
@@ -100,10 +103,12 @@ export default function SubmitMasterSwitchPage() {
       }
 
       if (pendingUploads.length > 0) {
-        await uploadPendingImages(responseData.id, pendingUploads);
+        if (!responseData || typeof responseData !== 'object' || typeof (responseData as { id?: unknown }).id !== 'string') throw new Error('SwitchBook returned an invalid submission response');
+        await uploadPendingImages((responseData as { id: string }).id, pendingUploads);
       }
 
-      router.push(`/switches/${responseData.id}?submitted=true`);
+      if (!responseData || typeof responseData !== 'object' || typeof (responseData as { id?: unknown }).id !== 'string') throw new Error('SwitchBook returned an invalid submission response');
+      router.push(`/switches/${(responseData as { id: string }).id}?submitted=true`);
     } catch (error) {
       console.error('Submission error:', error);
       alert(error instanceof Error ? error.message : 'Failed to submit master switch');

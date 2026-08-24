@@ -36,3 +36,12 @@ Date: 2026-08-23 (America/New_York)
 ## Remaining release boundary
 
 Authoritative KeebVault-owned OAuth callback evidence is required before provisioning. Ops must release only through CI/Compose, verify rollback, configure DNS/TLS for `sandbox.switchbook.app` (or formally use the same-origin `/developers/sandbox` URL), and demonstrate the repaired external 304 on the released SHA. Independent production acceptance belongs to QA.
+
+## Builder iteration 2
+
+- The main submission call site now parses its response exactly once through `responseJsonBody`; HTML/empty error bodies resolve to the safe fallback, while structured and legacy JSON errors remain readable. Duplicate and successful responses are shape-checked before use.
+- Regression coverage reads the main submission source to prohibit a return to unconditional `response.json()` and directly verifies non-JSON parsing returns `null`.
+- `npm audit --omit=dev` reports seven high transitive findings after all compatible lockfile refreshes in `0777d7f`. No safe in-major upstream update exists:
+  - Next.js 15.5.23 hard-pins `postcss@8.4.31` (GHSA-qx2v-qp2m-jg93, GHSA-6g55-p6wh-862q, GHSA-fxqj-rqcc-2cmp, GHSA-r28c-9q8g-f849) and permits `sharp@^0.34.3`, resolved to 0.34.5 (GHSA-f88m-g3jw-g9cj). npm's offered fix is Next.js 16.3.2, a framework major upgrade outside this focused acceptance repair.
+  - Prisma 6.19.0 hard-pins `@prisma/config@6.19.0`, which hard-pins `deepmerge-ts@7.1.5` (GHSA-ggr8-5vv4-36mx) and `effect@3.18.4` (GHSA-38f7-945m-qr2g). npm marks a fix available only through the Prisma 7 line. Overriding hard-pinned transitive majors would be unsupported and was not done.
+  - Exposure is build/config tooling rather than partner request-data execution: application runtime imports `@prisma/client`; the vulnerable Prisma packages are CLI/config dependencies used for generation/migrations. The PostCSS and sharp copies are framework build/image-processing dependencies. This reduces exploitability but does not erase the advisories; major upgrades require a separately tested release.
