@@ -1,7 +1,8 @@
 import { uploadFile } from './local-storage'
 import { isValidImageType } from './image-config'
-import { validateImageUrl } from './image-security'
+import { assertPublicImageHost, validateImageUrl } from './image-security'
 import { convertHeicToJpeg, generateSafeFilename, validateAndProcessImage } from './image-utils'
+import { createHash } from 'node:crypto'
 
 const MIME_EXTENSION_MAP: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -44,23 +45,44 @@ function normalizeMimeType(contentType: string | null, remoteUrl: string): strin
 }
 
 export async function rehostRemoteImage(remoteUrl: string, folder: string) {
-  const validation = validateImageUrl(remoteUrl)
-  if (!validation.valid) {
-    throw new Error(validation.error || 'Invalid remote image URL')
+  const MAX_BYTES = 12 * 1024 * 1024
+  let currentUrl = remoteUrl
+  let response: Response | undefined
+  for (let redirect = 0; redirect <= 3; redirect++) {
+    const validation = validateImageUrl(currentUrl)
+    if (!validation.valid) throw new Error(validation.error || 'Invalid remote image URL')
+    await assertPublicImageHost(currentUrl)
+    response = await fetch(currentUrl, { redirect: 'manual', signal: AbortSignal.timeout(10_000), headers: { Accept: 'image/*' } })
+    if (![301, 302, 303, 307, 308].includes(response.status)) break
+    const location = response.headers.get('location')
+    if (!location || redirect === 3) throw new Error('Remote image exceeded redirect limit')
+    currentUrl = new URL(location, currentUrl).toString()
   }
-
-  const response = await fetch(remoteUrl)
+  if (!response) throw new Error('Failed to download remote image')
   if (!response.ok) {
     throw new Error(`Failed to download remote image (${response.status})`)
   }
+
+  const declaredSize = Number(response.headers.get('content-length') || 0)
+  if (declaredSize > MAX_BYTES) throw new Error('Remote image exceeds 12 MB limit')
 
   let mimeType = normalizeMimeType(response.headers.get('content-type'), remoteUrl)
   if (!isValidImageType(mimeType)) {
     throw new Error(`Unsupported remote image type: ${mimeType}`)
   }
 
-  const arrayBuffer = await response.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
+  if (!response.body) throw new Error('Remote image response had no body')
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > MAX_BYTES) { await reader.cancel(); throw new Error('Remote image exceeds 12 MB limit') }
+    chunks.push(value)
+  }
+  const buffer = Buffer.concat(chunks)
 
   const imageValidation = await validateAndProcessImage(buffer, mimeType)
   if (!imageValidation.valid) {
@@ -92,5 +114,6 @@ export async function rehostRemoteImage(remoteUrl: string, folder: string) {
     width: imageValidation.metadata?.width ?? null,
     height: imageValidation.metadata?.height ?? null,
     size: file.size,
+    checksumSha256: createHash('sha256').update(processedBuffer).digest('hex'),
   }
 }

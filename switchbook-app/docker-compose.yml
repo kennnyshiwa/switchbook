@@ -27,6 +27,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      hydra:
+        condition: service_healthy
     networks:
       - switchbook-network
     environment:
@@ -47,6 +49,10 @@ services:
       # OAuth
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      REDIS_URL: ${REDIS_URL:-}
+      PARTNER_OIDC_ISSUER: ${PARTNER_OIDC_ISSUER:-https://switchbook.app}
+      PARTNER_OIDC_AUDIENCE: ${PARTNER_OIDC_AUDIENCE:-https://switchbook.app/api/v1}
+      HYDRA_ADMIN_URL: http://hydra:4445
 
       # Node
       NODE_ENV: production
@@ -60,6 +66,31 @@ services:
         npx prisma migrate deploy &&
         node server.js
       "
+
+  hydra:
+    image: oryd/hydra:v2.3.0
+    container_name: switchbook-hydra
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: /bin/ash
+    command:
+      - -c
+      - /usr/bin/hydra migrate sql --yes "$${HYDRA_DSN}" && exec /usr/bin/hydra serve all --config /etc/hydra/hydra.yml
+    environment:
+      DSN: ${HYDRA_DSN}
+      HYDRA_DSN: ${HYDRA_DSN:?HYDRA_DSN is required}
+      SECRETS_SYSTEM: ${HYDRA_SYSTEM_SECRET:?HYDRA_SYSTEM_SECRET is required}
+    volumes:
+      - ./ops/hydra/hydra.yml:/etc/hydra/hydra.yml:ro
+    networks:
+      - switchbook-network
+    healthcheck:
+      test: ["CMD", "hydra", "health", "ready", "-e", "http://127.0.0.1:4445"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   nginx:
     image: nginx:alpine

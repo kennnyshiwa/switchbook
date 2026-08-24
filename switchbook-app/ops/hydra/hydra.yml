@@ -1,0 +1,27 @@
+serve:
+  cookies:
+    same_site_mode: Lax
+urls:
+  self:
+    issuer: https://switchbook.app
+  login: https://switchbook.app/api/oauth/login
+  consent: https://switchbook.app/api/oauth/consent
+  logout: https://switchbook.app/auth/logout
+strategies:
+  access_token: jwt
+oauth2:
+  expose_internal_errors: false
+  allowed_top_level_claims:
+    - username
+    - email
+oidc:
+  subject_identifiers:
+    supported_types:
+      - public
+ttl:
+  access_token: 15m
+  refresh_token: 720h
+  id_token: 15m
+log:
+  level: info
+  format: json

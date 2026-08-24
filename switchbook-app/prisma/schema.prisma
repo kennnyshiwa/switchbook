@@ -36,6 +36,8 @@ model User {
   switches                Switch[]
   verificationTokens      VerificationToken[]
   wishlistItems           Wishlist[]
+  partnerSubmissions      PartnerSubmission[]
+  partnerCorrections      PartnerCorrection[]
 }
 
 model Switch {
@@ -166,18 +168,18 @@ model ForceCurveFeedback {
 }
 
 model SwitchScoreFeedback {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  switchName      String
-  manufacturer    String?
-  incorrectMatch  String
-  feedbackType    String   // 'incorrect_match' or 'no_score_exists'
-  createdAt       DateTime @default(now())
-  
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  switchName     String
+  manufacturer   String?
+  incorrectMatch String
+  feedbackType   String // 'incorrect_match' or 'no_score_exists'
+  createdAt      DateTime @default(now())
+
+  @@unique([switchName, manufacturer, incorrectMatch])
   @@index([userId])
   @@index([switchName, manufacturer])
-  @@unique([switchName, manufacturer, incorrectMatch])
 }
 
 model Account {
@@ -201,7 +203,7 @@ model Account {
 }
 
 model MasterSwitch {
-  id                     String             @id @default(cuid())
+  id                     String                 @id @default(cuid())
   name                   String
   chineseName            String?
   type                   SwitchType?
@@ -232,33 +234,36 @@ model MasterSwitch {
   submittedById          String
   approvedById           String?
   approvedAt             DateTime?
-  status                 MasterSwitchStatus @default(PENDING)
+  status                 MasterSwitchStatus     @default(PENDING)
   rejectionReason        String?
-  version                Int                @default(1)
-  viewCount              Int                @default(0)
-  lastModifiedAt         DateTime           @default(now())
+  version                Int                    @default(1)
+  viewCount              Int                    @default(0)
+  lastModifiedAt         DateTime               @default(now())
   originalSubmissionData Json?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
   primaryImageId         String?
-  doubleStage            Boolean            @default(false)
-  progressiveSpring      Boolean            @default(false)
+  doubleStage            Boolean                @default(false)
+  progressiveSpring      Boolean                @default(false)
   tactileForce           Float?
   clickType              ClickType?
   tactilePosition        Float?
-  shareableId            String?            @unique
+  shareableId            String?                @unique
   bottomHousingColor     String?
   markings               String?
   stemColor              String?
   stemShape              String?
   topHousingColor        String?
-  approvedBy             User?              @relation("ApprovedBy", fields: [approvedById], references: [id])
-  submittedBy            User               @relation("SubmittedBy", fields: [submittedById], references: [id])
+  approvedBy             User?                  @relation("ApprovedBy", fields: [approvedById], references: [id])
+  submittedBy            User                   @relation("SubmittedBy", fields: [submittedById], references: [id])
   edits                  MasterSwitchEdit[]
   views                  MasterSwitchView[]
   userSwitches           Switch[]
   images                 SwitchImage[]
   wishlistItems          Wishlist[]
+  lifecycle              MasterSwitchLifecycle?
+  partnerSubmissions     PartnerSubmission[]
+  partnerCorrections     PartnerCorrection[]
 
   @@index([name, manufacturer])
   @@index([status])
@@ -338,12 +343,155 @@ model SwitchImage {
   height         Int?
   size           Int?
   uploadedAt     DateTime      @default(now())
+  altText        String?
+  sourceUrl      String?
+  sourceName     String?
+  license        String?
+  attribution    String?
+  checksumSha256 String?
+  revision       Int           @default(1)
   masterSwitch   MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
   switch         Switch?       @relation(fields: [switchId], references: [id], onDelete: SetNull)
 
   @@index([switchId])
   @@index([masterSwitchId])
   @@index([order])
+}
+
+model PartnerApplication {
+  id                 String                  @id @default(cuid())
+  name               String
+  clientId           String                  @unique
+  secretHash         String
+  scopes             String[]
+  redirectUris       String[]
+  webhookUrl         String?
+  webhookSecretHash  String?
+  active             Boolean                 @default(true)
+  rateLimitPerMinute Int                     @default(120)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  credentials        PartnerCredential[]
+  auditEvents        PartnerAuditEvent[]
+  idempotencyKeys    PartnerIdempotencyKey[]
+  webhookEvents      PartnerWebhookEvent[]
+  submissions        PartnerSubmission[]
+  corrections        PartnerCorrection[]
+}
+
+model PartnerCredential {
+  id            String             @id @default(cuid())
+  applicationId String
+  prefix        String             @unique
+  secretHash    String
+  scopes        String[]
+  expiresAt     DateTime?
+  revokedAt     DateTime?
+  lastUsedAt    DateTime?
+  createdAt     DateTime           @default(now())
+  application   PartnerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, revokedAt])
+}
+
+model MasterSwitchLifecycle {
+  masterSwitchId String              @id
+  status         CatalogRecordStatus @default(ACTIVE)
+  mergedIntoId   String?
+  removedAt      DateTime?
+  removalReason  String?
+  updatedAt      DateTime            @updatedAt
+  masterSwitch   MasterSwitch        @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([mergedIntoId])
+}
+
+model PartnerSubmission {
+  id                String                  @id @default(cuid())
+  applicationId     String
+  userId            String
+  masterSwitchId    String?
+  status            PartnerSubmissionStatus @default(SUBMITTED)
+  payload           Json
+  moderatorFeedback String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  application       PartnerApplication      @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  masterSwitch      MasterSwitch?           @relation(fields: [masterSwitchId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, userId, updatedAt])
+  @@index([masterSwitchId])
+}
+
+model PartnerCorrection {
+  id                String                  @id @default(cuid())
+  applicationId     String
+  userId            String
+  masterSwitchId    String
+  status            PartnerSubmissionStatus @default(SUBMITTED)
+  changes           Json
+  reason            String
+  moderatorFeedback String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  application       PartnerApplication      @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  masterSwitch      MasterSwitch            @relation(fields: [masterSwitchId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, userId, updatedAt])
+  @@index([masterSwitchId])
+}
+
+model PartnerIdempotencyKey {
+  id             String             @id @default(cuid())
+  applicationId  String
+  key            String
+  requestHash    String
+  responseStatus Int
+  responseBody   Json
+  expiresAt      DateTime
+  createdAt      DateTime           @default(now())
+  application    PartnerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, key])
+  @@index([expiresAt])
+}
+
+model PartnerAuditEvent {
+  id            String              @id @default(cuid())
+  applicationId String?
+  actorUserId   String?
+  requestId     String
+  action        String
+  resourceType  String?
+  resourceId    String?
+  statusCode    Int
+  ipHash        String?
+  metadata      Json?
+  createdAt     DateTime            @default(now())
+  application   PartnerApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, createdAt])
+  @@index([requestId])
+}
+
+model PartnerWebhookEvent {
+  id            String                @id @default(cuid())
+  applicationId String
+  type          String
+  payload       Json
+  status        WebhookDeliveryStatus @default(PENDING)
+  attempts      Int                   @default(0)
+  nextAttemptAt DateTime              @default(now())
+  deliveredAt   DateTime?
+  lastError     String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  application   PartnerApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
 }
 
 model Wishlist {
@@ -410,6 +558,26 @@ enum ClickType {
   CLICK_JACKET
 }
 
+enum CatalogRecordStatus {
+  ACTIVE
+  MERGED
+  REMOVED
+}
+
+enum PartnerSubmissionStatus {
+  DRAFT
+  SUBMITTED
+  NEEDS_CHANGES
+  APPROVED
+  REJECTED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
 model Material {
   id        String   @id @default(cuid())
   name      String   @unique
@@ -417,7 +585,7 @@ model Material {
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([active])
   @@index([order])
 }
@@ -429,7 +597,7 @@ model StemShape {
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([active])
   @@index([order])
 }

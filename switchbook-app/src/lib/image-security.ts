@@ -1,6 +1,8 @@
 /**
  * Image security utilities for validating and sanitizing image URLs
  */
+import { lookup } from 'node:dns/promises'
+import { isIP } from 'node:net'
 
 // Blocked hostnames that should never be accessed
 const BLOCKED_HOSTNAMES = [
@@ -115,6 +117,30 @@ function isPrivateIP(hostname: string): boolean {
          ipv6Patterns.some(pattern => pattern.test(hostname))
 }
 
+function isUnsafeResolvedAddress(address: string): boolean {
+  if (address.startsWith('::ffff:')) return isUnsafeResolvedAddress(address.slice(7))
+  if (isIP(address) === 4) {
+    const [a, b] = address.split('.').map(Number)
+    return a === 0 || a === 10 || a === 127 || a >= 224 ||
+      a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 ||
+      a === 192 && b === 168 || a === 100 && b >= 64 && b <= 127 ||
+      a === 198 && (b === 18 || b === 19)
+  }
+  const normalized = address.toLowerCase()
+  return normalized === '::' || normalized === '::1' || normalized.startsWith('fc') ||
+    normalized.startsWith('fd') || normalized.startsWith('fe8') || normalized.startsWith('fe9') ||
+    normalized.startsWith('fea') || normalized.startsWith('feb')
+}
+
+/** Resolve immediately before every remote fetch to prevent DNS rebinding into private networks. */
+export async function assertPublicImageHost(rawUrl: string) {
+  const parsed = new URL(rawUrl)
+  const answers = await lookup(parsed.hostname, { all: true, verbatim: true })
+  if (!answers.length || answers.some(answer => isUnsafeResolvedAddress(answer.address))) {
+    throw new Error('Image host resolves to a private or reserved address')
+  }
+}
+
 /**
  * Enhanced image URL validation with additional security checks
  */
@@ -175,7 +201,7 @@ export function checkImageValidationRateLimit(clientIP: string): boolean {
 }
 
 // Cleanup old entries periodically
-setInterval(() => {
+const imageRateLimitCleanup = setInterval(() => {
   const now = Date.now()
   for (const [ip, data] of imageValidationAttempts.entries()) {
     if (now > data.resetTime) {
@@ -183,3 +209,4 @@ setInterval(() => {
     }
   }
 }, 60000) // Cleanup every minute
+imageRateLimitCleanup.unref()

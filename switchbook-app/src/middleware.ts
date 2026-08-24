@@ -17,9 +17,11 @@ export default auth((req) => {
     ["GET", "HEAD", "OPTIONS"].includes(req.method) &&
     (pathname === "/api/master-switches" ||
       /^\/api\/master-switches\/[^/]+$/.test(pathname))
+  const isPartnerApi = pathname.startsWith('/api/v1/')
+  const isPartnerOAuth = pathname.startsWith('/api/oauth/')
 
   // Allow public pages/APIs used for logged-out discovery.
-  if (isPublicSharePage || isPublicShareApi || isPublicMasterSwitchApi) {
+  if (isPublicSharePage || isPublicShareApi || isPublicMasterSwitchApi || isPartnerApi || isPartnerOAuth) {
     return NextResponse.next()
   }
 
