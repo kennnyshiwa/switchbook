@@ -20,20 +20,23 @@ location() { awk 'tolower($0) ~ /^location:/{sub(/^[^:]*:[[:space:]]*/,""); sub(
 challenge_for() { printf %s "$1" | openssl dgst -binary -sha256 | openssl base64 -A | tr '+/' '-_' | tr -d '='; }
 
 client_id=keebvault_e2e
-curl -fsS -X POST http://127.0.0.1:54445/admin/clients -H 'Content-Type: application/json' -d "{\"client_id\":\"$client_id\",\"client_secret\":\"$client_secret\",\"redirect_uris\":[\"http://127.0.0.1:59998/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"scope\":\"openid offline_access catalog:read\",\"token_endpoint_auth_method\":\"client_secret_basic\"}" >/dev/null
+audience=https://switchbook.app/api/v1
+curl -fsS -X POST http://127.0.0.1:54445/admin/clients -H 'Content-Type: application/json' -d "{\"client_id\":\"$client_id\",\"client_secret\":\"$client_secret\",\"redirect_uris\":[\"http://127.0.0.1:59998/callback\"],\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"],\"scope\":\"openid offline_access catalog:read profile:read\",\"audience\":[\"$audience\"],\"token_endpoint_auth_method\":\"client_secret_basic\"}" >/dev/null
 
 authorize() {
   verifier=$1
   cookie_jar="$tmp_dir/cookies-$$"
   : >"$cookie_jar"
   challenge=$(challenge_for "$verifier")
-  auth_url="http://127.0.0.1:54444/oauth2/auth?client_id=$client_id&response_type=code&scope=openid%20offline_access%20catalog%3Aread&redirect_uri=http%3A%2F%2F127.0.0.1%3A59998%2Fcallback&state=e2e-state&code_challenge=$challenge&code_challenge_method=S256"
+  auth_url="http://127.0.0.1:54444/oauth2/auth?client_id=$client_id&response_type=code&scope=openid%20offline_access%20catalog%3Aread%20profile%3Aread&audience=https%3A%2F%2Fswitchbook.app%2Fapi%2Fv1&redirect_uri=http%3A%2F%2F127.0.0.1%3A59998%2Fcallback&state=e2e-state&code_challenge=$challenge&code_challenge_method=S256"
   login_redirect=$(curl -sS -c "$cookie_jar" -b "$cookie_jar" -D - -o /dev/null "$auth_url" | location)
   login_challenge=$(printf %s "$login_redirect" | query_value login_challenge)
   continue_url=$(curl -fsS -X PUT "http://127.0.0.1:54445/admin/oauth2/auth/requests/login/accept?login_challenge=$login_challenge" -H 'Content-Type: application/json' -d '{"subject":"switchbook-e2e-user","remember":false}' | json_value "['redirect_to']")
   consent_redirect=$(curl -sS -c "$cookie_jar" -b "$cookie_jar" -D - -o /dev/null "$continue_url" | location)
   consent_challenge=$(printf %s "$consent_redirect" | query_value consent_challenge)
-  continue_url=$(curl -fsS -X PUT "http://127.0.0.1:54445/admin/oauth2/auth/requests/consent/accept?consent_challenge=$consent_challenge" -H 'Content-Type: application/json' -d '{"grant_scope":["openid","offline_access","catalog:read"],"remember":false,"session":{"access_token":{"application_id":"e2e"},"id_token":{"username":"e2e"}}}' | json_value "['redirect_to']")
+  requested_audience=$(curl -fsS "http://127.0.0.1:54445/admin/oauth2/auth/requests/consent?consent_challenge=$consent_challenge" | json_value "['requested_access_token_audience'][0]")
+  [ "$requested_audience" = "$audience" ]
+  continue_url=$(curl -fsS -X PUT "http://127.0.0.1:54445/admin/oauth2/auth/requests/consent/accept?consent_challenge=$consent_challenge" -H 'Content-Type: application/json' -d "{\"grant_scope\":[\"openid\",\"offline_access\",\"catalog:read\",\"profile:read\"],\"grant_access_token_audience\":[\"$requested_audience\"],\"remember\":false,\"session\":{\"access_token\":{\"client_id\":\"$client_id\"},\"id_token\":{\"username\":\"e2e\"}}}" | json_value "['redirect_to']")
   callback=$(curl -sS -c "$cookie_jar" -b "$cookie_jar" -D - -o /dev/null "$continue_url" | location)
   rm -f "$cookie_jar"
   printf %s "$callback" | query_value code
@@ -56,6 +59,21 @@ code=$(authorize "$verifier")
 access=$(json_value "['access_token']" <"$tmp_dir/token.json")
 refresh=$(json_value "['refresh_token']" <"$tmp_dir/token.json")
 
+ACCESS_TOKEN="$access" EXPECTED_AUDIENCE="$audience" python3 - <<'PY'
+import base64, json, os
+payload = os.environ['ACCESS_TOKEN'].split('.')[1]
+payload += '=' * (-len(payload) % 4)
+claims = json.loads(base64.urlsafe_b64decode(payload))
+aud = claims.get('aud', [])
+aud = [aud] if isinstance(aud, str) else aud
+assert os.environ['EXPECTED_AUDIENCE'] in aud, claims
+scope = claims.get('scope', claims.get('scp', []))
+scope = scope.split() if isinstance(scope, str) else scope
+assert {'catalog:read', 'profile:read'}.issubset(set(scope)), claims
+PY
+sub=$(curl -fsS -H "Authorization: Bearer $access" http://127.0.0.1:54444/userinfo | json_value "['sub']")
+[ "$sub" = switchbook-e2e-user ]
+
 active=$(curl -fsS -u "$client_id:$client_secret" -d "token=$access" http://127.0.0.1:54445/admin/oauth2/introspect | json_value "['active']")
 [ "$active" = True ]
 curl -fsS -u "$client_id:$client_secret" -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=refresh_token&refresh_token=$refresh" http://127.0.0.1:54444/oauth2/token >"$tmp_dir/refresh.json"
@@ -64,4 +82,4 @@ reuse_status=$(curl -sS -o /dev/null -w '%{http_code}' -u "$client_id:$client_se
 curl -fsS -u "$client_id:$client_secret" -d "token=$access" http://127.0.0.1:54444/oauth2/revoke >/dev/null
 active=$(curl -fsS -u "$client_id:$client_secret" -d "token=$access" http://127.0.0.1:54445/admin/oauth2/introspect | json_value "['active']")
 [ "$active" = False ]
-echo 'Hydra E2E PASS: S256 required; wrong/missing verifier rejected; code/token/refresh rotation/reuse rejection/revocation verified.'
+echo 'Hydra E2E PASS: S256 required; audience/scope JWT and authenticated userinfo verified; wrong/missing verifier, refresh reuse, and revocation rejected.'

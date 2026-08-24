@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs'
 import { classifyIdempotency } from '../src/lib/partner-api/idempotency'
 import { createHmac } from 'node:crypto'
 import SwaggerParser from '@apidevtools/swagger-parser'
+import { acceptedConsentGrant } from '../src/lib/partner-api/consent'
 
 test('partner keys are prefixed, random, and hash-verifiable', () => {
   const first = issuePartnerKey()
@@ -101,6 +102,19 @@ test('Hydra and nginx jointly mandate PKCE S256 and publish access-token keys', 
   assert.match(hydra, /hydra\.jwt\.access-token/)
   assert.match(nginx, /code_challenge_method != "S256"/)
   assert.match(nginx, /arg_code_challenge = ""/)
+})
+
+test('consent grants Hydra-requested audience and scopes without trusting client form audience', () => {
+  const consent = {
+    subject: 'user-1', client: { client_id: 'client-1' },
+    requested_scope: ['openid', 'profile:read', 'catalog:read'],
+    requested_access_token_audience: ['https://switchbook.app/api/v1'],
+  }
+  const grant = acceptedConsentGrant(consent, ['profile:read', 'catalog:read', 'admin:write'], { username: 'e2e', email: 'e2e@example.com' })
+  assert.deepEqual(grant.grant_scope, ['profile:read', 'catalog:read'])
+  assert.deepEqual(grant.grant_access_token_audience, ['https://switchbook.app/api/v1'])
+  assert.equal('audience' in grant, false)
+  assert.equal(JSON.stringify(grant).includes('attacker.example'), false)
 })
 
 test('idempotency conflicts and in-flight reservations cannot replay side effects', () => {
