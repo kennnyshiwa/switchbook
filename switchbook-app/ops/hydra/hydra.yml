@@ -11,6 +11,9 @@ strategies:
   access_token: jwt
 oauth2:
   expose_internal_errors: false
+  pkce:
+    enforced: true
+    enforced_for_public_clients: true
   allowed_top_level_claims:
     - username
     - email
@@ -18,6 +21,20 @@ oidc:
   subject_identifiers:
     supported_types:
       - public
+webfinger:
+  jwks:
+    broadcast_keys:
+      - hydra.openid.id-token
+      - hydra.jwt.access-token
+  oidc_discovery:
+    supported_claims:
+      - email
+      - username
+    supported_scope:
+      - profile:read
+      - submissions:write
+      - submissions:read
+      - corrections:write
 ttl:
   access_token: 15m
   refresh_token: 720h

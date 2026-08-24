@@ -1,7 +1,7 @@
 import { MasterSwitchStatus, Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { requirePartner } from '@/lib/partner-api/auth'
+import { auditPartner, requirePartner } from '@/lib/partner-api/auth'
 import { errorResponse, PartnerApiError } from '@/lib/partner-api/errors'
 import { lightweight, partnerSwitchInclude, toPartnerSwitch } from '@/lib/partner-api/catalog'
 import { cacheableJson } from '@/lib/partner-api/http'
@@ -20,7 +20,7 @@ const querySchema = z.object({
 export async function GET(request: Request) {
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID()
   try {
-    await requirePartner(request, ['catalog:read'])
+    const principal = await requirePartner(request, ['catalog:read'])
     const parsed = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
     if (!parsed.success) throw new PartnerApiError(400, 'invalid_request', 'Invalid catalog query', parsed.error.flatten())
     const { q, manufacturer, type, technology, cursor, limit, sort, order } = parsed.data
@@ -46,6 +46,7 @@ export async function GET(request: Request) {
     const page = records.slice(0, limit)
     const data = await Promise.all(page.map(toPartnerSwitch))
     const updatedAt = page.reduce((latest, item) => item.updatedAt > latest ? item.updatedAt : latest, new Date(0))
+    await auditPartner(request, principal, 'catalog.search', 200, { type: 'master_switch' })
     return cacheableJson(request, { data: data.map(lightweight), page: { nextCursor: hasMore ? page.at(-1)?.id : null, hasMore, limit } }, updatedAt)
   } catch (error) { return errorResponse(error, requestId) }
 }

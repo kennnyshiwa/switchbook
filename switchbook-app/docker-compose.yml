@@ -52,6 +52,7 @@ services:
       REDIS_URL: ${REDIS_URL:-}
       PARTNER_OIDC_ISSUER: ${PARTNER_OIDC_ISSUER:-https://switchbook.app}
       PARTNER_OIDC_AUDIENCE: ${PARTNER_OIDC_AUDIENCE:-https://switchbook.app/api/v1}
+      PARTNER_SECRET_ENCRYPTION_KEY: ${PARTNER_SECRET_ENCRYPTION_KEY:?PARTNER_SECRET_ENCRYPTION_KEY is required}
       HYDRA_ADMIN_URL: http://hydra:4445
 
       # Node

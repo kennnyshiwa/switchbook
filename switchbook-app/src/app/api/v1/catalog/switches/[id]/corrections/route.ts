@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { requirePartner } from '@/lib/partner-api/auth'
+import { auditPartner, requirePartner } from '@/lib/partner-api/auth'
 import { errorResponse, PartnerApiError } from '@/lib/partner-api/errors'
 import { correctionSchema } from '@/lib/partner-api/schemas'
 import { beginIdempotent, finishIdempotent } from '@/lib/partner-api/idempotency'
@@ -24,10 +24,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!current) throw new PartnerApiError(404, 'not_found', 'Active switch not found')
     const created = await prisma.$transaction(async tx => {
       const edit = await tx.masterSwitchEdit.create({ data: { masterSwitchId: id, editedById: principal.userId!, previousData: current as unknown as Prisma.InputJsonValue, newData: { ...parsed.data.changes, editReason: parsed.data.reason } as Prisma.InputJsonValue, changedFields: Object.keys(parsed.data.changes), status: 'PENDING' } })
-      return tx.partnerCorrection.create({ data: { applicationId: principal.applicationId, userId: principal.userId!, masterSwitchId: id, changes: parsed.data.changes as Prisma.InputJsonValue, reason: parsed.data.reason, status: 'SUBMITTED' } })
+      return tx.partnerCorrection.create({ data: { applicationId: principal.applicationId, userId: principal.userId!, masterSwitchId: id, masterSwitchEditId: edit.id, changes: parsed.data.changes as Prisma.InputJsonValue, reason: parsed.data.reason, status: 'SUBMITTED' } })
     })
     const body = { data: { id: created.id, status: created.status.toLowerCase(), switchId: id, updatedAt: created.updatedAt } }
     await finishIdempotent(principal.applicationId, idem.key, idem.requestHash, 202, body)
+    await auditPartner(request, principal, 'correction.create', 202, { type: 'partner_correction', id: created.id })
     return NextResponse.json(body, { status: 202 })
   } catch (error) { return errorResponse(error, requestId) }
 }

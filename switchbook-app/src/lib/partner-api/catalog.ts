@@ -9,6 +9,11 @@ export const partnerSwitchInclude = {
 
 export type PartnerSwitchRecord = Prisma.MasterSwitchGetPayload<{ include: typeof partnerSwitchInclude }>
 
+export function catalogDisposition(status: string, lifecycle?: { status: string; catalogApprovedAt: Date } | null) {
+  if (lifecycle?.status === 'MERGED' || lifecycle?.status === 'REMOVED') return lifecycle.catalogApprovedAt ? lifecycle.status : 'NOT_FOUND'
+  return status === 'APPROVED' ? 'ACTIVE' : 'NOT_FOUND'
+}
+
 const absoluteUrl = (path: string) => path.startsWith('http') ? path : `${apiOrigin()}${path.startsWith('/') ? '' : '/'}${path}`
 
 export async function toPartnerSwitch(record: PartnerSwitchRecord) {

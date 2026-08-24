@@ -1,12 +1,14 @@
 import { randomBytes } from 'node:crypto'
 import { prisma } from '../src/lib/prisma'
-import { issuePartnerKey, sha256 } from '../src/lib/partner-api/crypto'
+import { issuePartnerKey, sealSecret, sha256 } from '../src/lib/partner-api/crypto'
 import { PARTNER_SCOPES } from '../src/lib/partner-api/config'
+import { assertSafeWebhookUrl } from '../src/lib/partner-api/outbound'
 
 async function main() {
   const name = process.env.PARTNER_NAME || 'KeebVault'
   const redirectUri = process.env.PARTNER_REDIRECT_URI
   const hydraAdmin = (process.env.HYDRA_ADMIN_URL || 'http://127.0.0.1:4445').replace(/\/$/, '')
+  const webhookUrl = process.env.PARTNER_WEBHOOK_URL ? await assertSafeWebhookUrl(process.env.PARTNER_WEBHOOK_URL) : null
   if (!redirectUri || !redirectUri.startsWith('https://') || new URL(redirectUri).origin === 'null') throw new Error('PARTNER_REDIRECT_URI must be an exact HTTPS callback URL')
   const clientId = process.env.PARTNER_CLIENT_ID || `keebvault_${randomBytes(8).toString('hex')}`
   const clientSecret = randomBytes(32).toString('base64url')
@@ -14,8 +16,8 @@ async function main() {
   const webhookSecret = randomBytes(32).toString('base64url')
   const application = await prisma.partnerApplication.upsert({
     where: { clientId },
-    create: { name, clientId, secretHash: sha256(clientSecret), scopes: [...PARTNER_SCOPES], redirectUris: [redirectUri], webhookSecretHash: sha256(webhookSecret) },
-    update: { name, secretHash: sha256(clientSecret), scopes: [...PARTNER_SCOPES], redirectUris: [redirectUri], webhookSecretHash: sha256(webhookSecret), active: true },
+    create: { name, clientId, secretHash: sha256(clientSecret), scopes: [...PARTNER_SCOPES], redirectUris: [redirectUri], webhookUrl, webhookSecretEnvelope: sealSecret(webhookSecret) },
+    update: { name, secretHash: sha256(clientSecret), scopes: [...PARTNER_SCOPES], redirectUris: [redirectUri], webhookUrl, webhookSecretEnvelope: sealSecret(webhookSecret), active: true },
   })
   await prisma.partnerCredential.create({ data: { applicationId: application.id, prefix: apiKey.prefix, secretHash: apiKey.hash, scopes: ['catalog:read'] } })
   const hydraClient = {

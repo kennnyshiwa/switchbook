@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { MasterSwitchStatus } from '@prisma/client'
 import { sendMasterSwitchApprovalEmail } from '@/lib/email'
 import { nanoid } from 'nanoid'
+import { resolvePartnerSubmission } from '@/lib/partner-api/moderation'
 
 export async function POST(
   req: NextRequest,
@@ -62,6 +63,7 @@ export async function POST(
         shareableId,
       }
     })
+    await resolvePartnerSubmission(id, 'APPROVED')
 
     // Create notification for submitter
     await prisma.notification.create({

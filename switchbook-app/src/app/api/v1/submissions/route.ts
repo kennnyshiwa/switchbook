@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { requirePartner } from '@/lib/partner-api/auth'
+import { auditPartner, requirePartner } from '@/lib/partner-api/auth'
 import { errorResponse, PartnerApiError } from '@/lib/partner-api/errors'
 import { proposedSwitchSchema } from '@/lib/partner-api/schemas'
 import { beginIdempotent, finishIdempotent } from '@/lib/partner-api/idempotency'
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     }
     const body = { data: { id: created.submission.id, status: created.submission.status.toLowerCase(), canonicalId: null, candidateId: created.masterSwitch.id, imageErrors } }
     await finishIdempotent(principal.applicationId, idempotency.key, idempotency.requestHash, 202, body)
+    await auditPartner(request, principal, 'submission.create', 202, { type: 'partner_submission', id: created.submission.id })
     return NextResponse.json(body, { status: 202 })
   } catch (error) { return errorResponse(error, requestId) }
 }
@@ -53,6 +54,7 @@ export async function GET(request: Request) {
     const principal = await requirePartner(request, ['submissions:read'])
     if (!principal.userId) throw new PartnerApiError(403, 'user_authorization_required', 'An OAuth user token is required')
     const data = await prisma.partnerSubmission.findMany({ where: { applicationId: principal.applicationId, userId: principal.userId }, orderBy: { updatedAt: 'desc' }, take: 100 })
+    await auditPartner(request, principal, 'submission.list', 200, { type: 'partner_submission' })
     return NextResponse.json({ data: data.map(item => ({ id: item.id, status: item.status.toLowerCase(), moderatorFeedback: item.moderatorFeedback, canonicalId: item.status === 'APPROVED' ? item.masterSwitchId : null, updatedAt: item.updatedAt })) })
   } catch (error) { return errorResponse(error, requestId) }
 }

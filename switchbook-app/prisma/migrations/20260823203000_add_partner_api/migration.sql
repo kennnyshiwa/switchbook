@@ -9,7 +9,7 @@ ADD COLUMN "revision" INTEGER NOT NULL DEFAULT 1;
 
 CREATE TABLE "PartnerApplication" (
   "id" TEXT NOT NULL, "name" TEXT NOT NULL, "clientId" TEXT NOT NULL, "secretHash" TEXT NOT NULL,
-  "scopes" TEXT[] NOT NULL, "redirectUris" TEXT[] NOT NULL, "webhookUrl" TEXT, "webhookSecretHash" TEXT,
+  "scopes" TEXT[] NOT NULL, "redirectUris" TEXT[] NOT NULL, "webhookUrl" TEXT, "webhookSecretEnvelope" TEXT,
   "active" BOOLEAN NOT NULL DEFAULT true, "rateLimitPerMinute" INTEGER NOT NULL DEFAULT 120,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "PartnerApplication_pkey" PRIMARY KEY ("id")
@@ -26,7 +26,7 @@ CREATE INDEX "PartnerCredential_applicationId_revokedAt_idx" ON "PartnerCredenti
 
 CREATE TABLE "MasterSwitchLifecycle" (
   "masterSwitchId" TEXT NOT NULL, "status" "CatalogRecordStatus" NOT NULL DEFAULT 'ACTIVE',
-  "mergedIntoId" TEXT, "removedAt" TIMESTAMP(3), "removalReason" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL,
+  "mergedIntoId" TEXT, "catalogApprovedAt" TIMESTAMP(3) NOT NULL, "removedAt" TIMESTAMP(3), "removalReason" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "MasterSwitchLifecycle_pkey" PRIMARY KEY ("masterSwitchId")
 );
 CREATE INDEX "MasterSwitchLifecycle_status_idx" ON "MasterSwitchLifecycle"("status");
@@ -42,13 +42,14 @@ CREATE INDEX "PartnerSubmission_applicationId_userId_updatedAt_idx" ON "PartnerS
 CREATE INDEX "PartnerSubmission_masterSwitchId_idx" ON "PartnerSubmission"("masterSwitchId");
 
 CREATE TABLE "PartnerCorrection" (
-  "id" TEXT NOT NULL, "applicationId" TEXT NOT NULL, "userId" TEXT NOT NULL, "masterSwitchId" TEXT NOT NULL,
+  "id" TEXT NOT NULL, "applicationId" TEXT NOT NULL, "userId" TEXT NOT NULL, "masterSwitchId" TEXT NOT NULL, "masterSwitchEditId" TEXT NOT NULL,
   "status" "PartnerSubmissionStatus" NOT NULL DEFAULT 'SUBMITTED', "changes" JSONB NOT NULL, "reason" TEXT NOT NULL,
   "moderatorFeedback" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "PartnerCorrection_pkey" PRIMARY KEY ("id")
 );
 CREATE INDEX "PartnerCorrection_applicationId_userId_updatedAt_idx" ON "PartnerCorrection"("applicationId", "userId", "updatedAt");
 CREATE INDEX "PartnerCorrection_masterSwitchId_idx" ON "PartnerCorrection"("masterSwitchId");
+CREATE UNIQUE INDEX "PartnerCorrection_masterSwitchEditId_key" ON "PartnerCorrection"("masterSwitchEditId");
 
 CREATE TABLE "PartnerIdempotencyKey" (
   "id" TEXT NOT NULL, "applicationId" TEXT NOT NULL, "key" TEXT NOT NULL, "requestHash" TEXT NOT NULL,
@@ -77,12 +78,20 @@ CREATE INDEX "PartnerWebhookEvent_status_nextAttemptAt_idx" ON "PartnerWebhookEv
 
 ALTER TABLE "PartnerCredential" ADD CONSTRAINT "PartnerCredential_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "MasterSwitchLifecycle" ADD CONSTRAINT "MasterSwitchLifecycle_masterSwitchId_fkey" FOREIGN KEY ("masterSwitchId") REFERENCES "MasterSwitch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MasterSwitchLifecycle" ADD CONSTRAINT "MasterSwitchLifecycle_mergedIntoId_fkey" FOREIGN KEY ("mergedIntoId") REFERENCES "MasterSwitch"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MasterSwitchLifecycle" ADD CONSTRAINT "MasterSwitchLifecycle_state_check" CHECK (
+  ("status" = 'MERGED' AND "mergedIntoId" IS NOT NULL AND "removedAt" IS NULL) OR
+  ("status" = 'REMOVED' AND "mergedIntoId" IS NULL AND "removedAt" IS NOT NULL) OR
+  ("status" = 'ACTIVE' AND "mergedIntoId" IS NULL AND "removedAt" IS NULL)
+);
+ALTER TABLE "MasterSwitchLifecycle" ADD CONSTRAINT "MasterSwitchLifecycle_no_self_merge_check" CHECK ("mergedIntoId" IS NULL OR "mergedIntoId" <> "masterSwitchId");
 ALTER TABLE "PartnerSubmission" ADD CONSTRAINT "PartnerSubmission_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerSubmission" ADD CONSTRAINT "PartnerSubmission_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerSubmission" ADD CONSTRAINT "PartnerSubmission_masterSwitchId_fkey" FOREIGN KEY ("masterSwitchId") REFERENCES "MasterSwitch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "PartnerCorrection" ADD CONSTRAINT "PartnerCorrection_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerCorrection" ADD CONSTRAINT "PartnerCorrection_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerCorrection" ADD CONSTRAINT "PartnerCorrection_masterSwitchId_fkey" FOREIGN KEY ("masterSwitchId") REFERENCES "MasterSwitch"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PartnerCorrection" ADD CONSTRAINT "PartnerCorrection_masterSwitchEditId_fkey" FOREIGN KEY ("masterSwitchEditId") REFERENCES "MasterSwitchEdit"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerIdempotencyKey" ADD CONSTRAINT "PartnerIdempotencyKey_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PartnerAuditEvent" ADD CONSTRAINT "PartnerAuditEvent_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "PartnerWebhookEvent" ADD CONSTRAINT "PartnerWebhookEvent_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE CASCADE ON UPDATE CASCADE;

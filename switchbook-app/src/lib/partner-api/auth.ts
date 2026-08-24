@@ -14,6 +14,10 @@ export type PartnerPrincipal = {
   rateLimit: number
 }
 
+export function missingPartnerScopes(granted: Set<string>, required: PartnerScope[]) {
+  return required.filter(scope => !granted.has(scope))
+}
+
 let jwks: ReturnType<typeof createRemoteJWKSet> | undefined
 
 function bearer(request: Request) {
@@ -71,7 +75,7 @@ export async function requirePartner(request: Request, required: PartnerScope[])
     throw new PartnerApiError(401, 'unauthorized', 'Provide an application key or OAuth bearer token')
   }
 
-  const missing = required.filter(scope => !principal.scopes.has(scope))
+  const missing = missingPartnerScopes(principal.scopes, required)
   if (missing.length) throw new PartnerApiError(403, 'insufficient_scope', `Missing scope: ${missing.join(', ')}`)
 
   const limit = await consumeRateLimit(principal.applicationId, principal.rateLimit)
@@ -92,5 +96,6 @@ export async function auditPartner(request: Request, principal: PartnerPrincipal
     statusCode,
     ipHash: forwarded ? sha256(`${process.env.AUDIT_IP_SALT || 'switchbook'}:${forwarded}`) : null,
   }}).catch(error => console.error('[partner-audit]', requestId, error))
+  console.info(JSON.stringify({ event: 'partner_api_request', requestId, applicationId: principal?.applicationId, userId: principal?.userId, action, statusCode, resource }))
   return requestId
 }

@@ -203,7 +203,7 @@ model Account {
 }
 
 model MasterSwitch {
-  id                     String                 @id @default(cuid())
+  id                     String                  @id @default(cuid())
   name                   String
   chineseName            String?
   type                   SwitchType?
@@ -234,28 +234,28 @@ model MasterSwitch {
   submittedById          String
   approvedById           String?
   approvedAt             DateTime?
-  status                 MasterSwitchStatus     @default(PENDING)
+  status                 MasterSwitchStatus      @default(PENDING)
   rejectionReason        String?
-  version                Int                    @default(1)
-  viewCount              Int                    @default(0)
-  lastModifiedAt         DateTime               @default(now())
+  version                Int                     @default(1)
+  viewCount              Int                     @default(0)
+  lastModifiedAt         DateTime                @default(now())
   originalSubmissionData Json?
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
   primaryImageId         String?
-  doubleStage            Boolean                @default(false)
-  progressiveSpring      Boolean                @default(false)
+  doubleStage            Boolean                 @default(false)
+  progressiveSpring      Boolean                 @default(false)
   tactileForce           Float?
   clickType              ClickType?
   tactilePosition        Float?
-  shareableId            String?                @unique
+  shareableId            String?                 @unique
   bottomHousingColor     String?
   markings               String?
   stemColor              String?
   stemShape              String?
   topHousingColor        String?
-  approvedBy             User?                  @relation("ApprovedBy", fields: [approvedById], references: [id])
-  submittedBy            User                   @relation("SubmittedBy", fields: [submittedById], references: [id])
+  approvedBy             User?                   @relation("ApprovedBy", fields: [approvedById], references: [id])
+  submittedBy            User                    @relation("SubmittedBy", fields: [submittedById], references: [id])
   edits                  MasterSwitchEdit[]
   views                  MasterSwitchView[]
   userSwitches           Switch[]
@@ -264,6 +264,7 @@ model MasterSwitch {
   lifecycle              MasterSwitchLifecycle?
   partnerSubmissions     PartnerSubmission[]
   partnerCorrections     PartnerCorrection[]
+  lifecycleMergeTargets  MasterSwitchLifecycle[] @relation("LifecycleMergedInto")
 
   @@index([name, manufacturer])
   @@index([status])
@@ -272,19 +273,20 @@ model MasterSwitch {
 }
 
 model MasterSwitchEdit {
-  id              String             @id @default(cuid())
-  masterSwitchId  String
-  editedById      String
-  previousData    Json
-  newData         Json
-  changedFields   Json
-  editedAt        DateTime           @default(now())
-  approvedById    String?
-  status          MasterSwitchStatus @default(PENDING)
-  rejectionReason String?
-  approvedBy      User?              @relation("ApprovedEditBy", fields: [approvedById], references: [id])
-  editedBy        User               @relation("EditedBy", fields: [editedById], references: [id])
-  masterSwitch    MasterSwitch       @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  id                String             @id @default(cuid())
+  masterSwitchId    String
+  editedById        String
+  previousData      Json
+  newData           Json
+  changedFields     Json
+  editedAt          DateTime           @default(now())
+  approvedById      String?
+  status            MasterSwitchStatus @default(PENDING)
+  rejectionReason   String?
+  approvedBy        User?              @relation("ApprovedEditBy", fields: [approvedById], references: [id])
+  editedBy          User               @relation("EditedBy", fields: [editedById], references: [id])
+  masterSwitch      MasterSwitch       @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  partnerCorrection PartnerCorrection?
 
   @@index([masterSwitchId])
   @@index([editedById])
@@ -359,24 +361,24 @@ model SwitchImage {
 }
 
 model PartnerApplication {
-  id                 String                  @id @default(cuid())
-  name               String
-  clientId           String                  @unique
-  secretHash         String
-  scopes             String[]
-  redirectUris       String[]
-  webhookUrl         String?
-  webhookSecretHash  String?
-  active             Boolean                 @default(true)
-  rateLimitPerMinute Int                     @default(120)
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  credentials        PartnerCredential[]
-  auditEvents        PartnerAuditEvent[]
-  idempotencyKeys    PartnerIdempotencyKey[]
-  webhookEvents      PartnerWebhookEvent[]
-  submissions        PartnerSubmission[]
-  corrections        PartnerCorrection[]
+  id                    String                  @id @default(cuid())
+  name                  String
+  clientId              String                  @unique
+  secretHash            String
+  scopes                String[]
+  redirectUris          String[]
+  webhookUrl            String?
+  webhookSecretEnvelope String?
+  active                Boolean                 @default(true)
+  rateLimitPerMinute    Int                     @default(120)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  credentials           PartnerCredential[]
+  auditEvents           PartnerAuditEvent[]
+  idempotencyKeys       PartnerIdempotencyKey[]
+  webhookEvents         PartnerWebhookEvent[]
+  submissions           PartnerSubmission[]
+  corrections           PartnerCorrection[]
 }
 
 model PartnerCredential {
@@ -395,13 +397,15 @@ model PartnerCredential {
 }
 
 model MasterSwitchLifecycle {
-  masterSwitchId String              @id
-  status         CatalogRecordStatus @default(ACTIVE)
-  mergedIntoId   String?
-  removedAt      DateTime?
-  removalReason  String?
-  updatedAt      DateTime            @updatedAt
-  masterSwitch   MasterSwitch        @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  masterSwitchId    String              @id
+  status            CatalogRecordStatus @default(ACTIVE)
+  mergedIntoId      String?
+  catalogApprovedAt DateTime
+  removedAt         DateTime?
+  removalReason     String?
+  updatedAt         DateTime            @updatedAt
+  masterSwitch      MasterSwitch        @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  mergedInto        MasterSwitch?       @relation("LifecycleMergedInto", fields: [mergedIntoId], references: [id], onDelete: Restrict)
 
   @@index([status])
   @@index([mergedIntoId])
@@ -426,19 +430,21 @@ model PartnerSubmission {
 }
 
 model PartnerCorrection {
-  id                String                  @id @default(cuid())
-  applicationId     String
-  userId            String
-  masterSwitchId    String
-  status            PartnerSubmissionStatus @default(SUBMITTED)
-  changes           Json
-  reason            String
-  moderatorFeedback String?
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  application       PartnerApplication      @relation(fields: [applicationId], references: [id], onDelete: Restrict)
-  user              User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  masterSwitch      MasterSwitch            @relation(fields: [masterSwitchId], references: [id], onDelete: Restrict)
+  id                 String                  @id @default(cuid())
+  applicationId      String
+  userId             String
+  masterSwitchId     String
+  masterSwitchEditId String                  @unique
+  status             PartnerSubmissionStatus @default(SUBMITTED)
+  changes            Json
+  reason             String
+  moderatorFeedback  String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  application        PartnerApplication      @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  masterSwitch       MasterSwitch            @relation(fields: [masterSwitchId], references: [id], onDelete: Restrict)
+  masterSwitchEdit   MasterSwitchEdit        @relation(fields: [masterSwitchEditId], references: [id], onDelete: Restrict)
 
   @@index([applicationId, userId, updatedAt])
   @@index([masterSwitchId])

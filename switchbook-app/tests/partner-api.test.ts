@@ -4,6 +4,16 @@ import { issuePartnerKey, secureEqualHash } from '../src/lib/partner-api/crypto'
 import { proposedSwitchSchema } from '../src/lib/partner-api/schemas'
 import { validateImageUrl } from '../src/lib/image-security'
 import { switchesDbSearchUrl } from '../src/lib/partner-api/config'
+import { openSecret, sealSecret } from '../src/lib/partner-api/crypto'
+import { catalogDisposition } from '../src/lib/partner-api/catalog'
+import { assertNoMergeCycle } from '../src/lib/partner-api/lifecycle'
+import { PartnerApiError } from '../src/lib/partner-api/errors'
+import { assertSafeWebhookUrl } from '../src/lib/partner-api/outbound'
+import { cacheableJson } from '../src/lib/partner-api/http'
+import { readFileSync } from 'node:fs'
+import { classifyIdempotency } from '../src/lib/partner-api/idempotency'
+import { missingPartnerScopes } from '../src/lib/partner-api/auth'
+import { createHmac } from 'node:crypto'
 
 test('partner keys are prefixed, random, and hash-verifiable', () => {
   const first = issuePartnerKey()
@@ -29,4 +39,64 @@ test('image URL validation blocks local and insecure sources', () => {
 
 test('SwitchesDB links carry encoded manufacturer and model search', () => {
   assert.equal(switchesDbSearchUrl('Oil King', 'Gateron'), 'https://switchesdb.switchbook.app/?search=Gateron%20Oil%20King')
+})
+
+test('pending/rejected records never become visible merely by having lifecycle metadata', () => {
+  const provenance = { status: 'ACTIVE', catalogApprovedAt: new Date() }
+  assert.equal(catalogDisposition('PENDING', provenance), 'NOT_FOUND')
+  assert.equal(catalogDisposition('REJECTED', provenance), 'NOT_FOUND')
+  assert.equal(catalogDisposition('APPROVED', null), 'ACTIVE')
+  assert.equal(catalogDisposition('REJECTED', { ...provenance, status: 'MERGED' }), 'MERGED')
+})
+
+test('webhook secrets are authenticated encrypted envelopes and fail under the wrong key', () => {
+  process.env.PARTNER_SECRET_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64')
+  const envelope = sealSecret('raw-shared-secret')
+  assert.notEqual(envelope, 'raw-shared-secret')
+  assert.equal(openSecret(envelope), 'raw-shared-secret')
+  const payload = '1700000000.{"event":"submission.approved"}'
+  const expected = createHmac('sha256', 'raw-shared-secret').update(payload).digest('hex')
+  assert.equal(createHmac('sha256', openSecret(envelope)).update(payload).digest('hex'), expected)
+  process.env.PARTNER_SECRET_ENCRYPTION_KEY = Buffer.alloc(32, 8).toString('base64')
+  assert.throws(() => openSecret(envelope))
+})
+
+test('merge invariant rejects self and indirect cycles', async () => {
+  await assert.rejects(() => assertNoMergeCycle('a', 'a', async () => null), (error: unknown) => error instanceof PartnerApiError && error.code === 'lifecycle_cycle')
+  const chain: Record<string, string | null> = { b: 'c', c: 'a' }
+  await assert.rejects(() => assertNoMergeCycle('a', 'b', async id => chain[id] || null), (error: unknown) => error instanceof PartnerApiError && error.code === 'lifecycle_cycle')
+})
+
+test('webhook validator rejects HTTP, embedded credentials, and non-443 ports before fetch', async () => {
+  await assert.rejects(() => assertSafeWebhookUrl('http://example.com/hook'))
+  await assert.rejects(() => assertSafeWebhookUrl('https://user:pass@example.com/hook'))
+  await assert.rejects(() => assertSafeWebhookUrl('https://example.com:8443/hook'))
+  await assert.rejects(() => assertSafeWebhookUrl('https://127.0.0.1/hook'))
+})
+
+test('scope enforcement reports every missing permission', () => {
+  assert.deepEqual(missingPartnerScopes(new Set(['catalog:read']), ['catalog:read', 'submissions:write', 'corrections:write']), ['submissions:write', 'corrections:write'])
+})
+
+test('conditional JSON returns 304 for matching ETag', async () => {
+  const first = cacheableJson(new Request('https://switchbook.app/api/v1/catalog/switches'), { data: [] }, new Date('2026-01-01'))
+  const etag = first.headers.get('etag')!
+  const second = cacheableJson(new Request('https://switchbook.app/api/v1/catalog/switches', { headers: { 'if-none-match': etag } }), { data: [] }, new Date('2026-01-01'))
+  assert.equal(second.status, 304)
+  assert.equal(second.headers.get('etag'), etag)
+})
+
+test('Hydra and nginx jointly mandate PKCE S256 and publish access-token keys', () => {
+  const hydra = readFileSync(new URL('../ops/hydra/hydra.yml', import.meta.url), 'utf8')
+  const nginx = readFileSync(new URL('../nginx/conf.d/default.conf', import.meta.url), 'utf8')
+  assert.match(hydra, /pkce:\s+enforced: true/)
+  assert.match(hydra, /hydra\.jwt\.access-token/)
+  assert.match(nginx, /code_challenge_method != "S256"/)
+  assert.match(nginx, /arg_code_challenge = ""/)
+})
+
+test('idempotency conflicts and in-flight reservations cannot replay side effects', () => {
+  assert.throws(() => classifyIdempotency({ requestHash: 'a', responseStatus: 0, responseBody: {} }, 'b'), (error: unknown) => error instanceof PartnerApiError && error.code === 'idempotency_conflict')
+  assert.throws(() => classifyIdempotency({ requestHash: 'a', responseStatus: 0, responseBody: {} }, 'a'), (error: unknown) => error instanceof PartnerApiError && error.code === 'request_in_progress')
+  assert.deepEqual(classifyIdempotency({ requestHash: 'a', responseStatus: 202, responseBody: { id: 'one' } }, 'a'), { status: 202, body: { id: 'one' } })
 })

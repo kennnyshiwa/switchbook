@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { MasterSwitchStatus } from '@prisma/client'
 import { z } from 'zod'
 import { sendMasterSwitchRejectionEmail } from '@/lib/email'
+import { resolvePartnerSubmission } from '@/lib/partner-api/moderation'
 
 const rejectSchema = z.object({
   reason: z.string().min(1, 'Rejection reason is required')
@@ -64,6 +65,7 @@ export async function POST(
         approvedAt: new Date(),
       }
     })
+    await resolvePartnerSubmission(id, 'REJECTED', reason)
 
     // Create notification for submitter
     await prisma.notification.create({

@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { sendEditSuggestionRejectionEmail } from '@/lib/email'
+import { resolvePartnerCorrection } from '@/lib/partner-api/moderation'
 
 const rejectSchema = z.object({
   reason: z.string().min(1, 'Rejection reason is required')
@@ -63,6 +64,7 @@ export async function POST(
         approvedById: session.user.id
       }
     })
+    await resolvePartnerCorrection(id, 'REJECTED', reason)
 
     // Create notification for the editor
     await prisma.notification.create({

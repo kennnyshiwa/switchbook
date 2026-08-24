@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendEditSuggestionApprovalEmail } from '@/lib/email'
+import { resolvePartnerCorrection } from '@/lib/partner-api/moderation'
 
 export async function POST(
   req: NextRequest,
@@ -93,6 +94,7 @@ export async function POST(
         approvedById: session.user.id
       }
     })
+    await resolvePartnerCorrection(id, 'APPROVED')
 
     // Create notification for the editor
     await prisma.notification.create({
