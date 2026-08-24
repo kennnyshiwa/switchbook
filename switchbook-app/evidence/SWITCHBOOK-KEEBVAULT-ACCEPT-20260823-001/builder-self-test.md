@@ -17,14 +17,13 @@ Date: 2026-08-23 (America/New_York)
 - Added `/developers` and `/developers/sandbox`; the sandbox keeps a user-entered key in page memory and sends it only to the same-origin catalog API.
 - Added legacy, structured, and non-JSON client error extraction and used it in the normal switch submission, photo upload, and correction UI.
 - Added RFC weak comparison for `If-None-Match`, including comma-separated validators.
-- Provisioned one active KeebVault partner application, one active `catalog:read` application credential, and one Hydra authorization-code/refresh client.
-- Exact redirect URI: `https://keebvault.app/oauth/switchbook/callback`.
-- Raw values are absent from source/evidence. One-time handoff: `/Users/kennnyshiwa/.openclaw/secure-handoffs/SWITCHBOOK-KEEBVAULT-ACCEPT-20260823-001.json` (`0600`; containing directory `0700`).
+- A first provisioning attempt used an inferred `keebvault.app` callback. Ownership/implementation could not be established, so it was rejected as non-authoritative and fully rolled back: application disabled, one credential revoked, Hydra client deletion returned 204, and subsequent Hydra lookup returned 404.
+- Raw values are absent from source/evidence. The revoked one-time output is quarantined at `/Users/kennnyshiwa/.openclaw/secure-handoffs/quarantine/SWITCHBOOK-KEEBVAULT-ACCEPT-20260823-001.revoked.json`, mode `000` inside a `0700` directory. It must not be handed off or reactivated.
 - Revocation controls: partner application `active=false`, credential `revokedAt`, Hydra client delete/secret rotation, and OAuth `/oauth2/revoke`.
 
 ## Evidence summary
 
-- Live provisioned key: search 200 with two results; single 200; ordered batch 200 with `ACTIVE` and `NOT_FOUND`; missing key 401 with `code`, `message`, and `requestId`.
+- Before immediate revocation, the isolated key proved search 200 with two results; single 200; ordered batch 200 with `ACTIVE` and `NOT_FOUND`; missing key 401 with `code`, `message`, and `requestId`. The key is no longer active.
 - ETag production issue reproduced; repair unit test accepts CDN-weakened and comma-separated validators. Post-release production 304 remains an Ops/QA verification item.
 - Full test suite: 33 passed, 0 failed.
 - TypeScript: pass (`tsc --noEmit`).
@@ -36,4 +35,4 @@ Date: 2026-08-23 (America/New_York)
 
 ## Remaining release boundary
 
-Ops must release only through CI/Compose, verify rollback, configure DNS/TLS for `sandbox.switchbook.app` (or formally use the same-origin `/developers/sandbox` URL), and demonstrate the repaired external 304 on the released SHA. Independent production acceptance belongs to QA.
+Authoritative KeebVault-owned OAuth callback evidence is required before provisioning. Ops must release only through CI/Compose, verify rollback, configure DNS/TLS for `sandbox.switchbook.app` (or formally use the same-origin `/developers/sandbox` URL), and demonstrate the repaired external 304 on the released SHA. Independent production acceptance belongs to QA.
