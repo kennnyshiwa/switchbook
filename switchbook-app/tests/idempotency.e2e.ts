@@ -3,6 +3,8 @@ import { prisma } from '../src/lib/prisma'
 import { runIdempotentTransaction, storedPartnerError } from '../src/lib/partner-api/idempotency'
 import { PartnerApiError } from '../src/lib/partner-api/errors'
 import { associateSubmissionPhotos } from '../src/lib/partner-api/submission-photos'
+import { masterSwitchOrderBy } from '../src/lib/master-switch-sort'
+import { resolvePartnerCorrection, resolvePartnerSubmission } from '../src/lib/partner-api/moderation'
 
 async function main() {
 const application = await prisma.partnerApplication.create({ data: {
@@ -81,9 +83,49 @@ assert.equal(duplicateJob.status, 'SUCCEEDED')
 assert.equal(duplicateJob.switchImageId, linked[0].id)
 assert.equal(cleanupCalls, 1)
 assert.equal(generated.has('e2e/front-copy.png'), false)
+
+await prisma.$executeRaw`UPDATE "MasterSwitch" SET "status" = 'APPROVED' WHERE "id" = ${masterId}`
+const duplicateCandidates = await prisma.$queryRaw<Array<{ id: string }>>`SELECT "id" FROM "MasterSwitch" WHERE "status" = 'APPROVED' AND lower("manufacturer") = lower('E2E') AND "name" ILIKE '%Photo E2E%'`
+assert.deepEqual(duplicateCandidates.map(record => record.id), [masterId])
+await resolvePartnerSubmission(masterId, 'APPROVED')
+const resolvedSubmissions = await prisma.partnerSubmission.findMany({ where: { id: { in: [submission.id, duplicateSubmission.id] } }, orderBy: { id: 'asc' } })
+assert.ok(resolvedSubmissions.every(item => item.status === 'APPROVED' && item.masterSwitchId === masterId))
+
+const edit = await prisma.masterSwitchEdit.create({ data: {
+  masterSwitchId: masterId, editedById: userId, previousData: { name: 'Photo E2E' },
+  newData: { name: 'Photo E2E corrected', editReason: 'E2E correction reason' }, changedFields: ['name'], status: 'PENDING',
+} })
+const correction = await prisma.partnerCorrection.create({ data: {
+  applicationId: application.id, userId, masterSwitchId: masterId, masterSwitchEditId: edit.id,
+  changes: { name: 'Photo E2E corrected' }, reason: 'E2E correction reason', status: 'SUBMITTED',
+} })
+await resolvePartnerCorrection(edit.id, 'APPROVED')
+const resolvedCorrection = await prisma.partnerCorrection.findUniqueOrThrow({ where: { id: correction.id } })
+assert.equal(resolvedCorrection.status, 'APPROVED')
+assert.equal(resolvedCorrection.masterSwitchId, masterId)
+
+const sortIds = Array.from({ length: 7 }, (_, index) => `sort-e2e-${index}`)
+for (const [index, id] of sortIds.entries()) {
+  await prisma.$executeRaw`INSERT INTO "MasterSwitch" ("id", "name", "manufacturer", "submittedById", "status", "version", "viewCount", "lastModifiedAt", "createdAt", "updatedAt") VALUES (${id}, ${`Sort E2E ${index}`}, 'E2E', ${userId}, 'APPROVED', 1, 100, '2026-01-01', '2026-01-01', '2026-01-01')`
+  for (let copy = 0; copy < index % 3; copy++) {
+    await prisma.$executeRaw`INSERT INTO "Switch" ("id", "name", "manufacturer", "userId", "masterSwitchId", "createdAt", "updatedAt") VALUES (${`sort-e2e-user-${index}-${copy}`}, ${`Owned ${index}-${copy}`}, 'E2E', ${userId}, ${id}, NOW(), NOW())`
+  }
+}
+for (const sort of ['popular', 'userCount'] as const) {
+  const orderBy = masterSwitchOrderBy(sort, 'desc')
+  const full = await prisma.masterSwitch.findMany({ where: { id: { in: sortIds } }, orderBy, select: { id: true } })
+  const pages = await Promise.all([0, 3, 6].map(skip => prisma.masterSwitch.findMany({
+    where: { id: { in: sortIds } }, orderBy, skip, take: 3, select: { id: true },
+  })))
+  const pagedIds = pages.flat().map(row => row.id)
+  assert.deepEqual(pagedIds, full.map(row => row.id), `${sort} pagination must be stable and complete`)
+  assert.equal(new Set(pagedIds).size, sortIds.length, `${sort} pagination must not duplicate rows`)
+}
 console.log('Partner idempotency E2E PASS: rollback after injected fault, exactly-once concurrency, exact deterministic replay.')
 console.log('Partner photo E2E PASS: six concurrent replays ingested two remote images from one source page exactly once with no orphan.')
 console.log('Partner photo checksum E2E PASS: a different remote URL with identical bytes reused the image and removed the redundant upload.')
+console.log('Master switch sort E2E PASS: tied popular/userCount rows paginate in stable order without duplicates or omissions.')
+console.log('Partner moderation E2E PASS: duplicate lookup, submission approval/canonical linkage, and correction approval linkage verified.')
 
 }
 

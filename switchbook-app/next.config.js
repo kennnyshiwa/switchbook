@@ -5,7 +5,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**', // Allow any HTTPS domain for user-uploaded images
+        hostname: 'switchbook.app',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.switchbook.app',
       },
       {
         protocol: 'http',

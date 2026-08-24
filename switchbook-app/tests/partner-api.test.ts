@@ -174,6 +174,35 @@ test('published partner OpenAPI is parser-valid OpenAPI 3.1', async () => {
   assert.ok(document.paths?.['/submissions'])
 })
 
+test('OpenAPI response and security matrices match reachable partner route behavior', async () => {
+  const document = await SwaggerParser.dereference(new URL('../public/openapi/partner-v1.yaml', import.meta.url).pathname) as any
+  const expected: Record<string, Record<string, string[]>> = {
+    '/catalog/switches': { get: ['200','304','400','401','403','429','500'] },
+    '/catalog/switches/{id}': { get: ['200','304','401','403','404','429','500'] },
+    '/catalog/switches/batch': { post: ['200','304','400','401','403','429','500'] },
+    '/profile': { get: ['200','401','403','404','429','500'] },
+    '/submissions': { get: ['200','401','403','429','500'], post: ['202','400','401','403','409','429','500'] },
+    '/submissions/{id}': { get: ['200','401','403','404','429','500'] },
+    '/catalog/switches/{id}/corrections': { post: ['202','400','401','403','404','409','429','500'] },
+    '/corrections': { get: ['200','401','403','429','500'] },
+    '/migration/matches': { post: ['200','400','401','403','429','500'] },
+  }
+  for (const [path, methods] of Object.entries(expected)) for (const [method, statuses] of Object.entries(methods)) {
+    assert.deepEqual(Object.keys(document.paths[path][method].responses).sort(), statuses.sort(), `${method.toUpperCase()} ${path}`)
+  }
+  assert.deepEqual(document.paths['/migration/matches'].post.security, [
+    { applicationKey: [] }, { oauth: ['catalog:read'] },
+  ])
+})
+
+test('Next image optimizer is host-allowlisted and runtime Sharp is overridden to the patched line', () => {
+  const config = readFileSync(new URL('../next.config.js', import.meta.url), 'utf8')
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  assert.doesNotMatch(config, /hostname:\s*['"]\*\*['"]/)
+  assert.match(config, /hostname:\s*'switchbook\.app'/)
+  assert.equal(pkg.overrides.sharp, '^0.35.3')
+})
+
 test('partner runbook separates temporary SwitchBook acceptance from partner handoff', () => {
   const runbook = readFileSync(new URL('../docs/partner-api-runbook.md', import.meta.url), 'utf8')
   assert.match(runbook, /https:\/\/switchbook\.app\/developers\/sandbox/)

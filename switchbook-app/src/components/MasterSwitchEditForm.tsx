@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { getMaterials } from '@/utils/materials';
 import { getStemShapes } from '@/utils/stemShapes';
 import { IMAGE_CONFIG } from '@/lib/image-config';
+import { apiErrorMessage, responseJsonBody } from '@/lib/client-api-error';
 
 interface SwitchImage {
   id: string;
@@ -320,10 +321,11 @@ export function MasterSwitchEditForm({ currentData, onSubmit, isSubmitting }: Ma
         xhr.send(formData);
       });
 
-      const payload = await response.json();
+      const payload = await responseJsonBody(response) as { error?: string; url?: string } | null;
       if (!response.ok) {
-        throw new Error(payload.error || 'Upload failed');
+        throw new Error(apiErrorMessage(payload, 'Upload failed'));
       }
+      if (!payload?.url) throw new Error('Upload response was invalid');
 
       clearErrors('imageUrl');
       handleSuggestedImageUpdate(payload.url);

@@ -101,7 +101,6 @@ export default function SuggestEditPage({ params }: { params: Promise<{ id: stri
         throw new Error(await responseErrorMessage(response, 'Failed to submit edit suggestion'));
       }
 
-      await response.json();
       router.push(`/dashboard/submissions?editSubmitted=true`);
     } catch (error) {
       console.error('Submission error:', error);

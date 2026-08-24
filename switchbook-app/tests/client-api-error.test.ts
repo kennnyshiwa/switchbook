@@ -17,3 +17,12 @@ test('main submission call site uses safe response parsing', () => {
   assert.match(source, /const responseData = await responseJsonBody\(response\)/)
   assert.doesNotMatch(source, /const responseData = await response\.json\(\)/)
 })
+
+test('normal UI edit and correction call sites tolerate non-JSON responses', () => {
+  const page = readFileSync(new URL('../src/app/switches/[id]/suggest-edit/page.tsx', import.meta.url), 'utf8')
+  const form = readFileSync(new URL('../src/components/MasterSwitchEditForm.tsx', import.meta.url), 'utf8')
+  assert.match(page, /responseErrorMessage\(response, 'Failed to submit edit suggestion'\)/)
+  assert.doesNotMatch(page, /await response\.json\(\);\s*router\.push/)
+  assert.match(form, /responseJsonBody\(response\)/)
+  assert.match(form, /apiErrorMessage\(payload, 'Upload failed'\)/)
+})
