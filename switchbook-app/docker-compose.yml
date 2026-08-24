@@ -70,7 +70,7 @@ services:
       - uploads:/app/public/uploads
     command: >
       sh -c "
-        npx prisma migrate deploy &&
+        prisma migrate deploy &&
         node server.js
       "
 

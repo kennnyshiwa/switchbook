@@ -34,11 +34,16 @@ RUN adduser -S nextjs -u 1001
 # Install dependencies for runtime
 RUN apk add --no-cache libc6-compat
 
+# The container runs database migrations before startup. Keep the CLI pinned
+# and baked into the image so production never resolves a registry "latest".
+RUN npm install --global prisma@6.19.0 && \
+    prisma --version | grep -Eq '^prisma +: 6\.19\.0$'
+
 # Copy built application
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
+COPY --chown=nextjs:nodejs --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 
 # Create uploads directory and cache directories
