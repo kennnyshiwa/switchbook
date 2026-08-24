@@ -9,23 +9,39 @@ import SwitchScoresButton from '@/components/SwitchScoresButton'
 
 export function CanonicalShareImage({ share }: { share: ShareModel }) {
   const [index, setIndex] = useState(0)
-  const [failed, setFailed] = useState(false)
+  const [failedIndexes, setFailedIndexes] = useState<Set<number>>(() => new Set())
   const image = share.images[index]
-  const showImage = image && !failed
+  const showImage = image && !failedIndexes.has(index)
+
+  const handleError = () => {
+    const failed = new Set(failedIndexes).add(index)
+    const next = share.images.findIndex((_, candidate) => !failed.has(candidate))
+    setFailedIndexes(failed)
+    if (next >= 0) setIndex(next)
+  }
+
+  const selectImage = (itemIndex: number) => {
+    setFailedIndexes(previous => {
+      const retryable = new Set(previous)
+      retryable.delete(itemIndex)
+      return retryable
+    })
+    setIndex(itemIndex)
+  }
 
   return (
     <div data-testid={showImage ? 'share-image' : 'share-image-fallback'} className="relative h-96 w-full overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
       {showImage ? (
-        <img src={image.url} alt={image.alt || `${share.manufacturer ? `${share.manufacturer} ` : ''}${share.name}`} className="h-full w-full object-contain" onError={() => setFailed(true)} />
+        <img src={image.url} alt={image.alt || `${share.manufacturer ? `${share.manufacturer} ` : ''}${share.name}`} className="h-full w-full object-contain" onError={handleError} />
       ) : (
         <div className="px-6 text-center text-gray-500 dark:text-gray-400" aria-label="No switch image available">
           <div className="mx-auto mb-3 h-16 w-16 rounded-full border-4 border-current opacity-30" />
           No image available
         </div>
       )}
-      {share.images.length > 1 && showImage && (
+      {share.images.length > 1 && failedIndexes.size < share.images.length && (
         <div className="absolute inset-x-0 bottom-3 flex justify-center gap-2">
-          {share.images.map((item, itemIndex) => <button key={item.id || item.url} aria-label={`Show image ${itemIndex + 1}`} onClick={() => { setIndex(itemIndex); setFailed(false) }} className={`h-2.5 w-2.5 rounded-full ${itemIndex === index ? 'bg-blue-600' : 'bg-white/80'}`} />)}
+          {share.images.map((item, itemIndex) => <button key={item.id || item.url} aria-label={`${failedIndexes.has(itemIndex) ? 'Retry' : 'Show'} image ${itemIndex + 1}`} onClick={() => selectImage(itemIndex)} className={`h-2.5 w-2.5 rounded-full ${itemIndex === index && !failedIndexes.has(itemIndex) ? 'bg-blue-600' : failedIndexes.has(itemIndex) ? 'bg-red-400' : 'bg-white/80'}`} />)}
         </div>
       )}
     </div>

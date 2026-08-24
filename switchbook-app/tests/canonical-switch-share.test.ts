@@ -34,6 +34,18 @@ test('sparse records omit unavailable fields consistently and preserve zero valu
   assert.deepEqual(master.sections, [{ title: 'Force', stats: [{ key: 'actuationForce', label: 'Actuation Force', value: '0g' }] }])
 })
 
+test('available false booleans render No while unavailable booleans remain omitted', () => {
+  const share = serializeCanonicalSwitchShare('user', { name: 'Boolean', doubleStage: false, progressiveSpring: true, isModified: false })
+  assert.deepEqual(share.sections.find(section => section.title === 'Spring')?.stats, [
+    { key: 'doubleStage', label: 'Double-stage Spring', value: 'No' },
+    { key: 'progressiveSpring', label: 'Progressive Spring', value: 'Yes' },
+  ])
+  assert.deepEqual(share.personalSections[0].stats, [{ key: 'isModified', label: 'Modified', value: 'No' }])
+  const unavailable = serializeCanonicalSwitchShare('user', { name: 'Unavailable' })
+  assert.equal(unavailable.sections.some(section => section.title === 'Spring'), false)
+  assert.equal(unavailable.personalSections.length, 0)
+})
+
 test('purple M badge is based only on source kind, never a user link', () => {
   const master = serializeCanonicalSwitchShare('master', complete)
   const linkedUser = serializeCanonicalSwitchShare('user', { ...complete, masterSwitchId: 'master-id' })

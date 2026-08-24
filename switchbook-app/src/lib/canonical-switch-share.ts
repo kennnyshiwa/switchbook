@@ -74,11 +74,12 @@ const SECTIONS: Array<[title: string, definitions: StatDefinition[]]> = [
 ]
 
 function present(value: unknown): boolean {
-  return value !== null && value !== undefined && value !== '' && value !== false
+  return value !== null && value !== undefined && value !== ''
 }
 
 function display(value: unknown, unit?: string): string {
   if (value === true) return 'Yes'
+  if (value === false) return 'No'
   const text = String(value)
   if (!unit || text.toLowerCase().endsWith(unit.toLowerCase())) return text
   return `${text}${unit}`
@@ -111,7 +112,7 @@ export function serializeCanonicalSwitchShare(sourceKind: ShareSourceKind, recor
     ? [
         ['dateObtained', 'Date Obtained', record.dateObtained ? new Date(String(record.dateObtained)).toLocaleDateString('en-US', { timeZone: 'UTC' }) : null],
         ['personalTags', 'Personal Tags', Array.isArray(record.personalTags) && record.personalTags.length ? record.personalTags.join(', ') : null],
-        ['isModified', 'Modified', record.isModified ? 'Yes' : null],
+        ['isModified', 'Modified', Object.prototype.hasOwnProperty.call(record, 'isModified') && typeof record.isModified === 'boolean' ? display(record.isModified) : null],
       ].filter((entry): entry is [string, string, string] => Boolean(entry[2])).map(([key, label, value]) => ({ key, label, value }))
     : []
 
