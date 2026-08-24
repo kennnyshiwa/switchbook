@@ -32,11 +32,11 @@ export async function POST(request: Request) {
         applicationId: partner.applicationId, userId: partner.userId!, masterSwitchId: masterSwitch.id,
         payload: parsed.data as unknown as Prisma.InputJsonValue, status: 'SUBMITTED',
       } })
-      await tx.partnerSubmissionPhoto.createMany({ data: photos.map((photo, order) => ({ submissionId: submission.id, sourceUrl: photo.sourceUrl || photo.url, order })), skipDuplicates: true })
+      await tx.partnerSubmissionPhoto.createMany({ data: photos.map((photo, order) => ({ submissionId: submission.id, remoteUrl: photo.url, sourceUrl: photo.sourceUrl, order })), skipDuplicates: true })
       return { status: 202, body: { data: {
         id: submission.id, status: submission.status.toLowerCase(), canonicalId: null, candidateId: masterSwitch.id,
         photosStatus: photos.length ? 'processing' : 'complete',
-        photos: photos.map(photo => ({ sourceUrl: photo.sourceUrl || photo.url, status: 'pending', error: null })),
+        photos: photos.map(photo => ({ remoteUrl: photo.url, sourceUrl: photo.sourceUrl || null, status: 'pending', error: null })),
       } } }
     })
     const responseData = (result.body as { data?: { candidateId?: string } }).data

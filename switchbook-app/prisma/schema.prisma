@@ -334,30 +334,33 @@ model DismissedNotification {
 }
 
 model SwitchImage {
-  id                     String                  @id @default(cuid())
-  switchId               String?
-  masterSwitchId         String?
-  url                    String
-  type                   ImageType               @default(UPLOADED)
-  order                  Int                     @default(0)
-  caption                String?
-  width                  Int?
-  height                 Int?
-  size                   Int?
-  uploadedAt             DateTime                @default(now())
-  altText                String?
-  sourceUrl              String?
-  sourceName             String?
-  license                String?
-  attribution            String?
-  checksumSha256         String?
-  revision               Int                     @default(1)
-  masterSwitch           MasterSwitch?           @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
-  switch                 Switch?                 @relation(fields: [switchId], references: [id], onDelete: SetNull)
-  partnerSubmissionPhoto PartnerSubmissionPhoto?
+  id                      String                   @id @default(cuid())
+  switchId                String?
+  masterSwitchId          String?
+  url                     String
+  type                    ImageType                @default(UPLOADED)
+  order                   Int                      @default(0)
+  caption                 String?
+  width                   Int?
+  height                  Int?
+  size                    Int?
+  uploadedAt              DateTime                 @default(now())
+  altText                 String?
+  remoteUrl               String?
+  sourceUrl               String?
+  sourceName              String?
+  license                 String?
+  attribution             String?
+  checksumSha256          String?
+  revision                Int                      @default(1)
+  masterSwitch            MasterSwitch?            @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  switch                  Switch?                  @relation(fields: [switchId], references: [id], onDelete: SetNull)
+  partnerSubmissionPhotos PartnerSubmissionPhoto[]
 
   @@index([switchId])
   @@index([masterSwitchId])
+  @@index([masterSwitchId, remoteUrl])
+  @@index([masterSwitchId, checksumSha256])
   @@index([order])
 }
 
@@ -434,17 +437,18 @@ model PartnerSubmission {
 model PartnerSubmissionPhoto {
   id            String            @id @default(cuid())
   submissionId  String
-  sourceUrl     String
+  remoteUrl     String
+  sourceUrl     String?
   status        String            @default("PENDING")
   error         String?
-  switchImageId String?           @unique
+  switchImageId String?
   order         Int
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   submission    PartnerSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   switchImage   SwitchImage?      @relation(fields: [switchImageId], references: [id], onDelete: SetNull)
 
-  @@unique([submissionId, sourceUrl])
+  @@unique([submissionId, remoteUrl])
   @@index([submissionId, order])
   @@index([status, updatedAt])
 }
