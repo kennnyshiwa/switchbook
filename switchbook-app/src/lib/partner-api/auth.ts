@@ -18,6 +18,20 @@ export function missingPartnerScopes(granted: Set<string>, required: PartnerScop
   return required.filter(scope => !granted.has(scope))
 }
 
+export function partnerScopesFromClaims(payload: unknown) {
+  const claims = typeof payload === 'object' && payload !== null ? payload as { scope?: unknown; permissions?: unknown } : {}
+  const scopes = new Set<string>()
+  if (typeof claims.scope === 'string') {
+    for (const scope of claims.scope.split(/\s+/).filter(Boolean)) scopes.add(scope)
+  } else if (Array.isArray(claims.scope)) {
+    for (const scope of claims.scope) if (typeof scope === 'string' && scope) scopes.add(scope)
+  }
+  if (Array.isArray(claims.permissions)) {
+    for (const scope of claims.permissions) if (typeof scope === 'string' && scope) scopes.add(scope)
+  }
+  return scopes
+}
+
 let jwks: ReturnType<typeof createRemoteJWKSet> | undefined
 
 function bearer(request: Request) {
@@ -63,8 +77,7 @@ export async function requirePartner(request: Request, required: PartnerScope[])
     const clientId = String(payload.azp || payload.client_id || '')
     const app = await prisma.partnerApplication.findUnique({ where: { clientId } })
     if (!app?.active || !payload.sub) throw new PartnerApiError(401, 'invalid_token', 'Unknown OAuth client or subject')
-    const scopeClaim = Array.isArray(payload.permissions) ? payload.permissions.join(' ') : String(payload.scope || '')
-    const scopes = new Set(scopeClaim.split(' ').filter(Boolean).filter(scope => app.scopes.includes(scope)))
+    const scopes = new Set([...partnerScopesFromClaims(payload)].filter(scope => app.scopes.includes(scope)))
     const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { id: true } })
     if (!user) throw new PartnerApiError(403, 'account_not_linked', 'OAuth identity is not linked to a SwitchBook user')
     principal = { applicationId: app.id, clientId, scopes, userId: user.id, subject: payload.sub, rateLimit: app.rateLimitPerMinute }

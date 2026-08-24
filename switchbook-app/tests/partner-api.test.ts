@@ -6,13 +6,13 @@ import { createPinnedLookup, resolvePublicHost, validateImageUrl } from '../src/
 import { switchesDbSearchUrl } from '../src/lib/partner-api/config'
 import { openSecret, sealSecret } from '../src/lib/partner-api/crypto'
 import { catalogDisposition } from '../src/lib/partner-api/catalog'
+import { missingPartnerScopes, partnerScopesFromClaims } from '../src/lib/partner-api/auth'
 import { assertNoMergeCycle } from '../src/lib/partner-api/lifecycle'
 import { PartnerApiError } from '../src/lib/partner-api/errors'
 import { assertSafeWebhookUrl, drainLimitedResponse } from '../src/lib/partner-api/outbound'
 import { cacheableJson } from '../src/lib/partner-api/http'
 import { readFileSync } from 'node:fs'
 import { classifyIdempotency } from '../src/lib/partner-api/idempotency'
-import { missingPartnerScopes } from '../src/lib/partner-api/auth'
 import { createHmac } from 'node:crypto'
 
 test('partner keys are prefixed, random, and hash-verifiable', () => {
@@ -120,6 +120,14 @@ test('pinned DNS lookup honors scalar and all-address callback shapes', () => {
   lookup('images.example', { all: true }, (...args) => { all = args })
   assert.deepEqual(scalar, [null, '8.8.8.8', 4])
   assert.deepEqual(all, [null, [{ address: '8.8.8.8', family: 4 }]])
+})
+
+test('OAuth scopes safely union standard scope and permissions claims', () => {
+  assert.deepEqual([...partnerScopesFromClaims({ scope: 'openid submissions:write', permissions: [] })], ['openid', 'submissions:write'])
+  assert.deepEqual([...partnerScopesFromClaims({ scope: 'submissions:read', permissions: ['corrections:write', 'submissions:read'] })], ['submissions:read', 'corrections:write'])
+  assert.deepEqual([...partnerScopesFromClaims({ permissions: ['submissions:write'] })], ['submissions:write'])
+  assert.deepEqual([...partnerScopesFromClaims({ scope: 42 as never, permissions: ['submissions:read', 99, null] })], ['submissions:read'])
+  assert.deepEqual(missingPartnerScopes(partnerScopesFromClaims({ scope: 'catalog:read', permissions: [] }), ['catalog:read', 'submissions:write']), ['submissions:write'])
 })
 
 test('production composition requires shared Redis and isolated Hydra bootstrap', () => {
