@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-switchbook}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-switchbook_password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       POSTGRES_DB: ${DB_NAME:-switchbook}
       HYDRA_DB_USER: ${HYDRA_DB_USER:-switchbook_hydra}
       HYDRA_DB_PASSWORD: ${HYDRA_DB_PASSWORD:?HYDRA_DB_PASSWORD is required}
@@ -39,7 +39,7 @@ services:
       - switchbook-network
     environment:
       # Database
-      DATABASE_URL: postgresql://${DB_USER:-switchbook}:${DB_PASSWORD:-switchbook_password}@postgres:5432/${DB_NAME:-switchbook}
+      DATABASE_URL: postgresql://${DB_USER:-switchbook}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/${DB_NAME:-switchbook}
       
       # NextAuth - IMPORTANT: Use HTTPS URL even though nginx uses HTTP
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://yourdomain.com}
