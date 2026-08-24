@@ -19,12 +19,15 @@ export function missingPartnerScopes(granted: Set<string>, required: PartnerScop
 }
 
 export function partnerScopesFromClaims(payload: unknown) {
-  const claims = typeof payload === 'object' && payload !== null ? payload as { scope?: unknown; permissions?: unknown } : {}
+  const claims = typeof payload === 'object' && payload !== null ? payload as { scope?: unknown; scp?: unknown; permissions?: unknown } : {}
   const scopes = new Set<string>()
   if (typeof claims.scope === 'string') {
     for (const scope of claims.scope.split(/\s+/).filter(Boolean)) scopes.add(scope)
   } else if (Array.isArray(claims.scope)) {
     for (const scope of claims.scope) if (typeof scope === 'string' && scope) scopes.add(scope)
+  }
+  if (Array.isArray(claims.scp)) {
+    for (const scope of claims.scp) if (typeof scope === 'string' && scope) scopes.add(scope)
   }
   if (Array.isArray(claims.permissions)) {
     for (const scope of claims.permissions) if (typeof scope === 'string' && scope) scopes.add(scope)
