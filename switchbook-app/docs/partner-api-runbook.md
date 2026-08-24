@@ -2,14 +2,15 @@
 
 ## Production configuration
 
-1. Create a separate PostgreSQL database/user for Hydra and set `HYDRA_DSN`. Never reuse or publish the application DB password.
+1. Set unique `HYDRA_DB_USER`, `HYDRA_DB_PASSWORD`, and `HYDRA_DB_NAME`. Fresh volumes create the isolated role/database through `ops/postgres/init-hydra-db.sh`. For an existing volume, run `ops/postgres/bootstrap-hydra-db.sh` before cutover; it is idempotent and then proves Hydra connectivity by applying migrations.
 2. Generate `HYDRA_SYSTEM_SECRET` with at least 32 random bytes. Keep it in the deployment secret store.
 3. Generate an independent 32-byte `PARTNER_SECRET_ENCRYPTION_KEY` (base64 or hex) for encrypted webhook secrets. Back it up in the deployment secret store; losing or changing it without re-encrypting existing secrets disables webhook delivery.
-4. Set `PARTNER_OIDC_ISSUER=https://switchbook.app`, `PARTNER_OIDC_AUDIENCE=https://switchbook.app/api/v1`, `REDIS_URL`, and a random `AUDIT_IP_SALT`.
+4. Set `PARTNER_OIDC_ISSUER=https://switchbook.app`, `PARTNER_OIDC_AUDIENCE=https://switchbook.app/api/v1`, and a random `AUDIT_IP_SALT`. Compose provides persistent Redis at `redis://redis:6379`; the partner API fails closed if shared quota storage is unavailable.
 5. Run `docker compose pull && docker compose up -d`. Compose runs Hydra migrations before serving; verify `docker compose ps`, `curl -fsS https://switchbook.app/health/ready`, and discovery/JWKS.
 6. Provision KeebVault once with an exact callback URL:
    `PARTNER_NAME=KeebVault PARTNER_REDIRECT_URI=https://keebvault.example/oauth/switchbook/callback npm run partner:provision`
    Store the one-time client secret, catalog API key, and webhook secret in KeebVault's secret manager.
+   Re-running with the same `PARTNER_CLIENT_ID` updates redirect/webhook configuration without rotating credentials. Rotation is explicit: set `PARTNER_ROTATE_SECRETS=true`, coordinate the cutover, and securely capture the newly printed values.
 7. Schedule `npm run partner:webhooks` every minute if webhooks are enabled.
 
 ## OAuth requirements

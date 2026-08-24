@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 export class PartnerApiError extends Error {
   constructor(
@@ -23,5 +24,12 @@ export function errorResponse(error: unknown, requestId: string) {
     },
   }
   if (!known) console.error('[partner-api]', requestId, error)
+  void prisma.partnerAuditEvent.create({ data: {
+    requestId,
+    action: 'partner.request.failed',
+    statusCode: status,
+    metadata: { code: body.error.code },
+  }}).catch(auditError => console.error('[partner-audit-failure]', requestId, auditError))
+  console.info(JSON.stringify({ event: 'partner_api_failure', requestId, statusCode: status, code: body.error.code }))
   return NextResponse.json(body, { status, headers: { 'X-Request-Id': requestId } })
 }

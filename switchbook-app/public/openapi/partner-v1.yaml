@@ -14,6 +14,7 @@ paths:
     get:
       summary: Search active approved switches
       operationId: searchSwitches
+      security: [ { applicationKey: [] }, { oauth: [catalog:read] } ]
       parameters:
         - { name: q, in: query, schema: { type: string, maxLength: 120 } }
         - { name: manufacturer, in: query, schema: { type: string } }
@@ -32,16 +33,18 @@ paths:
     get:
       summary: Retrieve a canonical record or lifecycle tombstone
       operationId: getSwitch
+      security: [ { applicationKey: [] }, { oauth: [catalog:read] } ]
       parameters: [ { $ref: '#/components/parameters/SwitchId' } ]
       responses:
-        '200': { description: Full record or tombstone, content: { application/json: { schema: { type: object } } } }
+        '200': { description: Full record or tombstone, content: { application/json: { schema: { oneOf: [ { $ref: '#/components/schemas/SwitchResponse' }, { $ref: '#/components/schemas/Tombstone' } ] } } } }
         '404': { $ref: '#/components/responses/Error' }
   /catalog/switches/batch:
     post:
       summary: Retrieve up to 100 records and tombstones in request order
       operationId: batchGetSwitches
+      security: [ { applicationKey: [] }, { oauth: [catalog:read] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [ids], properties: { ids: { type: array, minItems: 1, maxItems: 100, items: { type: string } } } } } } }
-      responses: { '200': { description: Per-ID results, content: { application/json: { schema: { type: object } } } }, '400': { $ref: '#/components/responses/Error' } }
+      responses: { '200': { description: Per-ID results, content: { application/json: { schema: { $ref: '#/components/schemas/BatchResponse' } } } }, '400': { $ref: '#/components/responses/Error' }, '401': { $ref: '#/components/responses/Error' }, '429': { $ref: '#/components/responses/Error' }, '500': { $ref: '#/components/responses/Error' } }
   /profile:
     get:
       summary: Read the linked SwitchBook profile
@@ -53,21 +56,21 @@ paths:
       summary: List the current user's partner submissions
       operationId: listSubmissions
       security: [ { oauth: [submissions:read] } ]
-      responses: { '200': { description: Current user's submissions }, '401': { $ref: '#/components/responses/Error' } }
+      responses: { '200': { description: Current user's submissions, content: { application/json: { schema: { $ref: '#/components/schemas/SubmissionList' } } } }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
     post:
       summary: Propose a missing switch for moderation
       operationId: createSubmission
       security: [ { oauth: [submissions:write] } ]
       parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SwitchProposal' } } } }
-      responses: { '202': { description: Proposal accepted for moderation }, '409': { description: Possible duplicate or idempotency conflict } }
+      responses: { '202': { description: Proposal accepted for moderation, content: { application/json: { schema: { $ref: '#/components/schemas/SubmissionResponse' } } } }, '400': { $ref: '#/components/responses/Error' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '409': { $ref: '#/components/responses/Error' }, '429': { $ref: '#/components/responses/Error' }, '500': { $ref: '#/components/responses/Error' } }
   /submissions/{id}:
     get:
       summary: Retrieve one submission's moderation status
       operationId: getSubmission
       security: [ { oauth: [submissions:read] } ]
       parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
-      responses: { '200': { description: Submission status and moderator feedback }, '404': { $ref: '#/components/responses/Error' } }
+      responses: { '200': { description: Submission status and moderator feedback, content: { application/json: { schema: { $ref: '#/components/schemas/SubmissionResponse' } } } }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '404': { $ref: '#/components/responses/Error' } }
   /catalog/switches/{id}/corrections:
     post:
       summary: Suggest a correction to an active canonical record
@@ -75,13 +78,13 @@ paths:
       security: [ { oauth: [corrections:write] } ]
       parameters: [ { $ref: '#/components/parameters/SwitchId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CorrectionProposal' } } } }
-      responses: { '202': { description: Correction accepted for moderation }, '400': { $ref: '#/components/responses/Error' } }
+      responses: { '202': { description: Correction accepted for moderation, content: { application/json: { schema: { $ref: '#/components/schemas/CorrectionResponse' } } } }, '400': { $ref: '#/components/responses/Error' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '404': { $ref: '#/components/responses/Error' }, '409': { $ref: '#/components/responses/Error' } }
   /corrections:
     get:
       summary: List the current user's correction suggestions
       operationId: listCorrections
       security: [ { oauth: [submissions:read] } ]
-      responses: { '200': { description: Current user's correction statuses }, '401': { $ref: '#/components/responses/Error' } }
+      responses: { '200': { description: Current user's correction statuses, content: { application/json: { schema: { $ref: '#/components/schemas/CorrectionList' } } } }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
   /migration/matches:
     post:
       summary: Find reviewed migration candidates without modifying inventory
@@ -101,6 +104,7 @@ components:
           scopes:
             openid: Authenticate the SwitchBook account
             offline_access: Issue a rotating refresh token
+            catalog:read: Read approved canonical catalog records
             profile:read: Read linked basic profile
             submissions:write: Create catalog proposals
             submissions:read: Read own moderation status
@@ -112,7 +116,20 @@ components:
     Error: { description: Structured error, content: { application/json: { schema: { type: object, properties: { error: { $ref: '#/components/schemas/Error' } } } } } }
   schemas:
     Error: { type: object, required: [code, message, requestId], properties: { code: { type: string }, message: { type: string }, requestId: { type: string }, details: {} } }
-    SearchPage: { type: object, required: [data, page], properties: { data: { type: array, items: { type: object } }, page: { type: object } } }
+    SearchItem: { type: object, required: [id, status, name, manufacturer, type, technology, thumbnail, recordUrl, updatedAt], properties: { id: { type: string }, status: { const: ACTIVE }, mergedIntoId: { type: [string, 'null'] }, name: { type: string }, manufacturer: { type: [string, 'null'] }, type: { type: [string, 'null'] }, technology: { type: [string, 'null'] }, thumbnail: { type: [string, 'null'], format: uri }, recordUrl: { type: string, format: uri }, updatedAt: { type: string, format: date-time } } }
+    SearchPage: { type: object, required: [data, page], properties: { data: { type: array, items: { $ref: '#/components/schemas/SearchItem' } }, page: { type: object, required: [nextCursor, hasMore, limit], properties: { nextCursor: { type: [string, 'null'] }, hasMore: { type: boolean }, limit: { type: integer } } } } }
+    Image: { type: object, required: [id, url, alt, revision, source, attribution, updatedAt], properties: { id: { type: string }, url: { type: string, format: uri }, alt: { type: string }, width: { type: [integer, 'null'] }, height: { type: [integer, 'null'] }, bytes: { type: [integer, 'null'] }, checksumSha256: { type: [string, 'null'] }, revision: { type: integer }, source: { type: string }, sourceUrl: { type: [string, 'null'], format: uri }, license: { type: [string, 'null'] }, attribution: { type: string }, updatedAt: { type: string, format: date-time } } }
+    CatalogSwitch: { type: object, required: [id, status, name, manufacturer, forces, travel, materials, colors, spring, images, forceCurve, recordUrl, attribution, version, createdAt, updatedAt], properties: { id: { type: string }, status: { const: ACTIVE }, mergedIntoId: { type: [string, 'null'] }, name: { type: string }, chineseName: { type: [string, 'null'] }, manufacturer: { type: [string, 'null'] }, type: { type: [string, 'null'] }, technology: { type: [string, 'null'] }, forces: { type: object, additionalProperties: { type: [number, 'null'] } }, travel: { type: object, additionalProperties: { type: [number, 'null'] } }, materials: { type: object, additionalProperties: { type: [string, 'null'] } }, colors: { type: object, additionalProperties: { type: [string, 'null'] } }, stemShape: { type: [string, 'null'] }, spring: { type: object }, magnetic: { type: [object, 'null'] }, clickType: { type: [string, 'null'] }, markings: { type: [string, 'null'] }, compatibility: { type: [string, 'null'] }, notes: { type: [string, 'null'] }, images: { type: array, items: { $ref: '#/components/schemas/Image' } }, thumbnail: { type: [string, 'null'], format: uri }, forceCurve: { type: object, required: [available, url, source, rawDataIncluded, checkedAt], properties: { available: { type: boolean }, url: { type: [string, 'null'], format: uri }, source: { const: SwitchesDB }, rawDataIncluded: { const: false }, checkedAt: { type: [string, 'null'], format: date-time } } }, recordUrl: { type: string, format: uri }, attribution: { type: object }, version: { type: integer }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time } } }
+    SwitchResponse: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/CatalogSwitch' } } }
+    Tombstone: { type: object, required: [id, status, mergedIntoId, updatedAt], properties: { id: { type: string }, status: { type: string, enum: [MERGED, REMOVED] }, mergedIntoId: { type: [string, 'null'] }, updatedAt: { type: string, format: date-time } } }
+    BatchItem: { oneOf: [ { type: object, required: [id, status, data], properties: { id: { type: string }, status: { const: ACTIVE }, data: { $ref: '#/components/schemas/CatalogSwitch' } } }, { $ref: '#/components/schemas/Tombstone' }, { type: object, required: [id, status], properties: { id: { type: string }, status: { const: NOT_FOUND } } } ] }
+    BatchResponse: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/BatchItem' } } } }
+    SubmissionStatus: { type: object, required: [id, status, canonicalId, updatedAt], properties: { id: { type: string }, status: { type: string, enum: [draft, submitted, needs_changes, approved, rejected] }, moderatorFeedback: { type: [string, 'null'] }, canonicalId: { type: [string, 'null'] }, candidateId: { type: [string, 'null'] }, updatedAt: { type: string, format: date-time }, imageErrors: { type: array, items: { type: object, required: [url, error], properties: { url: { type: string }, error: { type: string } } } } } }
+    SubmissionResponse: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/SubmissionStatus' } } }
+    SubmissionList: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/SubmissionStatus' } } } }
+    CorrectionStatus: { type: object, required: [id, switchId, status, updatedAt], properties: { id: { type: string }, switchId: { type: string }, status: { type: string, enum: [submitted, needs_changes, approved, rejected] }, moderatorFeedback: { type: [string, 'null'] }, updatedAt: { type: string, format: date-time } } }
+    CorrectionResponse: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/CorrectionStatus' } } }
+    CorrectionList: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/CorrectionStatus' } } } }
     ProfileResponse: { type: object, required: [data], properties: { data: { type: object, required: [sub, username, email, emailVerified, createdAt], properties: { sub: { type: string }, username: { type: string }, email: { type: string, format: email }, emailVerified: { type: boolean }, createdAt: { type: string, format: date-time } } } } }
     PhotoProposal: { type: object, required: [url, alt], properties: { url: { type: string, format: uri }, alt: { type: string, minLength: 1, maxLength: 500 }, sourceUrl: { type: string, format: uri }, license: { type: string }, attribution: { type: string } } }
     SwitchProposal:
@@ -132,7 +149,25 @@ components:
         bottomOut: { type: [number, 'null'] }
         springWeight: { type: [string, 'null'] }
         springLength: { type: [string, 'null'] }
+        tactilePosition: { type: [number, 'null'] }
+        progressiveSpring: { type: boolean }
+        doubleStage: { type: boolean }
         compatibility: { type: [string, 'null'] }
+        topHousing: { type: [string, 'null'] }
+        bottomHousing: { type: [string, 'null'] }
+        stem: { type: [string, 'null'] }
+        topHousingColor: { type: [string, 'null'] }
+        bottomHousingColor: { type: [string, 'null'] }
+        stemColor: { type: [string, 'null'] }
+        stemShape: { type: [string, 'null'] }
+        markings: { type: [string, 'null'] }
+        magnetOrientation: { type: [string, 'null'] }
+        magnetPosition: { type: [string, 'null'] }
+        magnetPolarity: { type: [string, 'null'] }
+        initialMagneticFlux: { type: [number, 'null'] }
+        bottomOutMagneticFlux: { type: [number, 'null'] }
+        pcbThickness: { type: [string, 'null'] }
+        notes: { type: [string, 'null'] }
         photos: { type: array, maxItems: 8, items: { $ref: '#/components/schemas/PhotoProposal' } }
         submissionNotes: { type: string, minLength: 10, maxLength: 4000 }
         confirmNotDuplicate: { type: boolean, default: false }

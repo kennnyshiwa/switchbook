@@ -7,10 +7,14 @@ services:
       POSTGRES_USER: ${DB_USER:-switchbook}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-switchbook_password}
       POSTGRES_DB: ${DB_NAME:-switchbook}
+      HYDRA_DB_USER: ${HYDRA_DB_USER:-switchbook_hydra}
+      HYDRA_DB_PASSWORD: ${HYDRA_DB_PASSWORD:?HYDRA_DB_PASSWORD is required}
+      HYDRA_DB_NAME: ${HYDRA_DB_NAME:-switchbook_hydra}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./ops/postgres/init-hydra-db.sh:/docker-entrypoint-initdb.d/20-init-hydra-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-switchbook}"]
       interval: 10s
@@ -28,6 +32,8 @@ services:
       postgres:
         condition: service_healthy
       hydra:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - switchbook-network
@@ -49,7 +55,7 @@ services:
       # OAuth
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
-      REDIS_URL: ${REDIS_URL:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       PARTNER_OIDC_ISSUER: ${PARTNER_OIDC_ISSUER:-https://switchbook.app}
       PARTNER_OIDC_AUDIENCE: ${PARTNER_OIDC_AUDIENCE:-https://switchbook.app/api/v1}
       PARTNER_SECRET_ENCRYPTION_KEY: ${PARTNER_SECRET_ENCRYPTION_KEY:?PARTNER_SECRET_ENCRYPTION_KEY is required}
@@ -80,8 +86,8 @@ services:
       - -c
       - /usr/bin/hydra migrate sql --yes "$${HYDRA_DSN}" && exec /usr/bin/hydra serve all --config /etc/hydra/hydra.yml
     environment:
-      DSN: ${HYDRA_DSN}
-      HYDRA_DSN: ${HYDRA_DSN:?HYDRA_DSN is required}
+      DSN: postgres://${HYDRA_DB_USER:-switchbook_hydra}:${HYDRA_DB_PASSWORD:?HYDRA_DB_PASSWORD is required}@postgres:5432/${HYDRA_DB_NAME:-switchbook_hydra}?sslmode=disable
+      HYDRA_DSN: postgres://${HYDRA_DB_USER:-switchbook_hydra}:${HYDRA_DB_PASSWORD:?HYDRA_DB_PASSWORD is required}@postgres:5432/${HYDRA_DB_NAME:-switchbook_hydra}?sslmode=disable
       SECRETS_SYSTEM: ${HYDRA_SYSTEM_SECRET:?HYDRA_SYSTEM_SECRET is required}
     volumes:
       - ./ops/hydra/hydra.yml:/etc/hydra/hydra.yml:ro
@@ -92,6 +98,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: switchbook-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - switchbook-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   nginx:
     image: nginx:alpine
@@ -114,4 +135,5 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:
   uploads:

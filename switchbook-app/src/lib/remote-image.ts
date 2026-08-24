@@ -1,6 +1,6 @@
 import { uploadFile } from './local-storage'
 import { isValidImageType } from './image-config'
-import { assertPublicImageHost, validateImageUrl } from './image-security'
+import { pinnedPublicFetch, validateImageUrl } from './image-security'
 import { convertHeicToJpeg, generateSafeFilename, validateAndProcessImage } from './image-utils'
 import { createHash } from 'node:crypto'
 
@@ -48,11 +48,15 @@ export async function rehostRemoteImage(remoteUrl: string, folder: string) {
   const MAX_BYTES = 12 * 1024 * 1024
   let currentUrl = remoteUrl
   let response: Response | undefined
+  let closeDispatcher: (() => Promise<void>) | undefined
+  try {
   for (let redirect = 0; redirect <= 3; redirect++) {
     const validation = validateImageUrl(currentUrl)
     if (!validation.valid) throw new Error(validation.error || 'Invalid remote image URL')
-    await assertPublicImageHost(currentUrl)
-    response = await fetch(currentUrl, { redirect: 'manual', signal: AbortSignal.timeout(10_000), headers: { Accept: 'image/*' } })
+    if (closeDispatcher) await closeDispatcher()
+    const pinned = await pinnedPublicFetch(currentUrl, { redirect: 'manual', signal: AbortSignal.timeout(10_000), headers: { Accept: 'image/*' } })
+    response = pinned.response
+    closeDispatcher = pinned.close
     if (![301, 302, 303, 307, 308].includes(response.status)) break
     const location = response.headers.get('location')
     if (!location || redirect === 3) throw new Error('Remote image exceeded redirect limit')
@@ -115,5 +119,8 @@ export async function rehostRemoteImage(remoteUrl: string, folder: string) {
     height: imageValidation.metadata?.height ?? null,
     size: file.size,
     checksumSha256: createHash('sha256').update(processedBuffer).digest('hex'),
+  }
+  } finally {
+    if (closeDispatcher) await closeDispatcher()
   }
 }

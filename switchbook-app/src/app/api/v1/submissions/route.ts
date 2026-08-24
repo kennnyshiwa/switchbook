@@ -1,21 +1,24 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { auditPartner, requirePartner } from '@/lib/partner-api/auth'
+import { auditPartner, requirePartner, type PartnerPrincipal } from '@/lib/partner-api/auth'
 import { errorResponse, PartnerApiError } from '@/lib/partner-api/errors'
 import { proposedSwitchSchema } from '@/lib/partner-api/schemas'
-import { beginIdempotent, finishIdempotent } from '@/lib/partner-api/idempotency'
+import { beginIdempotent, failIdempotent, finishIdempotent, type IdempotencyReservation } from '@/lib/partner-api/idempotency'
 import { rehostRemoteImage } from '@/lib/remote-image'
 
 export async function POST(request: Request) {
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID()
+  let principal: PartnerPrincipal | undefined
+  let idempotency: IdempotencyReservation | undefined
   try {
-    const principal = await requirePartner(request, ['submissions:write'])
+    principal = await requirePartner(request, ['submissions:write'])
     if (!principal.userId) throw new PartnerApiError(403, 'user_authorization_required', 'An OAuth user token is required')
+    const partner = principal
     const json = await request.json()
     const parsed = proposedSwitchSchema.safeParse(json)
     if (!parsed.success) throw new PartnerApiError(400, 'validation_error', 'Invalid switch proposal', parsed.error.flatten())
-    const idempotency = await beginIdempotent(principal.applicationId, request.headers.get('idempotency-key'), parsed.data)
+    idempotency = await beginIdempotent(principal.applicationId, request.headers.get('idempotency-key'), parsed.data)
     if (idempotency.replay) return NextResponse.json(idempotency.replay.body, { status: idempotency.replay.status, headers: { 'Idempotent-Replayed': 'true' } })
 
     const possible = await prisma.masterSwitch.findMany({
@@ -26,10 +29,10 @@ export async function POST(request: Request) {
     const { photos, submissionNotes: _submissionNotes, confirmNotDuplicate: _confirm, ...fields } = parsed.data
     const created = await prisma.$transaction(async tx => {
       const masterSwitch = await tx.masterSwitch.create({ data: {
-        ...fields, submittedById: principal.userId!, status: 'PENDING', originalSubmissionData: parsed.data as unknown as Prisma.InputJsonValue,
+        ...fields, submittedById: partner.userId!, status: 'PENDING', originalSubmissionData: parsed.data as unknown as Prisma.InputJsonValue,
       } })
       const submission = await tx.partnerSubmission.create({ data: {
-        applicationId: principal.applicationId, userId: principal.userId!, masterSwitchId: masterSwitch.id,
+        applicationId: partner.applicationId, userId: partner.userId!, masterSwitchId: masterSwitch.id,
         payload: parsed.data as unknown as Prisma.InputJsonValue, status: 'SUBMITTED',
       } })
       return { masterSwitch, submission }
@@ -45,7 +48,10 @@ export async function POST(request: Request) {
     await finishIdempotent(principal.applicationId, idempotency.key, idempotency.requestHash, 202, body)
     await auditPartner(request, principal, 'submission.create', 202, { type: 'partner_submission', id: created.submission.id })
     return NextResponse.json(body, { status: 202 })
-  } catch (error) { return errorResponse(error, requestId) }
+  } catch (error) {
+    if (principal && idempotency) await failIdempotent(principal.applicationId, idempotency, error, requestId)
+    return errorResponse(error, requestId)
+  }
 }
 
 export async function GET(request: Request) {

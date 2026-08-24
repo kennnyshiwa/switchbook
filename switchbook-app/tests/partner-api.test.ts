@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { issuePartnerKey, secureEqualHash } from '../src/lib/partner-api/crypto'
 import { proposedSwitchSchema } from '../src/lib/partner-api/schemas'
-import { validateImageUrl } from '../src/lib/image-security'
+import { resolvePublicHost, validateImageUrl } from '../src/lib/image-security'
 import { switchesDbSearchUrl } from '../src/lib/partner-api/config'
 import { openSecret, sealSecret } from '../src/lib/partner-api/crypto'
 import { catalogDisposition } from '../src/lib/partner-api/catalog'
@@ -99,4 +99,41 @@ test('idempotency conflicts and in-flight reservations cannot replay side effect
   assert.throws(() => classifyIdempotency({ requestHash: 'a', responseStatus: 0, responseBody: {} }, 'b'), (error: unknown) => error instanceof PartnerApiError && error.code === 'idempotency_conflict')
   assert.throws(() => classifyIdempotency({ requestHash: 'a', responseStatus: 0, responseBody: {} }, 'a'), (error: unknown) => error instanceof PartnerApiError && error.code === 'request_in_progress')
   assert.deepEqual(classifyIdempotency({ requestHash: 'a', responseStatus: 202, responseBody: { id: 'one' } }, 'a'), { status: 202, body: { id: 'one' } })
+  assert.equal(classifyIdempotency({ requestHash: 'a', responseStatus: 0, responseBody: {}, expiresAt: new Date(0) }, 'a'), null)
+})
+
+test('DNS pinning resolves once and rejects any mixed public/private answer set', async () => {
+  let calls = 0
+  const pinned = await resolvePublicHost('webhook.example', async () => { calls++; return [{ address: '8.8.8.8', family: 4 }] })
+  assert.equal(pinned.address, '8.8.8.8')
+  assert.equal(calls, 1)
+  await assert.rejects(() => resolvePublicHost('rebind.example', async () => [
+    { address: '8.8.8.8', family: 4 }, { address: '127.0.0.1', family: 4 },
+  ]))
+})
+
+test('production composition requires shared Redis and isolated Hydra bootstrap', () => {
+  const compose = readFileSync(new URL('../docker-compose.yml', import.meta.url), 'utf8')
+  const init = readFileSync(new URL('../ops/postgres/init-hydra-db.sh', import.meta.url), 'utf8')
+  assert.match(compose, /redis:\/\/redis:6379/)
+  assert.match(compose, /redis_data:\/data/)
+  assert.match(compose, /HYDRA_DB_PASSWORD:\?HYDRA_DB_PASSWORD is required/)
+  assert.match(init, /CREATE ROLE/)
+  assert.match(init, /CREATE DATABASE/)
+})
+
+test('OAuth identity mapping is strict subject-only and lifecycle writes are serialized', () => {
+  const authSource = readFileSync(new URL('../src/lib/partner-api/auth.ts', import.meta.url), 'utf8')
+  const lifecycleSource = readFileSync(new URL('../src/app/api/admin/partner/lifecycle/[id]/route.ts', import.meta.url), 'utf8')
+  assert.match(authSource, /findUnique\(\{ where: \{ id: payload\.sub \}/)
+  assert.doesNotMatch(authSource, /payload\.email/)
+  assert.match(lifecycleSource, /pg_advisory_xact_lock/)
+  assert.match(lifecycleSource, /TransactionIsolationLevel\.Serializable/)
+})
+
+test('partner provisioning is idempotent unless intentional rotation is requested', () => {
+  const source = readFileSync(new URL('../scripts/provision-partner.ts', import.meta.url), 'utf8')
+  assert.match(source, /PARTNER_ROTATE_SECRETS/)
+  assert.match(source, /Configuration updated without rotating credentials/)
+  assert.match(source, /webhookUrl/)
 })

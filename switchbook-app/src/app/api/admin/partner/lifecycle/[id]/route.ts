@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PartnerApiError, errorResponse } from '@/lib/partner-api/errors'
@@ -18,7 +19,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const parsed = schema.safeParse(await request.json())
     if (!parsed.success) throw new PartnerApiError(400, 'validation_error', 'Invalid lifecycle transition', parsed.error.flatten())
     const { id } = await params
-    const updated = await prisma.$transaction(async tx => {
+    let updated
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        updated = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('switchbook_partner_lifecycle'))`
       const source = await tx.masterSwitch.findUnique({ where: { id }, include: { lifecycle: true } })
       if (!source || !source.approvedAt || source.status !== 'APPROVED' || source.lifecycle && source.lifecycle.status !== 'ACTIVE') {
         throw new PartnerApiError(409, 'invalid_lifecycle_source', 'Only an active, formerly approved record can transition')
@@ -36,8 +41,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       const apps = await tx.partnerApplication.findMany({ where: { active: true, webhookUrl: { not: null } }, select: { id: true } })
       await tx.partnerWebhookEvent.createMany({ data: apps.map(app => ({ applicationId: app.id, type: `catalog.${parsed.data.status.toLowerCase()}`, payload: { id, status: parsed.data.status, mergedIntoId: parsed.data.status === 'MERGED' ? parsed.data.mergedIntoId : null, updatedAt: lifecycle.updatedAt.toISOString() } })) })
       await tx.partnerAuditEvent.create({ data: { actorUserId: session.user.id, requestId, action: 'catalog.lifecycle.transition', resourceType: 'master_switch', resourceId: id, statusCode: 200, metadata: parsed.data } })
-      return lifecycle
-    })
+          return lifecycle
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+        break
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034' && attempt < 2) continue
+        throw error
+      }
+    }
+    if (!updated) throw new PartnerApiError(503, 'lifecycle_busy', 'Lifecycle update conflicted; retry the request')
     return NextResponse.json({ data: updated })
   } catch (error) { return errorResponse(error, requestId) }
 }

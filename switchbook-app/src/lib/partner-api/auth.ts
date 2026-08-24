@@ -65,10 +65,7 @@ export async function requirePartner(request: Request, required: PartnerScope[])
     if (!app?.active || !payload.sub) throw new PartnerApiError(401, 'invalid_token', 'Unknown OAuth client or subject')
     const scopeClaim = Array.isArray(payload.permissions) ? payload.permissions.join(' ') : String(payload.scope || '')
     const scopes = new Set(scopeClaim.split(' ').filter(Boolean).filter(scope => app.scopes.includes(scope)))
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ id: payload.sub }, ...payload.email ? [{ email: String(payload.email) }] : []] },
-      select: { id: true },
-    })
+    const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { id: true } })
     if (!user) throw new PartnerApiError(403, 'account_not_linked', 'OAuth identity is not linked to a SwitchBook user')
     principal = { applicationId: app.id, clientId, scopes, userId: user.id, subject: payload.sub, rateLimit: app.rateLimitPerMinute }
   } else {

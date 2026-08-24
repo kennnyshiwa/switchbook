@@ -3,6 +3,7 @@
  */
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
+import { Agent, fetch as undiciFetch, type RequestInit as UndiciRequestInit } from 'undici'
 
 // Blocked hostnames that should never be accessed
 const BLOCKED_HOSTNAMES = [
@@ -117,14 +118,15 @@ function isPrivateIP(hostname: string): boolean {
          ipv6Patterns.some(pattern => pattern.test(hostname))
 }
 
-function isUnsafeResolvedAddress(address: string): boolean {
+export function isUnsafeResolvedAddress(address: string): boolean {
   if (address.startsWith('::ffff:')) return isUnsafeResolvedAddress(address.slice(7))
   if (isIP(address) === 4) {
     const [a, b] = address.split('.').map(Number)
     return a === 0 || a === 10 || a === 127 || a >= 224 ||
       a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 ||
       a === 192 && b === 168 || a === 100 && b >= 64 && b <= 127 ||
-      a === 198 && (b === 18 || b === 19)
+      a === 198 && (b === 18 || b === 19 || b === 51) ||
+      a === 192 && b === 0 || a === 203 && b === 0
   }
   const normalized = address.toLowerCase()
   return normalized === '::' || normalized === '::1' || normalized.startsWith('fc') ||
@@ -138,6 +140,33 @@ export async function assertPublicImageHost(rawUrl: string) {
   const answers = await lookup(parsed.hostname, { all: true, verbatim: true })
   if (!answers.length || answers.some(answer => isUnsafeResolvedAddress(answer.address))) {
     throw new Error('Image host resolves to a private or reserved address')
+  }
+}
+
+type DnsAnswer = { address: string; family: number }
+type Resolver = (hostname: string) => Promise<DnsAnswer[]>
+
+export async function resolvePublicHost(hostname: string, resolver: Resolver = async host => lookup(host, { all: true, verbatim: true })) {
+  const answers = await resolver(hostname)
+  if (!answers.length || answers.some(answer => isUnsafeResolvedAddress(answer.address))) {
+    throw new Error('Remote host resolves to a private or reserved address')
+  }
+  return answers[0]
+}
+
+/** Resolve once, validate every answer, then pin the actual socket to that address. */
+export async function pinnedPublicFetch(rawUrl: string, init: RequestInit = {}) {
+  const url = new URL(rawUrl)
+  const pinned = await resolvePublicHost(url.hostname)
+  const dispatcher = new Agent({ connect: {
+    lookup: (_hostname, _options, callback) => callback(null, pinned.address, pinned.family),
+  } })
+  try {
+    const response = await undiciFetch(url, { ...(init as UndiciRequestInit), dispatcher })
+    return { response: response as unknown as Response, close: () => dispatcher.close() }
+  } catch (error) {
+    await dispatcher.close()
+    throw error
   }
 }
 

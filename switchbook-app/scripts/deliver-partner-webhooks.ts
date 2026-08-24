@@ -2,6 +2,7 @@ import { createHmac } from 'node:crypto'
 import { prisma } from '../src/lib/prisma'
 import { openSecret } from '../src/lib/partner-api/crypto'
 import { assertSafeWebhookUrl } from '../src/lib/partner-api/outbound'
+import { pinnedPublicFetch } from '../src/lib/image-security'
 
 async function main() {
   const events = await prisma.partnerWebhookEvent.findMany({ where: { status: 'PENDING', nextAttemptAt: { lte: new Date() } }, include: { application: true }, take: 50, orderBy: { createdAt: 'asc' } })
@@ -13,7 +14,14 @@ async function main() {
       const target = await assertSafeWebhookUrl(event.application.webhookUrl)
       const webhookSecret = openSecret(event.application.webhookSecretEnvelope)
       const signature = createHmac('sha256', webhookSecret).update(`${timestamp}.${body}`).digest('hex')
-      const response = await fetch(target, { method: 'POST', headers: { 'Content-Type':'application/json', 'User-Agent':'SwitchBook-Webhooks/1.0', 'X-SwitchBook-Timestamp':timestamp, 'X-SwitchBook-Signature':`v1=${signature}` }, body, signal: AbortSignal.timeout(10_000), redirect: 'error' })
+      const pinned = await pinnedPublicFetch(target, { method: 'POST', headers: { 'Content-Type':'application/json', 'User-Agent':'SwitchBook-Webhooks/1.0', 'X-SwitchBook-Timestamp':timestamp, 'X-SwitchBook-Signature':`v1=${signature}` }, body, signal: AbortSignal.timeout(10_000), redirect: 'error' })
+      let response: Response
+      try {
+        response = pinned.response
+        await response.arrayBuffer()
+      } finally {
+        await pinned.close()
+      }
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       await prisma.partnerWebhookEvent.update({ where: { id: event.id }, data: { status: 'DELIVERED', attempts: { increment: 1 }, deliveredAt: new Date(), lastError: null } })
     } catch (error) {
