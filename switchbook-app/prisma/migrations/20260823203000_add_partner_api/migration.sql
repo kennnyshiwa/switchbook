@@ -41,6 +41,17 @@ CREATE TABLE "PartnerSubmission" (
 CREATE INDEX "PartnerSubmission_applicationId_userId_updatedAt_idx" ON "PartnerSubmission"("applicationId", "userId", "updatedAt");
 CREATE INDEX "PartnerSubmission_masterSwitchId_idx" ON "PartnerSubmission"("masterSwitchId");
 
+CREATE TABLE "PartnerSubmissionPhoto" (
+  "id" TEXT NOT NULL, "submissionId" TEXT NOT NULL, "sourceUrl" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'PENDING', "error" TEXT, "switchImageId" TEXT, "order" INTEGER NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "PartnerSubmissionPhoto_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "PartnerSubmissionPhoto_submissionId_sourceUrl_key" ON "PartnerSubmissionPhoto"("submissionId", "sourceUrl");
+CREATE UNIQUE INDEX "PartnerSubmissionPhoto_switchImageId_key" ON "PartnerSubmissionPhoto"("switchImageId");
+CREATE INDEX "PartnerSubmissionPhoto_submissionId_order_idx" ON "PartnerSubmissionPhoto"("submissionId", "order");
+CREATE INDEX "PartnerSubmissionPhoto_status_updatedAt_idx" ON "PartnerSubmissionPhoto"("status", "updatedAt");
+
 CREATE TABLE "PartnerCorrection" (
   "id" TEXT NOT NULL, "applicationId" TEXT NOT NULL, "userId" TEXT NOT NULL, "masterSwitchId" TEXT NOT NULL, "masterSwitchEditId" TEXT NOT NULL,
   "status" "PartnerSubmissionStatus" NOT NULL DEFAULT 'SUBMITTED', "changes" JSONB NOT NULL, "reason" TEXT NOT NULL,
@@ -88,6 +99,8 @@ ALTER TABLE "MasterSwitchLifecycle" ADD CONSTRAINT "MasterSwitchLifecycle_no_sel
 ALTER TABLE "PartnerSubmission" ADD CONSTRAINT "PartnerSubmission_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerSubmission" ADD CONSTRAINT "PartnerSubmission_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerSubmission" ADD CONSTRAINT "PartnerSubmission_masterSwitchId_fkey" FOREIGN KEY ("masterSwitchId") REFERENCES "MasterSwitch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "PartnerSubmissionPhoto" ADD CONSTRAINT "PartnerSubmissionPhoto_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "PartnerSubmission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PartnerSubmissionPhoto" ADD CONSTRAINT "PartnerSubmissionPhoto_switchImageId_fkey" FOREIGN KEY ("switchImageId") REFERENCES "SwitchImage"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "PartnerCorrection" ADD CONSTRAINT "PartnerCorrection_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "PartnerApplication"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerCorrection" ADD CONSTRAINT "PartnerCorrection_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PartnerCorrection" ADD CONSTRAINT "PartnerCorrection_masterSwitchId_fkey" FOREIGN KEY ("masterSwitchId") REFERENCES "MasterSwitch"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

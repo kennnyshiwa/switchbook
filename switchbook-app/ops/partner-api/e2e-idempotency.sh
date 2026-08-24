@@ -10,4 +10,5 @@ $compose up -d --wait
 export DATABASE_URL=postgresql://partner_e2e:partner_e2e_password@127.0.0.1:55432/partner_e2e
 cd "$repo_dir"
 npx prisma migrate deploy >/dev/null
+npx prisma db push --skip-generate --accept-data-loss >/dev/null
 npx tsx tests/idempotency.e2e.ts

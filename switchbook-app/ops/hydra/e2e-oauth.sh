@@ -3,9 +3,11 @@ set -eu
 
 base_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 compose="docker compose -f $base_dir/e2e-compose.yml -p switchbook-hydra-e2e"
-cleanup() { $compose down -v --remove-orphans >/dev/null 2>&1 || true; }
+tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/switchbook-hydra-e2e.XXXXXX")
+down_services() { $compose down -v --remove-orphans >/dev/null 2>&1 || true; }
+cleanup() { down_services; rm -rf "$tmp_dir"; }
 trap cleanup EXIT INT TERM
-cleanup
+down_services
 $compose up -d --wait
 
 json_value() { python3 -c "import json,sys; print(json.load(sys.stdin)$1)"; }
@@ -19,7 +21,7 @@ curl -fsS -X POST http://127.0.0.1:54445/admin/clients -H 'Content-Type: applica
 
 authorize() {
   verifier=$1
-  cookie_jar="/tmp/switchbook-hydra-e2e-cookies-$$"
+  cookie_jar="$tmp_dir/cookies-$$"
   : >"$cookie_jar"
   challenge=$(challenge_for "$verifier")
   auth_url="http://127.0.0.1:54444/oauth2/auth?client_id=$client_id&response_type=code&scope=openid%20offline_access%20catalog%3Aread&redirect_uri=http%3A%2F%2F127.0.0.1%3A59998%2Fcallback&state=e2e-state&code_challenge=$challenge&code_challenge_method=S256"
@@ -38,7 +40,7 @@ token_status() {
   code=$1; verifier=${2-}
   args="grant_type=authorization_code&code=$code&redirect_uri=http%3A%2F%2F127.0.0.1%3A59998%2Fcallback"
   [ -z "$verifier" ] || args="$args&code_verifier=$verifier"
-  curl -sS -o /tmp/switchbook-hydra-e2e-token.json -w '%{http_code}' -u "$client_id:$client_secret" -H 'Content-Type: application/x-www-form-urlencoded' -d "$args" http://127.0.0.1:54444/oauth2/token
+  curl -sS -o "$tmp_dir/token.json" -w '%{http_code}' -u "$client_id:$client_secret" -H 'Content-Type: application/x-www-form-urlencoded' -d "$args" http://127.0.0.1:54444/oauth2/token
 }
 
 verifier='e2e-verifier-abcdefghijklmnopqrstuvwxyz-0123456789-ABCDE'
@@ -48,12 +50,12 @@ code=$(authorize "$verifier")
 [ "$(token_status "$code" 'wrong-verifier-abcdefghijklmnopqrstuvwxyz-0123456789')" = 400 ]
 code=$(authorize "$verifier")
 [ "$(token_status "$code" "$verifier")" = 200 ]
-access=$(json_value "['access_token']" </tmp/switchbook-hydra-e2e-token.json)
-refresh=$(json_value "['refresh_token']" </tmp/switchbook-hydra-e2e-token.json)
+access=$(json_value "['access_token']" <"$tmp_dir/token.json")
+refresh=$(json_value "['refresh_token']" <"$tmp_dir/token.json")
 
 active=$(curl -fsS -u "$client_id:$client_secret" -d "token=$access" http://127.0.0.1:54445/admin/oauth2/introspect | json_value "['active']")
 [ "$active" = True ]
-curl -fsS -u "$client_id:$client_secret" -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=refresh_token&refresh_token=$refresh" http://127.0.0.1:54444/oauth2/token >/tmp/switchbook-hydra-e2e-refresh.json
+curl -fsS -u "$client_id:$client_secret" -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=refresh_token&refresh_token=$refresh" http://127.0.0.1:54444/oauth2/token >"$tmp_dir/refresh.json"
 reuse_status=$(curl -sS -o /dev/null -w '%{http_code}' -u "$client_id:$client_secret" -H 'Content-Type: application/x-www-form-urlencoded' -d "grant_type=refresh_token&refresh_token=$refresh" http://127.0.0.1:54444/oauth2/token)
 [ "$reuse_status" = 400 ]
 curl -fsS -u "$client_id:$client_secret" -d "token=$access" http://127.0.0.1:54444/oauth2/revoke >/dev/null

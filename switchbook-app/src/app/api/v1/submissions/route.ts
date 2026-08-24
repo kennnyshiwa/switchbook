@@ -5,7 +5,7 @@ import { auditPartner, requirePartner } from '@/lib/partner-api/auth'
 import { errorResponse, PartnerApiError } from '@/lib/partner-api/errors'
 import { proposedSwitchSchema } from '@/lib/partner-api/schemas'
 import { runIdempotentTransaction, storedPartnerError } from '@/lib/partner-api/idempotency'
-import { rehostRemoteImage } from '@/lib/remote-image'
+import { associateSubmissionPhotos, photoOutcome } from '@/lib/partner-api/submission-photos'
 
 export async function POST(request: Request) {
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID()
@@ -32,33 +32,21 @@ export async function POST(request: Request) {
         applicationId: partner.applicationId, userId: partner.userId!, masterSwitchId: masterSwitch.id,
         payload: parsed.data as unknown as Prisma.InputJsonValue, status: 'SUBMITTED',
       } })
-      return { status: 202, body: { data: { id: submission.id, status: submission.status.toLowerCase(), canonicalId: null, candidateId: masterSwitch.id, imageErrors: [] } } }
+      await tx.partnerSubmissionPhoto.createMany({ data: photos.map((photo, order) => ({ submissionId: submission.id, sourceUrl: photo.sourceUrl || photo.url, order })), skipDuplicates: true })
+      return { status: 202, body: { data: {
+        id: submission.id, status: submission.status.toLowerCase(), canonicalId: null, candidateId: masterSwitch.id,
+        photosStatus: photos.length ? 'processing' : 'complete',
+        photos: photos.map(photo => ({ sourceUrl: photo.sourceUrl || photo.url, status: 'pending', error: null })),
+      } } }
     })
     const responseData = (result.body as { data?: { candidateId?: string } }).data
     if (result.status === 202 && responseData?.candidateId) {
-      await associateSubmissionPhotos(responseData.candidateId, photos)
+      const submissionId = (result.body as { data?: { id?: string } }).data?.id
+      if (submissionId) await associateSubmissionPhotos(submissionId, responseData.candidateId, photos)
     }
     await auditPartner(request, principal, 'submission.create', result.status, { type: 'partner_submission' })
     return NextResponse.json(result.body, { status: result.status, headers: result.replayed ? { 'Idempotent-Replayed': 'true' } : undefined })
   } catch (error) { return errorResponse(error, requestId) }
-}
-
-async function associateSubmissionPhotos(masterSwitchId: string, photos: Array<{ url: string; alt: string; sourceUrl?: string; license?: string; attribution?: string }>) {
-  for (const [index, photo] of photos.entries()) {
-    const sourceUrl = photo.sourceUrl || photo.url
-    try {
-      const alreadyLinked = await prisma.switchImage.findFirst({ where: { masterSwitchId, sourceUrl } })
-      if (alreadyLinked) continue
-      const uploaded = await rehostRemoteImage(photo.url, `master-switches/${masterSwitchId}`)
-      await prisma.$transaction(async tx => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${masterSwitchId}:${sourceUrl}`}))`
-        const existing = await tx.switchImage.findFirst({ where: { masterSwitchId, sourceUrl } })
-        if (!existing) await tx.switchImage.create({ data: { masterSwitchId, url: uploaded.url, order: index, width: uploaded.width, height: uploaded.height, size: uploaded.size, checksumSha256: uploaded.checksumSha256, altText: photo.alt, sourceUrl, license: photo.license, attribution: photo.attribution } })
-      })
-    } catch (error) {
-      console.warn('[partner-submission-image]', masterSwitchId, error instanceof Error ? error.message : 'Image rejected')
-    }
-  }
 }
 
 export async function GET(request: Request) {
@@ -66,8 +54,8 @@ export async function GET(request: Request) {
   try {
     const principal = await requirePartner(request, ['submissions:read'])
     if (!principal.userId) throw new PartnerApiError(403, 'user_authorization_required', 'An OAuth user token is required')
-    const data = await prisma.partnerSubmission.findMany({ where: { applicationId: principal.applicationId, userId: principal.userId }, orderBy: { updatedAt: 'desc' }, take: 100 })
+    const data = await prisma.partnerSubmission.findMany({ where: { applicationId: principal.applicationId, userId: principal.userId }, include: { photos: { orderBy: { order: 'asc' } } }, orderBy: { updatedAt: 'desc' }, take: 100 })
     await auditPartner(request, principal, 'submission.list', 200, { type: 'partner_submission' })
-    return NextResponse.json({ data: data.map(item => ({ id: item.id, status: item.status.toLowerCase(), moderatorFeedback: item.moderatorFeedback, canonicalId: item.status === 'APPROVED' ? item.masterSwitchId : null, updatedAt: item.updatedAt })) })
+    return NextResponse.json({ data: data.map(item => ({ id: item.id, status: item.status.toLowerCase(), moderatorFeedback: item.moderatorFeedback, canonicalId: item.status === 'APPROVED' ? item.masterSwitchId : null, updatedAt: item.updatedAt, ...photoOutcome(item.photos) })) })
   } catch (error) { return errorResponse(error, requestId) }
 }

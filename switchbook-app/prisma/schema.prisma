@@ -334,26 +334,27 @@ model DismissedNotification {
 }
 
 model SwitchImage {
-  id             String        @id @default(cuid())
-  switchId       String?
-  masterSwitchId String?
-  url            String
-  type           ImageType     @default(UPLOADED)
-  order          Int           @default(0)
-  caption        String?
-  width          Int?
-  height         Int?
-  size           Int?
-  uploadedAt     DateTime      @default(now())
-  altText        String?
-  sourceUrl      String?
-  sourceName     String?
-  license        String?
-  attribution    String?
-  checksumSha256 String?
-  revision       Int           @default(1)
-  masterSwitch   MasterSwitch? @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
-  switch         Switch?       @relation(fields: [switchId], references: [id], onDelete: SetNull)
+  id                     String                  @id @default(cuid())
+  switchId               String?
+  masterSwitchId         String?
+  url                    String
+  type                   ImageType               @default(UPLOADED)
+  order                  Int                     @default(0)
+  caption                String?
+  width                  Int?
+  height                 Int?
+  size                   Int?
+  uploadedAt             DateTime                @default(now())
+  altText                String?
+  sourceUrl              String?
+  sourceName             String?
+  license                String?
+  attribution            String?
+  checksumSha256         String?
+  revision               Int                     @default(1)
+  masterSwitch           MasterSwitch?           @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  switch                 Switch?                 @relation(fields: [switchId], references: [id], onDelete: SetNull)
+  partnerSubmissionPhoto PartnerSubmissionPhoto?
 
   @@index([switchId])
   @@index([masterSwitchId])
@@ -412,21 +413,40 @@ model MasterSwitchLifecycle {
 }
 
 model PartnerSubmission {
-  id                String                  @id @default(cuid())
+  id                String                   @id @default(cuid())
   applicationId     String
   userId            String
   masterSwitchId    String?
-  status            PartnerSubmissionStatus @default(SUBMITTED)
+  status            PartnerSubmissionStatus  @default(SUBMITTED)
   payload           Json
   moderatorFeedback String?
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  application       PartnerApplication      @relation(fields: [applicationId], references: [id], onDelete: Restrict)
-  user              User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  masterSwitch      MasterSwitch?           @relation(fields: [masterSwitchId], references: [id], onDelete: SetNull)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  application       PartnerApplication       @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  masterSwitch      MasterSwitch?            @relation(fields: [masterSwitchId], references: [id], onDelete: SetNull)
+  photos            PartnerSubmissionPhoto[]
 
   @@index([applicationId, userId, updatedAt])
   @@index([masterSwitchId])
+}
+
+model PartnerSubmissionPhoto {
+  id            String            @id @default(cuid())
+  submissionId  String
+  sourceUrl     String
+  status        String            @default("PENDING")
+  error         String?
+  switchImageId String?           @unique
+  order         Int
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  submission    PartnerSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  switchImage   SwitchImage?      @relation(fields: [switchImageId], references: [id], onDelete: SetNull)
+
+  @@unique([submissionId, sourceUrl])
+  @@index([submissionId, order])
+  @@index([status, updatedAt])
 }
 
 model PartnerCorrection {
