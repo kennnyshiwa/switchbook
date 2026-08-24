@@ -86,6 +86,13 @@ test('conditional JSON returns 304 for matching ETag', async () => {
   assert.equal(second.headers.get('etag'), etag)
 })
 
+test('conditional JSON accepts a CDN-weakened ETag and comma-separated validators', async () => {
+  const initial = cacheableJson(new Request('https://switchbook.app/api/v1/catalog/switches'), { data: ['stable'] })
+  const etag = initial.headers.get('etag')!
+  const weak = cacheableJson(new Request('https://switchbook.app/api/v1/catalog/switches', { headers: { 'If-None-Match': `"other", W/${etag}` } }), { data: ['stable'] })
+  assert.equal(weak.status, 304)
+})
+
 test('Hydra and nginx jointly mandate PKCE S256 and publish access-token keys', () => {
   const hydra = readFileSync(new URL('../ops/hydra/hydra.yml', import.meta.url), 'utf8')
   const nginx = readFileSync(new URL('../nginx/conf.d/default.conf', import.meta.url), 'utf8')
@@ -157,6 +164,14 @@ test('partner provisioning is idempotent unless intentional rotation is requeste
   assert.match(source, /PARTNER_ROTATE_SECRETS/)
   assert.match(source, /Configuration updated without rotating credentials/)
   assert.match(source, /webhookUrl/)
+})
+
+test('partner runbook forbids placeholder OAuth callbacks and documents external sandbox surfaces', () => {
+  const runbook = readFileSync(new URL('../docs/partner-api-runbook.md', import.meta.url), 'utf8')
+  assert.match(runbook, /https:\/\/switchbook\.app\/developers\/sandbox/)
+  assert.match(runbook, /https:\/\/switchbook\.app\/openapi\/partner-v1\.yaml/)
+  assert.match(runbook, /production OAuth provisioning is blocked/)
+  assert.doesNotMatch(runbook, /keebvault\.example/)
 })
 
 test('webhook response drain rejects declared and streamed oversized bodies', async () => {

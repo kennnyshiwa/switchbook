@@ -7,8 +7,9 @@
 3. Generate an independent 32-byte `PARTNER_SECRET_ENCRYPTION_KEY` (base64 or hex) for encrypted webhook secrets. Back it up in the deployment secret store; losing or changing it without re-encrypting existing secrets disables webhook delivery.
 4. Set `PARTNER_OIDC_ISSUER=https://switchbook.app`, `PARTNER_OIDC_AUDIENCE=https://switchbook.app/api/v1`, and a random `AUDIT_IP_SALT`. Compose provides persistent Redis at `redis://redis:6379`; the partner API fails closed if shared quota storage is unavailable.
 5. Run `docker compose pull && docker compose up -d`. Compose runs Hydra migrations before serving; verify `docker compose ps`, `curl -fsS https://switchbook.app/health/ready`, and discovery/JWKS.
-6. Provision KeebVault once with an exact callback URL:
-   `PARTNER_NAME=KeebVault PARTNER_REDIRECT_URI=https://keebvault.example/oauth/switchbook/callback npm run partner:provision`
+6. Obtain KeebVault's exact production HTTPS callback URL from the partner and provision it once:
+   `PARTNER_NAME=KeebVault PARTNER_REDIRECT_URI=https://<partner-owned-host>/<exact-callback-path> npm run partner:provision`
+   Do not substitute a placeholder, a SwitchBook-owned callback, or a wildcard. If the partner has not supplied the callback, catalog-key acceptance may continue, but production OAuth provisioning is blocked.
    Store the one-time client secret, catalog API key, and webhook secret in KeebVault's secret manager.
    Re-running with the same `PARTNER_CLIENT_ID` updates redirect/webhook configuration without rotating credentials. Rotation is explicit: set `PARTNER_ROTATE_SECRETS=true`, coordinate the cutover, and securely capture the newly printed values.
 7. Schedule `npm run partner:webhooks` every minute if webhooks are enabled.
@@ -19,6 +20,12 @@
 - Redirect URIs are exact HTTPS matches. Wildcards and implicit/password grants are forbidden.
 - Request only needed scopes. `offline_access` is required for refresh tokens.
 - Revoke at `/oauth2/revoke`; discovery is `/.well-known/openid-configuration`.
+
+## External integration surfaces
+
+- Production documentation is served at `https://switchbook.app/developers` and the OpenAPI 3.1 document at `https://switchbook.app/openapi/partner-v1.yaml`.
+- The same-origin catalog request console is served at `https://switchbook.app/developers/sandbox`. It retains the entered application key only in page memory and sends it only to `switchbook.app`.
+- The request console may use a scoped, revocable test credential against production-safe catalog data. Write/OAuth acceptance must use an isolated test account and synthetic records; it must not use a fabricated partner redirect URI.
 
 ### Repeatable acceptance evidence
 

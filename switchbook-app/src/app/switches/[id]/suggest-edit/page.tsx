@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { MasterSwitchEditForm } from '@/components/MasterSwitchEditForm';
+import { responseErrorMessage } from '@/lib/client-api-error';
 
 interface MasterSwitchData {
   id: string;
@@ -97,11 +98,10 @@ export default function SuggestEditPage({ params }: { params: Promise<{ id: stri
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to submit edit suggestion');
+        throw new Error(await responseErrorMessage(response, 'Failed to submit edit suggestion'));
       }
 
-      const result = await response.json();
+      await response.json();
       router.push(`/dashboard/submissions?editSubmitted=true`);
     } catch (error) {
       console.error('Submission error:', error);

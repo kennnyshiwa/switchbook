@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { MasterSwitchSubmissionForm } from '@/components/MasterSwitchSubmissionForm';
+import { apiErrorMessage, responseErrorMessage } from '@/lib/client-api-error';
 
 interface SimilarSwitch {
   id: string;
@@ -61,8 +62,7 @@ export default function SubmitMasterSwitchPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || `Failed to upload ${file.name}`);
+        throw new Error(await responseErrorMessage(response, `Failed to upload ${file.name}`));
       }
     }
   };
@@ -96,7 +96,7 @@ export default function SubmitMasterSwitchPage() {
       }
       
       if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to submit master switch');
+        throw new Error(apiErrorMessage(responseData, 'Failed to submit master switch'));
       }
 
       if (pendingUploads.length > 0) {
