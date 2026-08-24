@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hydra_e2e
+      POSTGRES_PASSWORD: hydra_e2e_password
+      POSTGRES_DB: hydra_e2e
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hydra_e2e"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+  hydra:
+    image: oryd/hydra:v2.3.0
+    depends_on:
+      postgres: { condition: service_healthy }
+    entrypoint: /bin/ash
+    command: ["-c", "/usr/bin/hydra migrate sql --yes \"$$DSN\" && exec /usr/bin/hydra serve all --dev --config /etc/hydra/hydra.yml"]
+    environment:
+      DSN: postgres://hydra_e2e:hydra_e2e_password@postgres:5432/hydra_e2e?sslmode=disable
+      SECRETS_SYSTEM: isolated-hydra-e2e-system-secret-at-least-32-bytes
+    volumes:
+      - ./e2e-hydra.yml:/etc/hydra/hydra.yml:ro
+    ports:
+      - "127.0.0.1:54444:4444"
+      - "127.0.0.1:54445:4445"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:4445/health/ready"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

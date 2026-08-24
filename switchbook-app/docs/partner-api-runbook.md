@@ -20,6 +20,12 @@
 - Request only needed scopes. `offline_access` is required for refresh tokens.
 - Revoke at `/oauth2/revoke`; discovery is `/.well-known/openid-configuration`.
 
+### Repeatable acceptance evidence
+
+- `ops/hydra/e2e-oauth.sh` creates isolated tmpfs Postgres/Hydra services, applies migrations, and drives login/consent challenges through Hydra's admin API. It verifies missing and wrong PKCE verifiers are rejected, a correct S256 verifier issues tokens, refresh rotation invalidates reuse, and revocation makes introspection inactive. The trap removes all temporary containers, networks, and data.
+- `ops/partner-api/e2e-idempotency.sh` creates an isolated tmpfs database, applies application migrations, injects a fault after a business write but before response finalization, and proves rollback. It also proves one business mutation under six concurrent identical requests and byte-exact deterministic error replay.
+- Run both from the repository root before release. Successful output begins `Hydra E2E PASS` and `Partner idempotency E2E PASS` respectively.
+
 ## Operations
 
 - Rotate application keys by creating a new `PartnerCredential`, cut over, then set `revokedAt` on the old key.

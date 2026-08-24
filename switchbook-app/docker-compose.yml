@@ -94,7 +94,7 @@ services:
     networks:
       - switchbook-network
     healthcheck:
-      test: ["CMD", "hydra", "health", "ready", "-e", "http://127.0.0.1:4445"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:4445/health/ready"]
       interval: 10s
       timeout: 5s
       retries: 12

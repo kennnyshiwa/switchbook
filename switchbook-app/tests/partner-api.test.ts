@@ -8,7 +8,7 @@ import { openSecret, sealSecret } from '../src/lib/partner-api/crypto'
 import { catalogDisposition } from '../src/lib/partner-api/catalog'
 import { assertNoMergeCycle } from '../src/lib/partner-api/lifecycle'
 import { PartnerApiError } from '../src/lib/partner-api/errors'
-import { assertSafeWebhookUrl } from '../src/lib/partner-api/outbound'
+import { assertSafeWebhookUrl, drainLimitedResponse } from '../src/lib/partner-api/outbound'
 import { cacheableJson } from '../src/lib/partner-api/http'
 import { readFileSync } from 'node:fs'
 import { classifyIdempotency } from '../src/lib/partner-api/idempotency'
@@ -136,4 +136,28 @@ test('partner provisioning is idempotent unless intentional rotation is requeste
   assert.match(source, /PARTNER_ROTATE_SECRETS/)
   assert.match(source, /Configuration updated without rotating credentials/)
   assert.match(source, /webhookUrl/)
+})
+
+test('webhook response drain rejects declared and streamed oversized bodies', async () => {
+  await assert.rejects(() => drainLimitedResponse(new Response('small', { headers: { 'content-length': '999999' } }), 64))
+  let cancelled = false
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) { controller.enqueue(new Uint8Array(40)) },
+    cancel() { cancelled = true },
+  })
+  await assert.rejects(() => drainLimitedResponse(new Response(stream), 64))
+  assert.equal(cancelled, true)
+})
+
+test('write routes use one atomic idempotency transaction for business data and replay response', () => {
+  const helper = readFileSync(new URL('../src/lib/partner-api/idempotency.ts', import.meta.url), 'utf8')
+  const submission = readFileSync(new URL('../src/app/api/v1/submissions/route.ts', import.meta.url), 'utf8')
+  const correction = readFileSync(new URL('../src/app/api/v1/catalog/switches/[id]/corrections/route.ts', import.meta.url), 'utf8')
+  assert.match(helper, /const result = await work\(tx\)/)
+  assert.match(helper, /tx\.partnerIdempotencyKey\.update/)
+  assert.match(helper, /TransactionIsolationLevel\.Serializable/)
+  assert.match(submission, /runIdempotentTransaction/)
+  assert.match(correction, /runIdempotentTransaction/)
+  assert.doesNotMatch(submission, /beginIdempotent/)
+  assert.doesNotMatch(correction, /beginIdempotent/)
 })

@@ -1,0 +1,19 @@
+urls:
+  self:
+    issuer: http://127.0.0.1:54444
+  login: http://127.0.0.1:59999/login
+  consent: http://127.0.0.1:59999/consent
+strategies:
+  access_token: jwt
+oauth2:
+  pkce:
+    enforced: true
+    enforced_for_public_clients: true
+oidc:
+  subject_identifiers:
+    supported_types: [public]
+ttl:
+  access_token: 5m
+  refresh_token: 1h
+log:
+  level: error

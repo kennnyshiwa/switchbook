@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { prisma } from '../src/lib/prisma'
 import { openSecret } from '../src/lib/partner-api/crypto'
-import { assertSafeWebhookUrl } from '../src/lib/partner-api/outbound'
+import { assertSafeWebhookUrl, drainLimitedResponse } from '../src/lib/partner-api/outbound'
 import { pinnedPublicFetch } from '../src/lib/image-security'
 
 async function main() {
@@ -18,7 +18,7 @@ async function main() {
       let response: Response
       try {
         response = pinned.response
-        await response.arrayBuffer()
+        await drainLimitedResponse(response)
       } finally {
         await pinned.close()
       }
