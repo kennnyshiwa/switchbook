@@ -61,6 +61,7 @@
     "zod": "^3.25.49"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
     "@types/lodash": "^4.17.17",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.3.3",

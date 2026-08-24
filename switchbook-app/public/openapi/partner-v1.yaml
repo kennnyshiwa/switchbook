@@ -14,7 +14,7 @@ paths:
     get:
       summary: Search active approved switches
       operationId: searchSwitches
-      security: [ { applicationKey: [] }, { oauth: [catalog:read] } ]
+      security: [ { applicationKey: [] }, { oauth: ['catalog:read'] } ]
       parameters:
         - { name: q, in: query, schema: { type: string, maxLength: 120 } }
         - { name: manufacturer, in: query, schema: { type: string } }
@@ -33,7 +33,7 @@ paths:
     get:
       summary: Retrieve a canonical record or lifecycle tombstone
       operationId: getSwitch
-      security: [ { applicationKey: [] }, { oauth: [catalog:read] } ]
+      security: [ { applicationKey: [] }, { oauth: ['catalog:read'] } ]
       parameters: [ { $ref: '#/components/parameters/SwitchId' } ]
       responses:
         '200': { description: Full record or tombstone, content: { application/json: { schema: { oneOf: [ { $ref: '#/components/schemas/SwitchResponse' }, { $ref: '#/components/schemas/Tombstone' } ] } } } }
@@ -42,25 +42,25 @@ paths:
     post:
       summary: Retrieve up to 100 records and tombstones in request order
       operationId: batchGetSwitches
-      security: [ { applicationKey: [] }, { oauth: [catalog:read] } ]
+      security: [ { applicationKey: [] }, { oauth: ['catalog:read'] } ]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [ids], properties: { ids: { type: array, minItems: 1, maxItems: 100, items: { type: string } } } } } } }
       responses: { '200': { description: Per-ID results, content: { application/json: { schema: { $ref: '#/components/schemas/BatchResponse' } } } }, '400': { $ref: '#/components/responses/Error' }, '401': { $ref: '#/components/responses/Error' }, '429': { $ref: '#/components/responses/Error' }, '500': { $ref: '#/components/responses/Error' } }
   /profile:
     get:
       summary: Read the linked SwitchBook profile
       operationId: getProfile
-      security: [ { oauth: [profile:read] } ]
+      security: [ { oauth: ['profile:read'] } ]
       responses: { '200': { description: Linked SwitchBook identity, content: { application/json: { schema: { $ref: '#/components/schemas/ProfileResponse' } } } }, '401': { $ref: '#/components/responses/Error' } }
   /submissions:
     get:
       summary: List the current user's partner submissions
       operationId: listSubmissions
-      security: [ { oauth: [submissions:read] } ]
+      security: [ { oauth: ['submissions:read'] } ]
       responses: { '200': { description: Current user's submissions, content: { application/json: { schema: { $ref: '#/components/schemas/SubmissionList' } } } }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
     post:
       summary: Propose a missing switch for moderation
       operationId: createSubmission
-      security: [ { oauth: [submissions:write] } ]
+      security: [ { oauth: ['submissions:write'] } ]
       parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SwitchProposal' } } } }
       responses: { '202': { description: Proposal accepted for moderation, content: { application/json: { schema: { $ref: '#/components/schemas/SubmissionResponse' } } } }, '400': { $ref: '#/components/responses/Error' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '409': { $ref: '#/components/responses/Error' }, '429': { $ref: '#/components/responses/Error' }, '500': { $ref: '#/components/responses/Error' } }
@@ -68,14 +68,14 @@ paths:
     get:
       summary: Retrieve one submission's moderation status
       operationId: getSubmission
-      security: [ { oauth: [submissions:read] } ]
+      security: [ { oauth: ['submissions:read'] } ]
       parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
       responses: { '200': { description: Submission status and moderator feedback, content: { application/json: { schema: { $ref: '#/components/schemas/SubmissionResponse' } } } }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '404': { $ref: '#/components/responses/Error' } }
   /catalog/switches/{id}/corrections:
     post:
       summary: Suggest a correction to an active canonical record
       operationId: createCorrection
-      security: [ { oauth: [corrections:write] } ]
+      security: [ { oauth: ['corrections:write'] } ]
       parameters: [ { $ref: '#/components/parameters/SwitchId' }, { $ref: '#/components/parameters/IdempotencyKey' } ]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CorrectionProposal' } } } }
       responses: { '202': { description: Correction accepted for moderation, content: { application/json: { schema: { $ref: '#/components/schemas/CorrectionResponse' } } } }, '400': { $ref: '#/components/responses/Error' }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' }, '404': { $ref: '#/components/responses/Error' }, '409': { $ref: '#/components/responses/Error' } }
@@ -83,7 +83,7 @@ paths:
     get:
       summary: List the current user's correction suggestions
       operationId: listCorrections
-      security: [ { oauth: [submissions:read] } ]
+      security: [ { oauth: ['submissions:read'] } ]
       responses: { '200': { description: Current user's correction statuses, content: { application/json: { schema: { $ref: '#/components/schemas/CorrectionList' } } } }, '401': { $ref: '#/components/responses/Error' }, '403': { $ref: '#/components/responses/Error' } }
   /migration/matches:
     post:
@@ -104,11 +104,11 @@ components:
           scopes:
             openid: Authenticate the SwitchBook account
             offline_access: Issue a rotating refresh token
-            catalog:read: Read approved canonical catalog records
-            profile:read: Read linked basic profile
-            submissions:write: Create catalog proposals
-            submissions:read: Read own moderation status
-            corrections:write: Suggest canonical corrections
+            'catalog:read': Read approved canonical catalog records
+            'profile:read': Read linked basic profile
+            'submissions:write': Create catalog proposals
+            'submissions:read': Read own moderation status
+            'corrections:write': Suggest canonical corrections
   parameters:
     SwitchId: { name: id, in: path, required: true, schema: { type: string } }
     IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 200 } }

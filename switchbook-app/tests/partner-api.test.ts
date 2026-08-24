@@ -14,6 +14,7 @@ import { cacheableJson } from '../src/lib/partner-api/http'
 import { readFileSync } from 'node:fs'
 import { classifyIdempotency } from '../src/lib/partner-api/idempotency'
 import { createHmac } from 'node:crypto'
+import SwaggerParser from '@apidevtools/swagger-parser'
 
 test('partner keys are prefixed, random, and hash-verifiable', () => {
   const first = issuePartnerKey()
@@ -166,11 +167,20 @@ test('partner provisioning is idempotent unless intentional rotation is requeste
   assert.match(source, /webhookUrl/)
 })
 
-test('partner runbook forbids placeholder OAuth callbacks and documents external sandbox surfaces', () => {
+test('published partner OpenAPI is parser-valid OpenAPI 3.1', async () => {
+  const document = await SwaggerParser.validate(new URL('../public/openapi/partner-v1.yaml', import.meta.url).pathname)
+  assert.equal((document as { openapi?: string }).openapi, '3.1.0')
+  assert.ok(document.paths?.['/catalog/switches'])
+  assert.ok(document.paths?.['/submissions'])
+})
+
+test('partner runbook separates temporary SwitchBook acceptance from partner handoff', () => {
   const runbook = readFileSync(new URL('../docs/partner-api-runbook.md', import.meta.url), 'utf8')
   assert.match(runbook, /https:\/\/switchbook\.app\/developers\/sandbox/)
   assert.match(runbook, /https:\/\/switchbook\.app\/openapi\/partner-v1\.yaml/)
-  assert.match(runbook, /production OAuth provisioning is blocked/)
+  assert.match(runbook, /handoff provisioning remains blocked/)
+  assert.match(runbook, /temporary SwitchBook-owned client/)
+  assert.match(runbook, /failed cleanup fails acceptance/)
   assert.doesNotMatch(runbook, /keebvault\.example/)
 })
 

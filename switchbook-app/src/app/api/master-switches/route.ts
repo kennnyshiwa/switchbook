@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { MasterSwitchStatus, Prisma } from '@prisma/client'
+import { masterSwitchOrderBy } from '@/lib/master-switch-sort'
 
 // Query params schema
 const querySchema = z.object({
@@ -48,7 +49,7 @@ const querySchema = z.object({
   initialMagneticFluxMax: z.string().optional().transform(val => val ? Number(val) : undefined),
   bottomOutMagneticFluxMin: z.string().optional().transform(val => val ? Number(val) : undefined),
   bottomOutMagneticFluxMax: z.string().optional().transform(val => val ? Number(val) : undefined),
-  sort: z.enum(['name', 'viewCount', 'createdAt']).optional().default('name'),
+  sort: z.enum(['name', 'viewCount', 'createdAt', 'popular', 'userCount']).optional().default('name'),
   order: z.enum(['asc', 'desc']).optional().default('asc'),
 })
 
@@ -191,7 +192,7 @@ export async function GET(request: Request) {
     // Get master switches with pagination
     const masterSwitches = await prisma.masterSwitch.findMany({
       where,
-      orderBy: { [sort]: order },
+      orderBy: masterSwitchOrderBy(sort, order),
       skip: limit ? (page - 1) * limit : 0,
       take: limit || undefined,
       include: {

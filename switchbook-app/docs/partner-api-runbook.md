@@ -9,7 +9,7 @@
 5. Run `docker compose pull && docker compose up -d`. Compose runs Hydra migrations before serving; verify `docker compose ps`, `curl -fsS https://switchbook.app/health/ready`, and discovery/JWKS.
 6. Obtain KeebVault's exact production HTTPS callback URL from the partner and provision it once:
    `PARTNER_NAME=KeebVault PARTNER_REDIRECT_URI=https://<partner-owned-host>/<exact-callback-path> npm run partner:provision`
-   Do not substitute a placeholder, a SwitchBook-owned callback, or a wildcard. If the partner has not supplied the callback, catalog-key acceptance may continue, but production OAuth provisioning is blocked.
+   Do not substitute a placeholder, a SwitchBook-owned callback, or a wildcard for the partner's final production client. If the partner has not supplied the callback, handoff provisioning remains blocked, but SwitchBook acceptance may continue with the isolated temporary client described below.
    Store the one-time client secret, catalog API key, and webhook secret in KeebVault's secret manager.
    Re-running with the same `PARTNER_CLIENT_ID` updates redirect/webhook configuration without rotating credentials. Rotation is explicit: set `PARTNER_ROTATE_SECRETS=true`, coordinate the cutover, and securely capture the newly printed values.
 7. Schedule `npm run partner:webhooks` every minute if webhooks are enabled.
@@ -25,7 +25,15 @@
 
 - Production documentation is served at `https://switchbook.app/developers` and the OpenAPI 3.1 document at `https://switchbook.app/openapi/partner-v1.yaml`.
 - The same-origin catalog request console is served at `https://switchbook.app/developers/sandbox`. It retains the entered application key only in page memory and sends it only to `switchbook.app`.
-- The request console may use a scoped, revocable test credential against production-safe catalog data. Write/OAuth acceptance must use an isolated test account and synthetic records; it must not use a fabricated partner redirect URI.
+- The request console may use a scoped, revocable test credential against production-safe catalog data. Write/OAuth acceptance must use an isolated test account and synthetic records. A temporary SwitchBook-owned client may use the exact callback `https://switchbook.app/developers/sandbox` solely for controlled acceptance; it must never be presented or retained as the partner's callback.
+
+### Controlled production acceptance
+
+1. Create a uniquely named, time-bounded application and synthetic user. Its only redirect URI must be the exact SwitchBook-owned HTTPS callback `https://switchbook.app/developers/sandbox`.
+2. Exercise authorization code with S256 PKCE, explicit consent, refresh rotation/replay rejection, revocation, scoped catalog reads, and synthetic submissions/corrections. Never infer or substitute the partner callback.
+3. Tag every synthetic record with the assignment identifier. Record IDs, not credential values, in redacted evidence.
+4. In a finally/trap cleanup, revoke tokens and credentials, delete the Hydra client and temporary application, remove all synthetic submissions, corrections, images, and users, then prove those IDs no longer resolve. A failed cleanup fails acceptance.
+5. Provision the real partner client only after receiving its exact partner-owned HTTPS callback.
 
 ### Repeatable acceptance evidence
 
