@@ -50,8 +50,34 @@ async function queueCatalogReview(catalogEntryId: string, kind: string, reason: 
 export async function syncForceCurveCatalog(revision: string, entries: CatalogInput[], options: { chunkSize?: number; failAfterChunks?: number; catalogRevision?: string } = {}) {
   const chunkSize = options.chunkSize || 50
   const uniqueEntries = [...new Map(entries.map(e => [e.path, e])).values()].sort((a,b) => a.path.localeCompare(b.path))
-  let run = await prisma.forceCurveSyncRun.upsert({ where: { source_revision: { source: FORCE_CURVE_SOURCE, revision } }, create: { source: FORCE_CURVE_SOURCE, revision, beforeCount: await prisma.forceCurveCatalogEntry.count({ where: { source: FORCE_CURVE_SOURCE, exists: true } }) }, update: {} })
-  if (run.status === 'COMPLETED') return run
+  const catalogRevision = options.catalogRevision || revision
+  // Creation is the ownership claim. A concurrent caller that loses the unique
+  // (source, revision) insert waits for the owner and shares its durable result.
+  // FAILED runs are claimed with a compare-and-set; an abruptly abandoned RUNNING
+  // run may only be reclaimed after an hour without a heartbeat.
+  let ownsRun = false
+  let run: Awaited<ReturnType<typeof prisma.forceCurveSyncRun.findUniqueOrThrow>>
+  try {
+    run = await prisma.forceCurveSyncRun.create({ data: { source: FORCE_CURVE_SOURCE, revision, beforeCount: await prisma.forceCurveCatalogEntry.count({ where: { source: FORCE_CURVE_SOURCE, exists: true } }) } })
+    ownsRun = true
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error
+    run = await prisma.forceCurveSyncRun.findUniqueOrThrow({ where: { source_revision: { source: FORCE_CURVE_SOURCE, revision } } })
+  }
+  while (!ownsRun && run.status !== 'COMPLETED') {
+    if (run.status === 'FAILED') {
+      const claimed = await prisma.forceCurveSyncRun.updateMany({ where: { id: run.id, status: 'FAILED', updatedAt: run.updatedAt }, data: { status: 'RUNNING', completedAt: null } })
+      ownsRun = claimed.count === 1
+    } else if (run.updatedAt < new Date(Date.now() - 60 * 60 * 1000)) {
+      const abandoned = await prisma.forceCurveSyncRun.updateMany({ where: { id: run.id, status: 'RUNNING', updatedAt: run.updatedAt }, data: { status: 'FAILED' } })
+      if (abandoned.count === 1) continue
+    }
+    if (!ownsRun) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      run = await prisma.forceCurveSyncRun.findUniqueOrThrow({ where: { id: run.id } })
+    }
+  }
+  if (!ownsRun) return reconcileCompletedSyncRun(run.id, catalogRevision)
   const start = Number(run.cursor || 0)
   try {
     let completedChunks = 0
@@ -63,7 +89,6 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
           const previous = await tx.forceCurveCatalogEntry.findUnique({ where: { source_repositoryPath: { source: FORCE_CURVE_SOURCE, repositoryPath: entry.path } } })
           const displayName = measurementDisplayName(entry.path)
           const contentChanged = Boolean(previous && previous.contentHash !== (entry.sha || null))
-          const catalogRevision = options.catalogRevision || revision
           const trustedMetadata = entry.metadataVerified && entry.manufacturer && entry.technology ? { manufacturer: entry.manufacturer, technology: entry.technology, metadataVerifiedAt: new Date() } : {}
           const row = await tx.forceCurveCatalogEntry.upsert({ where: { source_repositoryPath: { source: FORCE_CURVE_SOURCE, repositoryPath: entry.path } }, create: { source: FORCE_CURVE_SOURCE, repositoryPath: entry.path, displayName, revision: catalogRevision, contentHash: entry.sha, ...trustedMetadata }, update: { displayName, revision: catalogRevision, contentHash: entry.sha, ...(!previous?.metadataVerifiedAt ? trustedMetadata : {}), exists: true, lastSeenAt: new Date() } })
           if (!previous) added++; else if (contentChanged || !previous.exists) changed++
@@ -117,11 +142,40 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
       await prisma.forceCurveMapping.updateMany({ where: { masterSwitchId: peach.id, state: { in: APPROVED_STATES } }, data: { state: 'STALE', reason: 'No verified KTT Peach Blossom curve' } })
       await prisma.forceCurveMapping.upsert({ where: { noMatchKey: peach.id }, create: { masterSwitchId: peach.id, noMatchKey: peach.id, state: 'NO_MATCH', provenance: 'regression-guard', reason: 'No verified KTT Peach Blossom curve' }, update: { state: 'NO_MATCH', provenance: 'regression-guard' } })
     }
-    run = await prisma.forceCurveSyncRun.update({ where: { id: run.id }, data: { status: 'COMPLETED', completedAt: new Date(), cursor: String(uniqueEntries.length), afterCount: await prisma.forceCurveCatalogEntry.count({ where: { source: FORCE_CURVE_SOURCE, exists: true } }), unmatchedCount: unmatched, reviewCount: reviews } }); return run
+    run = await prisma.$transaction(async tx => {
+      const [afterCount, reviewCount] = await Promise.all([
+        tx.forceCurveCatalogEntry.count({ where: { source: FORCE_CURVE_SOURCE, exists: true } }),
+        applicableReviewCount(tx, catalogRevision),
+      ])
+      return tx.forceCurveSyncRun.update({ where: { id: run.id }, data: { status: 'COMPLETED', completedAt: new Date(), cursor: String(uniqueEntries.length), afterCount, unmatchedCount: unmatched, reviewCount } })
+    }); return run
   } catch (error) {
-    const current = await prisma.forceCurveSyncRun.findUniqueOrThrow({ where: { id: run.id } }); const prior = Array.isArray(current.errors) ? current.errors : []
-    await prisma.forceCurveSyncRun.update({ where: { id: run.id }, data: { status: 'FAILED', errorCount: { increment: 1 }, errors: [...prior, { message: error instanceof Error ? error.message : String(error), cursor: current.cursor }] as Prisma.InputJsonValue } }); throw error
+    await prisma.$transaction(async tx => {
+      const current = await tx.forceCurveSyncRun.findUniqueOrThrow({ where: { id: run.id } }); const prior = Array.isArray(current.errors) ? current.errors : []
+      await tx.forceCurveSyncRun.update({ where: { id: run.id }, data: { status: 'FAILED', errorCount: { increment: 1 }, errors: [...prior, { message: error instanceof Error ? error.message : String(error), cursor: current.cursor }] as Prisma.InputJsonValue } })
+    }); throw error
   }
+}
+
+type ForceCurveTx = Prisma.TransactionClient
+function applicableReviewCount(tx: ForceCurveTx, catalogRevision: string) {
+  return tx.forceCurveReviewCase.count({ where: {
+    status: 'OPEN',
+    kind: { in: ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] },
+    catalogEntry: { source: FORCE_CURVE_SOURCE, exists: true, revision: catalogRevision },
+  } })
+}
+
+async function reconcileCompletedSyncRun(runId: string, catalogRevision: string) {
+  return prisma.$transaction(async tx => {
+    const current = await tx.forceCurveSyncRun.findUniqueOrThrow({ where: { id: runId } })
+    if (current.status !== 'COMPLETED') return current
+    const reviewCount = await applicableReviewCount(tx, catalogRevision)
+    if (current.reviewCount === reviewCount) return current
+    // Guarded correction of derived audit data only. Decisions and queue rows are
+    // untouched, so a normal post-deploy sync repairs the initial production run.
+    return tx.forceCurveSyncRun.update({ where: { id: current.id }, data: { reviewCount } })
+  })
 }
 
 export async function fetchThereminGoatCatalog() {

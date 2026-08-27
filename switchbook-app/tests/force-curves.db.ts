@@ -50,6 +50,31 @@ async function main() {
   const reviewCount = await prisma.forceCurveReviewCase.count({where:{kind:{in:['SOURCE_UNVERIFIED','SOURCE_NONSTANDARD']},status:'OPEN'}})
   const repeated = await syncForceCurveCatalog('66cc5aa:formats-v2',modern,{chunkSize:2,catalogRevision:'66cc5aa'}); assert.equal(repeated.id,formats.id); assert.equal(await prisma.forceCurveReviewCase.count({where:{kind:{in:['SOURCE_UNVERIFIED','SOURCE_NONSTANDARD']},status:'OPEN'}}),reviewCount)
   await syncForceCurveCatalog('66cc5ab:formats-v2',modern,{chunkSize:2,catalogRevision:'66cc5ab'}); assert.equal(await prisma.forceCurveReviewCase.count({where:{kind:{in:['SOURCE_UNVERIFIED','SOURCE_NONSTANDARD']},status:'OPEN'}}),reviewCount)
+
+  // Production-shaped upstream cardinality: 2,622 paired measurements plus 107
+  // singletons = 5,351 catalog blobs and exactly 2,729 durable review groups.
+  const upstream = Array.from({length:2622},(_,i) => {
+    const key = `Exact Pair ${i}/exact pair ${i}`
+    return [
+      {path:`Exact Pair ${i}/Exact Pair ${i} Raw Data CSV.csv`,sha:`raw-${i}`,format:'RAW_DATA' as const,measurementKey:key},
+      {path:`Exact Pair ${i}/Exact_Pair_${i}_HighResolutionRaw.csv`,sha:`hi-${i}`,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:key},
+    ]
+  }).flat().concat(Array.from({length:107},(_,i)=>({path:`Exact Solo ${i}/Exact Solo ${i} Raw Data CSV.csv`,sha:`solo-${i}`,format:'RAW_DATA' as const,measurementKey:`Exact Solo ${i}/exact solo ${i}`})))
+  const concurrentRevision = 'exact-upstream:formats-v2'
+  const concurrent = await Promise.all([
+    syncForceCurveCatalog(concurrentRevision,upstream,{chunkSize:250,catalogRevision:'exact-upstream'}),
+    syncForceCurveCatalog(concurrentRevision,upstream,{chunkSize:250,catalogRevision:'exact-upstream'}),
+  ])
+  assert.equal(concurrent[0].id,concurrent[1].id); assert.equal(concurrent[0].status,'COMPLETED'); assert.equal(concurrent[1].status,'COMPLETED')
+  assert.equal(concurrent[0].cursor,'5351'); assert.equal(concurrent[1].cursor,'5351'); assert.equal(concurrent[0].errorCount,0); assert.equal(concurrent[1].errorCount,0)
+  assert.equal(concurrent[0].afterCount,5351); assert.equal(concurrent[0].reviewCount,2729); assert.equal(concurrent[1].reviewCount,2729)
+  assert.equal(await prisma.forceCurveSyncRun.count({where:{source:FORCE_CURVE_SOURCE,revision:concurrentRevision}}),1)
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{status:'OPEN',kind:{in:['SOURCE_UNVERIFIED','SOURCE_NONSTANDARD']},catalogEntry:{source:FORCE_CURVE_SOURCE,exists:true,revision:'exact-upstream'}}}),2729)
+  const decisionsBeforeRepair = await prisma.forceCurveMapping.findMany({select:{id:true,state:true,provenance:true,reason:true},orderBy:{id:'asc'}})
+  await prisma.forceCurveSyncRun.update({where:{id:concurrent[0].id},data:{reviewCount:0}})
+  const repaired = await syncForceCurveCatalog(concurrentRevision,upstream,{chunkSize:250,catalogRevision:'exact-upstream'}); assert.equal(repaired.reviewCount,2729)
+  assert.deepEqual(await prisma.forceCurveMapping.findMany({select:{id:true,state:true,provenance:true,reason:true},orderBy:{id:'asc'}}),decisionsBeforeRepair)
+  assert.equal((await syncForceCurveCatalog(concurrentRevision,upstream,{chunkSize:250,catalogRevision:'exact-upstream'})).reviewCount,2729)
   assert.deepEqual(await getApprovedCurves('cmqo21sm103vknu3vh0tjs75x'),[])
   console.log(JSON.stringify({runs:await prisma.forceCurveSyncRun.count(),catalog:await prisma.forceCurveCatalogEntry.count(),reviews:await prisma.forceCurveReviewCase.count(),peachApprovedUrls:(await getApprovedCurves('cmqo21sm103vknu3vh0tjs75x')).map(x=>x.url)},null,2))
 }
