@@ -1,18 +1,25 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { catalogUrl, classifyCatalogTree, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
+import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
 import { adminActor, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
-const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: new Date(), exists: true, ...overrides })
+const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('automatic matching accepts one exact compatible candidate', () => assert.deepEqual(selectAutomaticCandidates(master, [curve()]).map(c => c.id), ['c1']))
-test('automatic matching accepts an exact production name with its manufacturer already prefixed', () => assert.deepEqual(selectAutomaticCandidates({id:'oil',name:'Gateron Oil King',manufacturer:'Gateron',technology:'MECHANICAL'}, [curve({displayName:'Gateron Oil King',manufacturer:'Gateron'})]).map(c => c.id), ['c1']))
+test('automatic matching accepts an exact production name with its manufacturer already prefixed', () => assert.deepEqual(selectAutomaticCandidates({id:'oil',name:'Gateron Oil King',manufacturer:'Gateron',technology:'MECHANICAL'}, [curve({displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv',manufacturer:'Gateron'})]).map(c => c.id), ['c1']))
 test('automatic matching exposes ambiguity rather than choosing first', () => assert.equal(selectAutomaticCandidates(master, [curve(), curve({id:'c2'})]).length, 2))
-test('missing, manufacturer-conflicting, technology-conflicting, and absent metadata fail closed', () => {
+test('one raw/high-resolution measurement selects high-resolution, while distinct legitimate measurements remain distinct', () => {
+  const raw = curve({id:'raw',repositoryPath:'KTT Peach/KTT Peach Raw Data CSV.csv'})
+  const high = curve({id:'high'})
+  assert.deepEqual(collapseAutomaticCandidates([raw,high]).map(row=>row.id),['high'])
+  assert.equal(collapseAutomaticCandidates([high,curve({id:'other',displayName:'KTT Peach Travel 2mm',repositoryPath:'KTT Peach Travel 2mm/KTT_Peach_Travel_2mm_HighResolutionRaw.csv'})]).length,2)
+})
+test('missing path evidence and manufacturer/technology conflicts fail closed while human metadata is not required', () => {
   assert.equal(selectAutomaticCandidates(master, [curve({exists:false})]).length, 0)
   assert.equal(selectAutomaticCandidates(master, [curve({manufacturer:'Cherry'})]).length, 0)
   assert.equal(selectAutomaticCandidates(master, [curve({technology:'MAGNETIC'})]).length, 0)
-  assert.equal(selectAutomaticCandidates(master, [curve({manufacturer:null, technology:null})]).length, 0)
-  assert.equal(selectAutomaticCandidates(master, [curve({metadataVerifiedAt:null})]).length, 0)
+  assert.equal(selectAutomaticCandidates(master, [curve({repositoryPath:undefined})]).length, 0)
+  assert.equal(selectAutomaticCandidates(master, [curve({contentHash:null})]).length, 0)
+  assert.equal(selectAutomaticCandidates(master, [curve({manufacturer:null, technology:null, metadataVerifiedAt:null})]).length, 1)
 })
 test('exact TG.csv file identity is encoded segment-by-segment', () => assert.equal(catalogUrl('KTT Peach/TG.csv'), 'https://github.com/ThereminGoat/force-curves/blob/main/KTT%20Peach/TG.csv'))
 test('approved read supports multiple curves and excludes stale/deleted rows', () => {
@@ -70,7 +77,7 @@ test('spring tester artifacts are excluded before standard suffix classification
 test('KTT Peach Sun and other Blossom paths cannot auto-match Peach Blossom without verified exact metadata', () => {
   const peachBlossom = { id:'cmqo21sm103vknu3vh0tjs75x', name:'Peach Blossom', manufacturer:'KTT', technology:'MECHANICAL' as const }
   const paths = ['KTT Peach Sun/KTT_Peach_Sun_HighResolutionRaw.csv','Cherry Blossom/Cherry Blossom Raw Data CSV.csv','Jerrzi Cherry Blossom/Jerrzi_Cherry_Blossom_HighResolutionRaw.csv']
-  const candidates = classifyCatalogTree(paths.map((path, i) => ({type:'blob',path,sha:String(i)}))).map((entry, i) => ({id:String(i),displayName:measurementDisplayName(entry.path),manufacturer:null,technology:null,metadataVerifiedAt:null,exists:true}))
+  const candidates = classifyCatalogTree(paths.map((path, i) => ({type:'blob',path,sha:String(i)}))).map((entry, i) => ({id:String(i),displayName:measurementDisplayName(entry.path),repositoryPath:entry.path,contentHash:entry.sha,manufacturer:null,technology:null,metadataVerifiedAt:null,exists:true}))
   assert.deepEqual(selectAutomaticCandidates(peachBlossom, candidates), [])
 })
 test('admin mutation authorization denies anonymous/non-admin and requires exact same origin', () => {

@@ -6,16 +6,29 @@ export const APPROVED_STATES: ForceCurveMappingState[] = ['AUTO_APPROVED', 'MANU
 export type CatalogFormat = 'RAW_DATA' | 'HIGH_RESOLUTION_RAW' | 'NONSTANDARD_REVIEW'
 export type CatalogInput = { path: string; sha?: string; manufacturer?: string; technology?: SwitchTechnology; metadataVerified?: boolean; format?: CatalogFormat; measurementKey?: string }
 export type MatchMaster = { id: string; name: string; manufacturer: string | null; technology: SwitchTechnology | null }
-export type MatchCatalog = { id: string; displayName: string; manufacturer: string | null; technology: SwitchTechnology | null; metadataVerifiedAt?: Date | null; exists: boolean }
+export type MatchCatalog = { id: string; displayName: string; repositoryPath?: string; contentHash?: string | null; manufacturer: string | null; technology: SwitchTechnology | null; metadataVerifiedAt?: Date | null; exists: boolean }
 const normalize = (value?: string | null) => (value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
-export function selectAutomaticCandidates(master: MatchMaster, catalog: MatchCatalog[]) {
-  // Source metadata is mandatory: unknown manufacturer or technology always fails closed.
-  if (!master.manufacturer || !master.technology) return []
+export function normalizedMasterIdentity(master: MatchMaster) {
+  if (!master.manufacturer) return ''
   const manufacturer = normalize(master.manufacturer)
   const name = normalize(master.name)
-  const expected = name === manufacturer || name.startsWith(`${manufacturer} `) ? name : `${manufacturer} ${name}`
-  return catalog.filter(c => c.exists && Boolean(c.metadataVerifiedAt) && Boolean(c.manufacturer) && Boolean(c.technology) && normalize(c.displayName) === expected && normalize(c.manufacturer) === normalize(master.manufacturer) && c.technology === master.technology)
+  return name === manufacturer || name.startsWith(`${manufacturer} `) ? name : `${manufacturer} ${name}`
+}
+
+function hasPathEvidence(candidate: MatchCatalog) {
+  if (!candidate.repositoryPath || !candidate.contentHash) return false
+  const parent = candidate.repositoryPath.split('/').at(-2)
+  const standard = candidate.repositoryPath.endsWith(RAW_SUFFIX) || candidate.repositoryPath.endsWith(HIGH_RES_SUFFIX)
+  return standard && Boolean(parent) && normalize(parent) === normalize(candidate.displayName)
+}
+
+export function selectAutomaticCandidates(master: MatchMaster, catalog: MatchCatalog[]) {
+  const expected = normalizedMasterIdentity(master)
+  if (!expected) return []
+  return catalog.filter(c => c.exists && hasPathEvidence(c) && normalize(c.displayName) === expected
+    && (!c.manufacturer || normalize(c.manufacturer) === normalize(master.manufacturer))
+    && (!c.technology || !master.technology || c.technology === master.technology))
 }
 
 export function catalogUrl(path: string) {
@@ -127,23 +140,59 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
       const hasNonstandard = members.some(member => member.format === 'NONSTANDARD_REVIEW')
       if (await queueCatalogReview(candidateIds[0], hasNonstandard ? 'SOURCE_NONSTANDARD' : 'SOURCE_UNVERIFIED', hasNonstandard ? 'Nonstandard CSV requires format and identity review' : 'Source has no authoritative manufacturer or technology metadata', candidateIds, { measurementKey, paths: ordered.map(member => member.path), preferredCatalogEntryId: candidateIds[0] })) reviews++
     }
-    const masters = await prisma.masterSwitch.findMany({ where: { status: 'APPROVED' }, select: { id: true, name: true, manufacturer: true, technology: true } })
-    for (const master of masters) {
-      const noMatch = await prisma.forceCurveMapping.findFirst({ where: { masterSwitchId: master.id, state: 'NO_MATCH' } }); if (noMatch) continue
-      const candidates = selectAutomaticCandidates(master, catalog)
-      if (candidates.length === 1) {
-        const decision = await prisma.forceCurveMapping.findFirst({ where: { masterSwitchId: master.id, catalogEntryId: candidates[0].id } })
-        if (decision?.state === 'MANUALLY_APPROVED' || decision?.state === 'REJECTED') continue
-        if (decision?.state === 'STALE') { if (await queueReview(master.id, 'STALE', 'Changed curve requires explicit re-verification', [candidates[0].id])) reviews++; continue }
-        await prisma.forceCurveMapping.upsert({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: master.id, catalogEntryId: candidates[0].id } }, create: { masterSwitchId: master.id, catalogEntryId: candidates[0].id, state: 'AUTO_APPROVED', confidence: 1, provenance: `sync:${run.id}` }, update: { state: 'AUTO_APPROVED', confidence: 1, provenance: `sync:${run.id}` } })
-      } else if (candidates.length > 1) { unmatched++; if (await queueReview(master.id, 'AMBIGUOUS', 'Multiple verified compatible exact paths', candidates.map(c => c.id))) reviews++ }
-      else unmatched++
-    }
-    const peach = await prisma.masterSwitch.findUnique({ where: { id: 'cmqo21sm103vknu3vh0tjs75x' }, select: { id: true } })
-    if (peach) {
-      await prisma.forceCurveMapping.updateMany({ where: { masterSwitchId: peach.id, state: { in: APPROVED_STATES } }, data: { state: 'STALE', reason: 'No verified KTT Peach Blossom curve' } })
-      await prisma.forceCurveMapping.upsert({ where: { noMatchKey: peach.id }, create: { masterSwitchId: peach.id, noMatchKey: peach.id, state: 'NO_MATCH', provenance: 'regression-guard', reason: 'No verified KTT Peach Blossom curve' }, update: { state: 'NO_MATCH', provenance: 'regression-guard' } })
-    }
+    await prisma.$transaction(async tx => {
+      const [masters, manufacturers] = await Promise.all([
+        tx.masterSwitch.findMany({ where: { status: 'APPROVED' }, select: { id: true, name: true, manufacturer: true, technology: true } }),
+        tx.manufacturer.findMany({ where: { verified: true }, select: { name: true, aliases: true } }),
+      ])
+      const makerTokens = manufacturers.flatMap(maker => [maker.name, ...maker.aliases].map(token => ({ token: normalize(token), canonical: maker.name }))).filter(x => x.token)
+      const resolveMaker = (identity: string) => {
+        const hits = new Set(makerTokens.filter(x => identity === x.token || identity.startsWith(`${x.token} `)).map(x => x.canonical))
+        return hits.size === 1 ? [...hits][0] : null
+      }
+      const queueGroupReview = async (kind: string, reason: string, rows: typeof catalog, measurementKey: string, masterSwitchId?: string) => {
+        const candidateIds = rows.map(row => row.id).sort()
+        const existing = await tx.forceCurveReviewCase.findFirst({ where: { status: 'OPEN', kind, catalogEntryId: { in: candidateIds }, ...(masterSwitchId ? { masterSwitchId } : {}) } })
+        if (existing) return false
+        await tx.forceCurveReviewCase.create({ data: { masterSwitchId, catalogEntryId: candidateIds[0], kind, reason, payload: { measurementKey, candidateIds } } })
+        reviews++
+        return true
+      }
+      for (const [measurementKey, members] of groups) {
+        if (members.some(member => member.format === 'NONSTANDARD_REVIEW')) continue
+        const rows = members.map(member => catalogByPath.get(member.path)).filter((row): row is NonNullable<typeof row> => Boolean(row))
+        const identity = normalize(rows[0]?.displayName)
+        if (!identity || rows.some(row => normalize(row.displayName) !== identity)) { await queueGroupReview('IDENTITY_CONFLICT', 'Catalog paths in one measurement disagree on switch identity', rows, measurementKey); continue }
+        const canonicalMaker = resolveMaker(identity)
+        if (!canonicalMaker) { await queueGroupReview('MANUFACTURER_CONFLICT', 'Manufacturer prefix does not resolve to one verified canonical manufacturer', rows, measurementKey); continue }
+        const eligibleMasters = masters.filter(master => {
+          const masterMaker = manufacturers.find(maker => normalize(maker.name) === normalize(master.manufacturer) || maker.aliases.some(alias => normalize(alias) === normalize(master.manufacturer)))
+          return masterMaker?.name === canonicalMaker && normalizedMasterIdentity({ ...master, manufacturer: canonicalMaker }) === identity
+        })
+        if (eligibleMasters.length !== 1) {
+          unmatched++
+          await queueGroupReview('AMBIGUOUS', 'Exact identity does not resolve to one approved master switch', rows, measurementKey)
+          continue
+        }
+        const master = eligibleMasters[0]
+        if (await tx.forceCurveMapping.findFirst({ where: { masterSwitchId: master.id, state: 'NO_MATCH' } })) continue
+        if (rows.some(row => row.technology && master.technology && row.technology !== master.technology)) { await queueGroupReview('TECHNOLOGY_CONFLICT', 'Known catalog technology conflicts with the exact master switch', rows, measurementKey, master.id); continue }
+        const compatible = selectAutomaticCandidates({ ...master, manufacturer: canonicalMaker }, rows)
+        const collapsed = collapseAutomaticCandidates(compatible)
+        if (collapsed.length !== 1) { await queueGroupReview('INSUFFICIENT_EVIDENCE', 'Exact candidate lacks compatible standard path or content evidence', rows, measurementKey, master.id); continue }
+        const preferredFormat = collapsed[0].repositoryPath!.endsWith(HIGH_RES_SUFFIX) ? 'HIGH_RESOLUTION_RAW' : 'RAW_DATA'
+        const samePriority = compatible.filter(row => (row.repositoryPath!.endsWith(HIGH_RES_SUFFIX) ? 'HIGH_RESOLUTION_RAW' : 'RAW_DATA') === preferredFormat)
+        if (samePriority.length !== 1) { await queueGroupReview('AMBIGUOUS', 'Multiple equal-priority exact catalog candidates', rows, measurementKey, master.id); continue }
+        const candidate = collapsed[0]
+        const decision = await tx.forceCurveMapping.findUnique({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: master.id, catalogEntryId: candidate.id } } })
+        if (decision) continue // every prior decision, including STALE/REJECTED, is immutable to sync
+        await tx.forceCurveCatalogEntry.update({ where: { id: candidate.id }, data: { manufacturer: canonicalMaker, ...(master.technology ? { technology: master.technology } : {}) } })
+        await tx.forceCurveMapping.create({ data: { masterSwitchId: master.id, catalogEntryId: candidate.id, state: 'AUTO_APPROVED', confidence: 1, provenance: JSON.stringify({ source: FORCE_CURVE_SOURCE, revision: catalogRevision, rule: 'exact-path-identity-v1', measurementKey, manufacturer: canonicalMaker, contentHash: candidate.contentHash }) } })
+        await tx.forceCurveReviewCase.updateMany({ where: { status: 'OPEN', catalogEntryId: { in: rows.map(row => row.id) }, kind: { in: ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] } }, data: { status: 'RESOLVED', resolution: 'AUTO_APPROVED', resolvedAt: new Date(), reason: 'Automatically resolved by exact path identity rule' } })
+      }
+      const peach = await tx.masterSwitch.findUnique({ where: { id: 'cmqo21sm103vknu3vh0tjs75x' }, select: { id: true } })
+      if (peach && !await tx.forceCurveMapping.findFirst({ where: { masterSwitchId: peach.id, state: 'NO_MATCH' } })) await tx.forceCurveMapping.create({ data: { masterSwitchId: peach.id, noMatchKey: peach.id, state: 'NO_MATCH', provenance: 'regression-guard', reason: 'No verified KTT Peach Blossom curve' } })
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
     run = await prisma.$transaction(async tx => {
       const [afterCount, reviewCount] = await Promise.all([
         tx.forceCurveCatalogEntry.count({ where: { source: FORCE_CURVE_SOURCE, exists: true } }),
@@ -228,6 +277,21 @@ function measurementKey(path: string) {
 }
 
 function formatPriority(format?: CatalogFormat) { return format === 'HIGH_RESOLUTION_RAW' ? 0 : format === 'RAW_DATA' ? 1 : 2 }
+
+function catalogMeasurementKey(entry: MatchCatalog) {
+  const parent = entry.repositoryPath?.split('/').at(-2) || ''
+  return `${normalize(parent)}/${normalize(entry.displayName)}`
+}
+
+export function collapseAutomaticCandidates(candidates: MatchCatalog[]) {
+  const groups = new Map<string, MatchCatalog[]>()
+  for (const candidate of candidates) groups.set(catalogMeasurementKey(candidate), [...(groups.get(catalogMeasurementKey(candidate)) || []), candidate])
+  return [...groups.values()].map(group => [...group].sort((a, b) => {
+    const aHigh = a.repositoryPath?.endsWith(HIGH_RES_SUFFIX) ? 0 : 1
+    const bHigh = b.repositoryPath?.endsWith(HIGH_RES_SUFFIX) ? 0 : 1
+    return aHigh - bHigh || (a.repositoryPath || '').localeCompare(b.repositoryPath || '')
+  })[0])
+}
 
 export function classifyCatalogTree(tree: Array<{ path: string; type: string; sha: string }>): CatalogInput[] {
   return tree.filter(entry => entry.type === 'blob' && !isNonSwitchArtifact(entry.path) && (entry.path.endsWith(RAW_SUFFIX) || entry.path.endsWith(HIGH_RES_SUFFIX) || REVIEW_ONLY_LEGACY_PATHS.has(entry.path))).map(entry => {

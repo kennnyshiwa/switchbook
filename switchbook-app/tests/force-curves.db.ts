@@ -7,12 +7,13 @@ import { linkSourceReview, resolveForceCurveReview, verifyReviewMetadata } from 
 async function main() {
   await prisma.forceCurveFeedback.deleteMany(); await prisma.forceCurveReviewCase.deleteMany(); await prisma.forceCurveMapping.deleteMany(); await prisma.forceCurveCatalogEntry.deleteMany(); await prisma.forceCurveSyncRun.deleteMany(); await prisma.masterSwitch.deleteMany(); await prisma.user.deleteMany()
   const user = await prisma.user.create({ data: { id:'fc-user', email:'fc@example.test', username:'fc-admin', role:'ADMIN' } })
+  await prisma.manufacturer.upsert({where:{name:'KTT'},create:{name:'KTT',aliases:[],verified:true},update:{aliases:[],verified:true}})
   await prisma.masterSwitch.createMany({ data: [
     { id:'m-peach', name:'Peach', manufacturer:'KTT', technology:'MECHANICAL', submittedById:user.id, status:'APPROVED' },
     { id:'cmqo21sm103vknu3vh0tjs75x', name:'Peach Blossom', manufacturer:'KTT', technology:'MECHANICAL', submittedById:user.id, status:'APPROVED' }
     ,{ id:'m-feedback', name:'Feedback', manufacturer:'KTT', technology:'MECHANICAL', submittedById:user.id, status:'APPROVED' }
   ] })
-  const input = [{ path:'KTT Peach/TG.csv', sha:'a', manufacturer:'KTT', technology:'MECHANICAL' as const, metadataVerified:true }]
+  const input = [{ path:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', sha:'a', manufacturer:'KTT', technology:'MECHANICAL' as const, metadataVerified:true, format:'HIGH_RESOLUTION_RAW' as const, measurementKey:'KTT Peach/ktt peach' }]
   const a = await syncForceCurveCatalog('db-rev-a', input, {chunkSize:1}); assert.equal(a.newCount,1); assert.equal((await getApprovedCurves('m-peach')).length,1)
   const same = await syncForceCurveCatalog('db-rev-a', input, {chunkSize:1}); assert.equal(same.id,a.id); assert.equal(same.newCount,1)
   const b = await syncForceCurveCatalog('db-rev-b', [{...input[0],sha:'b'}], {chunkSize:1}); assert.equal(b.changedCount,1); assert.ok(b.staleCount>=1); assert.equal((await getApprovedCurves('m-peach')).length,0); assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-peach'}})).state,'STALE')
@@ -23,8 +24,42 @@ async function main() {
   await prisma.forceCurveMapping.createMany({data:catalogs.map((c,i)=>({masterSwitchId:'m-peach',catalogEntryId:c.id,state:'MANUALLY_APPROVED' as const,provenance:`manual-${i}`}))}); assert.equal((await getApprovedCurves('m-peach')).length,2)
   await prisma.forceCurveMapping.create({data:{masterSwitchId:'m-peach',state:'NO_MATCH',noMatchKey:'m-peach',provenance:'manual'}}); assert.equal((await getApprovedCurves('m-peach')).length,0)
   await prisma.forceCurveMapping.create({data:{masterSwitchId:'m-peach',state:'NO_MATCH',noMatchKey:'m-peach',provenance:'duplicate'}}).then(()=>assert.fail('duplicate no-match accepted'),()=>undefined)
-  await syncForceCurveCatalog('peach-regression', [{path:'KTT Peach Blossom/TG.csv',sha:'pb',manufacturer:'KTT',technology:'MECHANICAL',metadataVerified:true}]); assert.deepEqual(await getApprovedCurves('cmqo21sm103vknu3vh0tjs75x'),[])
+  await syncForceCurveCatalog('peach-regression', [{path:'KTT Peach Blossom/KTT_Peach_Blossom_HighResolutionRaw.csv',sha:'pb',manufacturer:'KTT',technology:'MECHANICAL',metadataVerified:true,format:'HIGH_RESOLUTION_RAW',measurementKey:'KTT Peach Blossom/ktt peach blossom'}]); assert.deepEqual(await getApprovedCurves('cmqo21sm103vknu3vh0tjs75x'),[])
   const peachNoMatch = await prisma.forceCurveMapping.findUnique({where:{noMatchKey:'cmqo21sm103vknu3vh0tjs75x'}}); assert.equal(peachNoMatch?.state,'NO_MATCH')
+  await prisma.manufacturer.upsert({where:{name:'Cherry'},create:{name:'Cherry',aliases:[],verified:true},update:{aliases:[],verified:true}})
+  await prisma.masterSwitch.createMany({data:[
+    {id:'m-wrong-maker',name:'Wrong Maker',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-wrong-tech',name:'Wrong Tech',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-duplicate-a',name:'Duplicate',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-duplicate-b',name:'Duplicate',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-equal',name:'Equal',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-manual',name:'Manual Durable',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-rejected',name:'Rejected Durable',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+  ]})
+  const durableCatalogs = await Promise.all([
+    ['manual-catalog','KTT Manual Durable/KTT_Manual_Durable_HighResolutionRaw.csv','KTT Manual Durable'],
+    ['rejected-catalog','KTT Rejected Durable/KTT_Rejected_Durable_HighResolutionRaw.csv','KTT Rejected Durable'],
+  ].map(([id,repositoryPath,displayName])=>prisma.forceCurveCatalogEntry.create({data:{id,source:FORCE_CURVE_SOURCE,repositoryPath,displayName,contentHash:`sha-${id}`,exists:true}})))
+  await prisma.forceCurveMapping.createMany({data:[
+    {masterSwitchId:'m-manual',catalogEntryId:durableCatalogs[0].id,state:'MANUALLY_APPROVED',provenance:'manual-durable'},
+    {masterSwitchId:'m-rejected',catalogEntryId:durableCatalogs[1].id,state:'REJECTED',provenance:'rejected-durable'},
+  ]})
+  const conflictFixtures = [
+    {path:'KTT Wrong Maker/KTT_Wrong_Maker_HighResolutionRaw.csv',sha:'wrong-maker',manufacturer:'Cherry',technology:'MECHANICAL' as const,metadataVerified:true,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Wrong Maker/ktt wrong maker'},
+    {path:'KTT Wrong Tech/KTT_Wrong_Tech_HighResolutionRaw.csv',sha:'wrong-tech',manufacturer:'KTT',technology:'MAGNETIC' as const,metadataVerified:true,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Wrong Tech/ktt wrong tech'},
+    {path:'KTT Duplicate/KTT_Duplicate_HighResolutionRaw.csv',sha:'duplicate',manufacturer:'KTT',technology:'MECHANICAL' as const,metadataVerified:true,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Duplicate/ktt duplicate'},
+    {path:'KTT Equal/KTT_Equal_HighResolutionRaw.csv',sha:'equal-a',manufacturer:'KTT',technology:'MECHANICAL' as const,metadataVerified:true,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Equal/ktt equal'},
+    {path:'KTT Equal/KTT Equal_HighResolutionRaw.csv',sha:'equal-b',manufacturer:'KTT',technology:'MECHANICAL' as const,metadataVerified:true,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Equal/ktt equal'},
+    {path:durableCatalogs[0].repositoryPath,sha:'sha-manual-catalog',format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Manual Durable/ktt manual durable'},
+    {path:durableCatalogs[1].repositoryPath,sha:'sha-rejected-catalog',format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Rejected Durable/ktt rejected durable'},
+  ]
+  await syncForceCurveCatalog('conflict-fixtures',conflictFixtures)
+  assert.ok(await prisma.forceCurveReviewCase.findFirst({where:{kind:'INSUFFICIENT_EVIDENCE',masterSwitchId:'m-wrong-maker',status:'OPEN'}}))
+  assert.ok(await prisma.forceCurveReviewCase.findFirst({where:{kind:'TECHNOLOGY_CONFLICT',masterSwitchId:'m-wrong-tech',status:'OPEN'}}))
+  assert.ok(await prisma.forceCurveReviewCase.findFirst({where:{kind:'AMBIGUOUS',catalogEntry:{displayName:'KTT Duplicate'},status:'OPEN'}}))
+  assert.ok(await prisma.forceCurveReviewCase.findFirst({where:{kind:'AMBIGUOUS',masterSwitchId:'m-equal',status:'OPEN'}}))
+  assert.equal((await prisma.forceCurveMapping.findUniqueOrThrow({where:{id:(await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-manual'}})).id}})).state,'MANUALLY_APPROVED')
+  assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-rejected'}})).state,'REJECTED')
   const feedbackCatalog = await prisma.forceCurveCatalogEntry.create({data:{source:FORCE_CURVE_SOURCE,repositoryPath:'KTT Feedback/TG.csv',displayName:'KTT Feedback',manufacturer:'KTT',technology:'MECHANICAL',exists:true}})
   await prisma.forceCurveMapping.create({data:{masterSwitchId:'m-feedback',catalogEntryId:feedbackCatalog.id,state:'AUTO_APPROVED',provenance:'fixture'}})
   const feedback = await recordForceCurveFeedback({userId:user.id,masterSwitchId:'m-feedback',catalogEntryId:feedbackCatalog.id,switchName:'Feedback',manufacturer:'KTT',incorrectMatch:'KTT Feedback/TG.csv',feedbackType:'no_match_found'})
