@@ -64,6 +64,7 @@ export async function fetchSwitchFolders(): Promise<string[]> {
 }
 
 export interface ForceCurveMatch {
+  catalogEntryId?: string
   folderName: string
   url: string
   matchType: 'exact' | 'manufacturer-exact' | 'fuzzy' | 'manufacturer-fuzzy'

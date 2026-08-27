@@ -10,6 +10,7 @@ export default auth((req) => {
   const isApiRoute = pathname.startsWith("/api")
   const isAuthApiRoute = pathname.startsWith("/api/auth")
   const isPublicShareApi = pathname.startsWith("/api/share")
+  const isPublicForceCurveRead = ["GET", "HEAD", "OPTIONS"].includes(req.method) && /^\/api\/force-curves\/[^/]+$/.test(pathname)
   const isDashboard = pathname.startsWith("/dashboard")
   const isAdminRoute = pathname.startsWith("/admin")
   const isSettingsPage = pathname.startsWith("/settings")
@@ -21,7 +22,7 @@ export default auth((req) => {
   const isPartnerOAuth = pathname.startsWith('/api/oauth/')
 
   // Allow public pages/APIs used for logged-out discovery.
-  if (isPublicSharePage || isPublicShareApi || isPublicMasterSwitchApi || isPartnerApi || isPartnerOAuth) {
+  if (isPublicSharePage || isPublicShareApi || isPublicForceCurveRead || isPublicMasterSwitchApi || isPartnerApi || isPartnerOAuth) {
     return NextResponse.next()
   }
 
@@ -31,7 +32,7 @@ export default auth((req) => {
   }
 
   // Allow API routes (but require auth for non-public APIs)
-  if (isApiRoute && !isPublicShareApi && !isAuthApiRoute && !isPublicMasterSwitchApi && !isLoggedIn) {
+  if (isApiRoute && !isPublicShareApi && !isPublicForceCurveRead && !isAuthApiRoute && !isPublicMasterSwitchApi && !isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -422,6 +422,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
           {showForceCurves && (
             <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
               <ForceCurvesButton 
+                masterSwitchId={switchItem.masterSwitchId}
                 switchName={switchItem.name}
                 manufacturer={switchItem.manufacturer}
                 variant="button"

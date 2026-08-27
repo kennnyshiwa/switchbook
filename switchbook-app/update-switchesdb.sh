@@ -44,6 +44,12 @@ run_docker exec switchesdb sh -c "find /app/resources/public/data -name '*.csv' 
 
 echo ""
 echo "✅ SwitchesDB datasets have been updated!"
+echo "Cataloging canonical force-curve identities for Switchbook..."
+if ! run_docker ps --format "{{.Names}}" | grep -q "^switchbook-app$"; then
+    echo "❌ Error: switchbook-app container is not running; canonical catalog was not updated"
+    exit 1
+fi
+run_docker exec switchbook-app npm run force-curves:sync
 echo "The new data is now available at http://localhost:3002"
 echo ""
 echo "Note: If the data doesn't appear after refresh, you may need to clear your browser cache."

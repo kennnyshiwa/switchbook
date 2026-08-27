@@ -377,6 +377,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                     {showForceCurves && (
                       <>
                         <ForceCurvesButton 
+                          masterSwitchId={switchItem.masterSwitchId}
                           switchName={switchItem.name}
                           manufacturer={switchItem.manufacturer}
                           variant="icon"

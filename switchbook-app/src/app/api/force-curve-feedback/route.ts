@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recordForceCurveFeedback } from '@/lib/force-curve-feedback'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { switchName, manufacturer, incorrectMatch, feedbackType, suggestedMatch, notes } = await request.json()
+    const { masterSwitchId, catalogEntryId, switchName, manufacturer, incorrectMatch, feedbackType, suggestedMatch, notes } = await request.json()
     
     if (!switchName || !incorrectMatch || !feedbackType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -22,21 +23,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid feedback type' }, { status: 400 })
     }
 
-    // Create feedback entry
-    const feedback = await prisma.forceCurveFeedback.create({
-      data: {
-        userId: session.user.id,
-        switchName,
-        manufacturer: manufacturer || null,
-        incorrectMatch,
-        feedbackType,
-        suggestedMatch: suggestedMatch || null,
-        notes: notes || null
-      }
-    })
+    let feedback
+    try { feedback = await recordForceCurveFeedback({ userId: session.user.id, masterSwitchId, catalogEntryId, switchName, manufacturer, incorrectMatch, feedbackType, suggestedMatch, notes }) }
+    catch (error) { if (error instanceof Error && error.message === 'Invalid canonical identity') return NextResponse.json({ error: error.message }, { status: 400 }); throw error }
 
-    // If this is an incorrect match, we should also invalidate the cache for this switch
-    // so it gets re-checked with potentially improved matching
     if (feedbackType === 'incorrect_match') {
       await prisma.forceCurveCache.deleteMany({
         where: {

@@ -18,7 +18,9 @@
     "script:rehost-master-images": "tsx scripts/rehost-master-switch-images.ts",
     "partner:provision": "tsx scripts/provision-partner.ts",
     "partner:webhooks": "tsx scripts/deliver-partner-webhooks.ts",
+    "force-curves:sync": "tsx scripts/sync-force-curves.ts",
     "test": "tsx --test tests/run-tests.ts"
+    ,"test:force-curves-db": "tsx tests/force-curves.db.ts"
   },
   "keywords": [],
   "author": "",

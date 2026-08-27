@@ -8,36 +8,39 @@ datasource db {
 }
 
 model User {
-  id                      String                  @id @default(cuid())
-  email                   String                  @unique
-  username                String                  @unique
-  password                String?
-  role                    UserRole                @default(USER)
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
-  shareableId             String                  @unique @default(cuid())
-  emailVerified           DateTime?
-  showForceCurves         Boolean                 @default(true)
-  emailNotifications      Boolean                 @default(true)
-  emailMarketing          Boolean                 @default(true)
-  accounts                Account[]
-  dismissedNotifications  DismissedNotification[]
-  forceCurveFeedback      ForceCurveFeedback[]
-  forceCurvePreferences   ForceCurvePreference[]
-  switchScoreFeedback     SwitchScoreFeedback[]
-  manufacturers           Manufacturer[]
-  approvedMasterSwitches  MasterSwitch[]          @relation("ApprovedBy")
-  submittedMasterSwitches MasterSwitch[]          @relation("SubmittedBy")
-  approvedEdits           MasterSwitchEdit[]      @relation("ApprovedEditBy")
-  masterSwitchEdits       MasterSwitchEdit[]      @relation("EditedBy")
-  masterSwitchViews       MasterSwitchView[]
-  notifications           Notification[]
-  passwordResetTokens     PasswordResetToken[]
-  switches                Switch[]
-  verificationTokens      VerificationToken[]
-  wishlistItems           Wishlist[]
-  partnerSubmissions      PartnerSubmission[]
-  partnerCorrections      PartnerCorrection[]
+  id                         String                   @id @default(cuid())
+  email                      String                   @unique
+  username                   String                   @unique
+  password                   String?
+  role                       UserRole                 @default(USER)
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+  shareableId                String                   @unique @default(cuid())
+  emailVerified              DateTime?
+  showForceCurves            Boolean                  @default(true)
+  emailNotifications         Boolean                  @default(true)
+  emailMarketing             Boolean                  @default(true)
+  accounts                   Account[]
+  dismissedNotifications     DismissedNotification[]
+  forceCurveFeedback         ForceCurveFeedback[]
+  forceCurvePreferences      ForceCurvePreference[]
+  forceCurveReviews          ForceCurveReviewCase[]   @relation("ForceCurveReviewResolver")
+  forceCurveDecisions        ForceCurveMapping[]      @relation("ForceCurveMappingDecider")
+  forceCurveMetadataVerified ForceCurveCatalogEntry[] @relation("ForceCurveMetadataVerifier")
+  switchScoreFeedback        SwitchScoreFeedback[]
+  manufacturers              Manufacturer[]
+  approvedMasterSwitches     MasterSwitch[]           @relation("ApprovedBy")
+  submittedMasterSwitches    MasterSwitch[]           @relation("SubmittedBy")
+  approvedEdits              MasterSwitchEdit[]       @relation("ApprovedEditBy")
+  masterSwitchEdits          MasterSwitchEdit[]       @relation("EditedBy")
+  masterSwitchViews          MasterSwitchView[]
+  notifications              Notification[]
+  passwordResetTokens        PasswordResetToken[]
+  switches                   Switch[]
+  verificationTokens         VerificationToken[]
+  wishlistItems              Wishlist[]
+  partnerSubmissions         PartnerSubmission[]
+  partnerCorrections         PartnerCorrection[]
 }
 
 model Switch {
@@ -153,7 +156,7 @@ model ForceCurveCache {
 }
 
 model ForceCurveFeedback {
-  id             String   @id @default(cuid())
+  id             String                  @id @default(cuid())
   userId         String
   switchName     String
   manufacturer   String?
@@ -161,8 +164,14 @@ model ForceCurveFeedback {
   feedbackType   String
   suggestedMatch String?
   notes          String?
-  createdAt      DateTime @default(now())
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime                @default(now())
+  masterSwitchId String?
+  catalogEntryId String?
+  reviewCaseId   String?
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  masterSwitch   MasterSwitch?           @relation(fields: [masterSwitchId], references: [id], onDelete: SetNull)
+  catalogEntry   ForceCurveCatalogEntry? @relation(fields: [catalogEntryId], references: [id], onDelete: SetNull)
+  reviewCase     ForceCurveReviewCase?   @relation(fields: [reviewCaseId], references: [id], onDelete: SetNull)
 
   @@index([switchName, manufacturer])
 }
@@ -265,11 +274,123 @@ model MasterSwitch {
   partnerSubmissions     PartnerSubmission[]
   partnerCorrections     PartnerCorrection[]
   lifecycleMergeTargets  MasterSwitchLifecycle[] @relation("LifecycleMergedInto")
+  forceCurveMappings     ForceCurveMapping[]
+  forceCurveReviews      ForceCurveReviewCase[]
+  forceCurveFeedback     ForceCurveFeedback[]
 
   @@index([name, manufacturer])
   @@index([status])
   @@index([submittedById])
   @@index([shareableId])
+}
+
+enum ForceCurveMappingState {
+  AUTO_APPROVED
+  REVIEW_REQUIRED
+  MANUALLY_APPROVED
+  REJECTED
+  NO_MATCH
+  STALE
+}
+
+enum ForceCurveReviewStatus {
+  OPEN
+  RESOLVED
+}
+
+enum ForceCurveSyncStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model ForceCurveCatalogEntry {
+  id                   String                 @id @default(cuid())
+  source               String
+  repositoryPath       String
+  displayName          String
+  manufacturer         String?
+  technology           SwitchTechnology?
+  revision             String?
+  contentHash          String?
+  metadataVerifiedAt   DateTime?
+  metadataVerifiedById String?
+  exists               Boolean                @default(true)
+  firstSeenAt          DateTime               @default(now())
+  lastSeenAt           DateTime               @default(now())
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  mappings             ForceCurveMapping[]
+  reviews              ForceCurveReviewCase[]
+  feedback             ForceCurveFeedback[]
+  metadataVerifiedBy   User?                  @relation("ForceCurveMetadataVerifier", fields: [metadataVerifiedById], references: [id], onDelete: SetNull)
+
+  @@unique([source, repositoryPath])
+  @@index([exists])
+}
+
+model ForceCurveMapping {
+  id             String                  @id @default(cuid())
+  masterSwitchId String
+  catalogEntryId String?
+  state          ForceCurveMappingState
+  confidence     Float?
+  provenance     String
+  reason         String?
+  decidedById    String?
+  noMatchKey     String?                 @unique
+  decidedAt      DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  masterSwitch   MasterSwitch            @relation(fields: [masterSwitchId], references: [id], onDelete: Cascade)
+  catalogEntry   ForceCurveCatalogEntry? @relation(fields: [catalogEntryId], references: [id], onDelete: SetNull)
+  decidedBy      User?                   @relation("ForceCurveMappingDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@unique([masterSwitchId, catalogEntryId])
+  @@index([masterSwitchId, state])
+}
+
+model ForceCurveReviewCase {
+  id             String                  @id @default(cuid())
+  masterSwitchId String?
+  catalogEntryId String?
+  kind           String
+  status         ForceCurveReviewStatus  @default(OPEN)
+  reason         String
+  payload        Json?
+  resolution     ForceCurveMappingState?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  masterSwitch   MasterSwitch?           @relation(fields: [masterSwitchId], references: [id], onDelete: SetNull)
+  catalogEntry   ForceCurveCatalogEntry? @relation(fields: [catalogEntryId], references: [id], onDelete: SetNull)
+  resolvedBy     User?                   @relation("ForceCurveReviewResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  feedback       ForceCurveFeedback[]
+
+  @@index([status, kind])
+}
+
+model ForceCurveSyncRun {
+  id             String               @id @default(cuid())
+  source         String
+  revision       String
+  status         ForceCurveSyncStatus @default(RUNNING)
+  cursor         String?
+  beforeCount    Int                  @default(0)
+  afterCount     Int                  @default(0)
+  newCount       Int                  @default(0)
+  changedCount   Int                  @default(0)
+  staleCount     Int                  @default(0)
+  unmatchedCount Int                  @default(0)
+  reviewCount    Int                  @default(0)
+  errorCount     Int                  @default(0)
+  errors         Json?
+  startedAt      DateTime             @default(now())
+  completedAt    DateTime?
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([source, revision])
 }
 
 model MasterSwitchEdit {

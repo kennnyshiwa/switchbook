@@ -19,6 +19,7 @@ export interface CanonicalShareSection {
 
 export interface CanonicalSwitchShare {
   sourceKind: ShareSourceKind
+  masterSwitchId?: string
   name: string
   chineseName?: string
   manufacturer?: string
@@ -118,6 +119,7 @@ export function serializeCanonicalSwitchShare(sourceKind: ShareSourceKind, recor
 
   return {
     sourceKind,
+    masterSwitchId: sourceKind === 'master' ? String(record.id) : (present(record.masterSwitchId) ? String(record.masterSwitchId) : undefined),
     name: String(record.name || record.chineseName || 'Unknown Switch'),
     chineseName: present(record.chineseName) ? String(record.chineseName) : undefined,
     manufacturer: present(record.manufacturer) ? String(record.manufacturer) : undefined,

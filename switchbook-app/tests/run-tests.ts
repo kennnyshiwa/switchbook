@@ -6,3 +6,4 @@ import "./master-switch-popup-share.test";
 import "./master-switch-sort.test";
 import "./switch-filters.test";
 import "./partner-api.test";
+import "./force-curves.test";

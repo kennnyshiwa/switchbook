@@ -163,17 +163,11 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         // Now check which switches still need to be checked
         const switchesToCheck = switches
           .filter(sw => {
-            // Skip if user has saved preferences for this switch
-            const hasSavedPreferences = forceCurvePreferences.some(pref => 
-              pref.switchName === sw.name && 
-              pref.manufacturer === sw.manufacturer
-            )
             const key = `${sw.name}|${sw.manufacturer || ''}`
             const inCache = cacheMap.has(key)
-            
-            return !hasSavedPreferences && !inCache
+            return !inCache
           })
-          .map(sw => ({ name: sw.name, manufacturer: sw.manufacturer || undefined }))
+          .map(sw => ({ key: `${sw.name}|${sw.manufacturer || ''}`, masterSwitchId: sw.masterSwitchId }))
         
         if (switchesToCheck.length > 0) {
           // Batch checking switches for force curves
@@ -206,16 +200,6 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
   // Helper function to check if a switch has force curves
   const switchHasForceCurves = useCallback(async (switchItem: Switch): Promise<boolean> => {
-    // First check if user has saved preferences for this switch
-    const hasSavedPreferences = forceCurvePreferences.some(pref => 
-      pref.switchName === switchItem.name && 
-      pref.manufacturer === switchItem.manufacturer
-    )
-    
-    if (hasSavedPreferences) {
-      return true
-    }
-    
     // Check cache first
     const key = `${switchItem.name}|${switchItem.manufacturer || ''}`
     if (forceCurveCache.has(key)) {
@@ -224,7 +208,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     
     // If not in cache, use API endpoint to check (this should be rare after batch check)
     try {
-      const response = await fetch(`/api/force-curve-check?switchName=${encodeURIComponent(switchItem.name)}&manufacturer=${encodeURIComponent(switchItem.manufacturer || '')}`)
+      const response = await fetch(`/api/force-curve-check?masterSwitchId=${encodeURIComponent(switchItem.masterSwitchId || '')}`)
       
       if (response.ok) {
         const result = await response.json()
@@ -241,7 +225,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       // Error checking force curve availability
       return false
     }
-  }, [forceCurvePreferences, forceCurveCache])
+  }, [forceCurveCache])
 
   // Generate filter options from current switches
   const filterOptions = useMemo((): FilterOptions => deriveSwitchFilterOptions(switches), [switches])

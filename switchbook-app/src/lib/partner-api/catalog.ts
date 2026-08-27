@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { apiOrigin, switchesDbSearchUrl } from './config'
+import { apiOrigin } from './config'
+import { getApprovedCurves } from '@/lib/force-curves'
 
 export const partnerSwitchInclude = {
   images: { orderBy: { order: 'asc' as const } },
@@ -17,10 +18,7 @@ export function catalogDisposition(status: string, lifecycle?: { status: string;
 const absoluteUrl = (path: string) => path.startsWith('http') ? path : `${apiOrigin()}${path.startsWith('/') ? '' : '/'}${path}`
 
 export async function toPartnerSwitch(record: PartnerSwitchRecord) {
-  const curve = await prisma.forceCurveCache.findFirst({
-    where: { switchName: record.name, manufacturer: record.manufacturer || null, hasForceCurve: true },
-    select: { hasForceCurve: true, updatedAt: true },
-  })
+  const curve = (await getApprovedCurves(record.id))[0]
   const lifecycle = record.lifecycle?.status || 'ACTIVE'
   const images = record.images.map(image => ({
     id: image.id,
@@ -78,10 +76,10 @@ export async function toPartnerSwitch(record: PartnerSwitchRecord) {
     thumbnail: images[0]?.url || record.imageUrl && absoluteUrl(record.imageUrl) || null,
     forceCurve: curve ? {
       available: true,
-      url: switchesDbSearchUrl(record.name, record.manufacturer),
+      url: curve.url,
       source: 'SwitchesDB',
       rawDataIncluded: false,
-      checkedAt: curve.updatedAt.toISOString(),
+      checkedAt: record.updatedAt.toISOString(),
     } : { available: false, url: null, source: 'SwitchesDB', rawDataIncluded: false, checkedAt: null },
     recordUrl: `${apiOrigin()}/switches/${record.id}`,
     attribution: { text: 'Data and photo from SwitchBook', url: `${apiOrigin()}/switches/${record.id}` },

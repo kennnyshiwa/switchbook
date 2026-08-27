@@ -488,6 +488,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             {/* External Resources */}
             <div className="flex flex-wrap gap-2">
               <ForceCurvesButton 
+                masterSwitchId={switchData.id}
                 switchName={switchData.name}
                 manufacturer={switchData.manufacturer}
                 variant="button"

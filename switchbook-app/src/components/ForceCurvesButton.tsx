@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { findAllForceCurveMatches, type ForceCurveMatch } from '@/utils/forceCurves'
+import type { ForceCurveMatch } from '@/utils/forceCurves'
 
 interface ForceCurvesButtonProps {
   switchName: string
+  masterSwitchId?: string | null
   manufacturer?: string | null
   variant?: 'button' | 'badge' | 'icon'
   className?: string
@@ -15,6 +16,7 @@ interface ForceCurvesButtonProps {
 
 export default function ForceCurvesButton({ 
   switchName, 
+  masterSwitchId,
   manufacturer, 
   variant = 'button',
   className = '',
@@ -39,67 +41,19 @@ export default function ForceCurvesButton({
     async function loadForceCurveData() {
       try {
         let foundMatches: ForceCurveMatch[] = []
-        
-        // If we already know from the parent component whether this switch has force curves
-        if (forceCurvesCached !== undefined) {
-          if (forceCurvesCached) {
-            // We know it has force curves - we'll load the actual matches when user interacts
-            foundMatches = [] // Start empty, will be populated on demand
-          } else {
-            // We know it doesn't have force curves
-            foundMatches = []
-          }
-        } else {
-          // For public/unauthenticated viewing, or when cache is not available,
-          // directly check for force curves
-          try {
-            // First try the cache API endpoint
-            const cacheResponse = await fetch(`/api/force-curve-check?switchName=${encodeURIComponent(switchName)}&manufacturer=${encodeURIComponent(manufacturer || '')}`)
-            
-            if (cacheResponse.ok) {
-              const cacheResult = await cacheResponse.json()
-              
-              if (cacheResult.fromCache) {
-                // Use cached result - if cache says it has force curves, we still need to get the actual matches
-                // But only call the API if the cache confirms there are force curves
-                if (cacheResult.hasForceCurve) {
-                  foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
-                } else {
-                  foundMatches = []
-                }
-              } else if (cacheResult.needsCheck) {
-                // Cache is missing/expired, defer to batch checking system
-                // Don't make individual API calls here, just show no matches for now
-                foundMatches = []
-              } else {
-                // Fallback case
-                foundMatches = []
-              }
-            } else if (cacheResponse.status === 401 || cacheResponse.status === 403) {
-              // Unauthorized - this is likely a public page
-              // Directly check GitHub for force curves
-              foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
-            } else {
-              // Other errors - don't make individual API calls
-              foundMatches = []
-            }
-          } catch (cacheError) {
-            // If cache check fails, try direct GitHub check for public pages
-            try {
-              foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
-            } catch (githubError) {
-              foundMatches = []
-            }
-          }
+        if (!masterSwitchId) { if (isMounted) { setMatches([]); setIsLoading(false) }; return }
+        const response = await fetch(`/api/force-curves/${encodeURIComponent(masterSwitchId)}`)
+        if (response.ok) {
+          const data = await response.json()
+          foundMatches = data.curves.map((curve: { id: string; folderName: string; url: string }) => ({ catalogEntryId: curve.id, folderName: curve.folderName, url: curve.url, matchType: 'exact' as const }))
         }
         
         if (isMounted) {
           setMatches(foundMatches)
           
           // Set saved preference from props if provided
-          if (savedPreferenceProp) {
-            setSavedPreference(savedPreferenceProp)
-          }
+          // Legacy display-name URL preferences are retained for rollback, but never opened by canonical reads.
+          setSavedPreference(null)
           // Note: We no longer fetch preferences from API since they should be passed as props
           
           setIsLoading(false)
@@ -116,7 +70,7 @@ export default function ForceCurvesButton({
     return () => {
       isMounted = false
     }
-  }, [switchName, manufacturer, isAuthenticated, forceCurvesCached, savedPreferenceProp])
+  }, [masterSwitchId, switchName, manufacturer, isAuthenticated, forceCurvesCached, savedPreferenceProp])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -182,9 +136,11 @@ export default function ForceCurvesButton({
     if (matches.length === 0 && forceCurvesCached === true) {
       // Load actual matches now
       try {
-        const foundMatches = await findAllForceCurveMatches(switchName, manufacturer || undefined)
-        setMatches(foundMatches)
-        return foundMatches
+        const response = masterSwitchId ? await fetch(`/api/force-curves/${encodeURIComponent(masterSwitchId)}`) : null
+        const data = response?.ok ? await response.json() : { curves: [] }
+        const canonicalMatches = data.curves.map((curve: { id: string; folderName: string; url: string }) => ({ catalogEntryId: curve.id, folderName: curve.folderName, url: curve.url, matchType: 'exact' as const }))
+        setMatches(canonicalMatches)
+        return canonicalMatches
       } catch (error) {
         // Error loading force curve matches
         return []
@@ -261,6 +217,8 @@ export default function ForceCurvesButton({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           switchName,
+          masterSwitchId,
+          catalogEntryId: matches.find(match => match.folderName === incorrectMatch)?.catalogEntryId,
           manufacturer: manufacturer || null,
           incorrectMatch: incorrectMatch || (savedPreference?.folder) || (matches[0]?.folderName) || 'unknown',
           feedbackType,
