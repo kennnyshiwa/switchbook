@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { catalogUrl, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
+import { catalogUrl, classifyCatalogTree, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
-const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const, exists: true, ...overrides })
+const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: new Date(), exists: true, ...overrides })
 test('automatic matching accepts one exact compatible candidate', () => assert.deepEqual(selectAutomaticCandidates(master, [curve()]).map(c => c.id), ['c1']))
 test('automatic matching exposes ambiguity rather than choosing first', () => assert.equal(selectAutomaticCandidates(master, [curve(), curve({id:'c2'})]).length, 2))
 test('missing, manufacturer-conflicting, technology-conflicting, and absent metadata fail closed', () => {
@@ -10,6 +10,7 @@ test('missing, manufacturer-conflicting, technology-conflicting, and absent meta
   assert.equal(selectAutomaticCandidates(master, [curve({manufacturer:'Cherry'})]).length, 0)
   assert.equal(selectAutomaticCandidates(master, [curve({technology:'MAGNETIC'})]).length, 0)
   assert.equal(selectAutomaticCandidates(master, [curve({manufacturer:null, technology:null})]).length, 0)
+  assert.equal(selectAutomaticCandidates(master, [curve({metadataVerifiedAt:null})]).length, 0)
 })
 test('exact TG.csv file identity is encoded segment-by-segment', () => assert.equal(catalogUrl('KTT Peach/TG.csv'), 'https://github.com/ThereminGoat/force-curves/blob/main/KTT%20Peach/TG.csv'))
 test('approved read supports multiple curves and excludes stale/deleted rows', () => {
@@ -20,4 +21,53 @@ test('approved read supports multiple curves and excludes stale/deleted rows', (
 test('Peach Blossom behavior: durable NO_MATCH suppresses conflicting approval and yields no TG.csv URL', () => {
   const result = resolveApprovedCurveRecords([{ state: 'NO_MATCH', catalogEntry: null }, { state: 'AUTO_APPROVED', catalogEntry: { id:'bad',displayName:'Cherry Blossom',repositoryPath:'Cherry Blossom/TG.csv',exists:true } }])
   assert.deepEqual(result, []); assert.equal(JSON.stringify(result).includes('TG.csv'), false)
+})
+test('actual upstream formats preserve exact path/hash and pair to one measurement', () => {
+  const entries = classifyCatalogTree([
+    {type:'blob',path:"'X' Green/'X' Green Raw Data CSV.csv",sha:'7be19f'},
+    {type:'blob',path:"'X' Green/'X'_Green_HighResolutionRaw.csv",sha:'82bcbe'},
+    {type:'blob',path:'ignore/readme.pdf',sha:'nope'},
+  ])
+  assert.equal(entries.length, 2)
+  assert.deepEqual(entries.map(e => e.format), ['RAW_DATA','HIGH_RESOLUTION_RAW'])
+  assert.equal(entries[0].measurementKey, entries[1].measurementKey)
+  assert.equal(entries[0].path, "'X' Green/'X' Green Raw Data CSV.csv")
+  assert.equal(entries[1].sha, '82bcbe')
+})
+test('single standard format is cataloged; construction and arbitrary CSVs are excluded while distinct measurements stay distinct', () => {
+  const entries = classifyCatalogTree([
+    {type:'blob',path:'Solo/Solo Raw Data CSV.csv',sha:'one'},
+    {type:'blob',path:'Keyfirst Bling Green/Keyfirst Bling Green Data Construction.csv',sha:'two'},
+    {type:'blob',path:'Arbitrary/Arbitrary.csv',sha:'excluded'},
+    {type:'blob',path:'Many/Many Red Raw Data CSV.csv',sha:'three'},
+    {type:'blob',path:'Many/Many_Blue_HighResolutionRaw.csv',sha:'four'},
+  ])
+  assert.equal(entries.length, 3)
+  assert.equal(entries.some(entry => entry.sha === 'two'), false)
+  assert.equal(entries.some(entry => entry.sha === 'excluded'), false)
+  assert.notEqual(entries[1].measurementKey, entries[2].measurementKey)
+  assert.equal(measurementDisplayName('Solo/Solo Raw Data CSV.csv'), 'Solo')
+})
+test('spring tester artifacts are excluded before standard suffix classification without excluding valid spring-named switches', () => {
+  const springTesters = Array.from({length:68}, (_, index) => ({
+    type:'blob',
+    path:`SwitchOddities Spring Testers/Fixture ${index}/Spring ${index} Raw Data CSV.csv`,
+    sha:`spring-${index}`,
+  }))
+  const entries = classifyCatalogTree([
+    ...springTesters,
+    {type:'blob',path:'Laboratory/Spring-Tester Calibration_HighResolutionRaw.csv',sha:'generic-tester'},
+    {type:'blob',path:'Keyfirst Bling Green/Keyfirst Bling Green Data Construction.csv',sha:'construction'},
+    {type:'blob',path:'Valid Spring Switch/Valid Spring Switch Raw Data CSV.csv',sha:'valid-spring-switch'},
+    {type:'blob',path:'Tester Switch/Tester Switch Raw Data CSV.csv',sha:'valid-tester-switch'},
+  ])
+  assert.equal(entries.length, 2)
+  assert.deepEqual(entries.map(entry => entry.sha), ['valid-spring-switch','valid-tester-switch'])
+  assert.equal(entries.some(entry => entry.path.includes('SwitchOddities Spring Testers')), false)
+})
+test('KTT Peach Sun and other Blossom paths cannot auto-match Peach Blossom without verified exact metadata', () => {
+  const peachBlossom = { id:'cmqo21sm103vknu3vh0tjs75x', name:'Peach Blossom', manufacturer:'KTT', technology:'MECHANICAL' as const }
+  const paths = ['KTT Peach Sun/KTT_Peach_Sun_HighResolutionRaw.csv','Cherry Blossom/Cherry Blossom Raw Data CSV.csv','Jerrzi Cherry Blossom/Jerrzi_Cherry_Blossom_HighResolutionRaw.csv']
+  const candidates = classifyCatalogTree(paths.map((path, i) => ({type:'blob',path,sha:String(i)}))).map((entry, i) => ({id:String(i),displayName:measurementDisplayName(entry.path),manufacturer:null,technology:null,metadataVerifiedAt:null,exists:true}))
+  assert.deepEqual(selectAutomaticCandidates(peachBlossom, candidates), [])
 })
