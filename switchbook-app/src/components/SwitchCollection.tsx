@@ -13,6 +13,7 @@ import ForceCurveLookupButton from './ForceCurveLookupButton'
 import VirtualSwitchGrid from './VirtualSwitchGrid'
 import { findForceCurveData } from '@/utils/forceCurves'
 import { hasSwitchScoreData } from '@/utils/switchScores'
+import { applySwitchFilters, deriveSwitchFilterOptions } from '@/lib/switch-filters'
 
 interface SwitchImage {
   id: string
@@ -244,6 +245,8 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
   // Generate filter options from current switches
   const filterOptions = useMemo((): FilterOptions => {
+    return deriveSwitchFilterOptions(switches)
+    /* Legacy expansion retained temporarily below for an easy review diff; unreachable. */
     const manufacturers = [...new Set(switches.map(s => s.manufacturer).filter(Boolean) as string[])].sort()
     const types = [...new Set(switches.map(s => s.type).filter(Boolean) as string[])].sort()
     const technologies = [...new Set(switches.map(s => s.technology).filter(Boolean) as string[])].sort()
@@ -352,7 +355,11 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
         )
       }
 
-      // Apply active filters
+      filtered = applySwitchFilters(filtered, activeFilters)
+      /* Shared categorical/range semantics are applied above. The following legacy
+         predicates are skipped and kept only as nearby history while this component
+         still owns its asynchronous force-curve filters. */
+      if (false) {
       if (activeFilters.manufacturer) {
         filtered = filtered.filter(s => s.manufacturer === activeFilters.manufacturer)
       }
@@ -467,6 +474,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       }
       if (activeFilters.doubleStage !== undefined) {
         filtered = filtered.filter(s => s.doubleStage === activeFilters.doubleStage)
+      }
       }
 
       // Apply Franken filter

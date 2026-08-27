@@ -12,6 +12,8 @@ import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
 import MasterSwitchDetailsPopup from '@/components/MasterSwitchDetailsPopup'
 import SwitchesDBComparison from '@/components/SwitchesDBComparison'
 import VirtualSwitchList from '@/components/VirtualSwitchList'
+import type { ActiveFilters } from '@/components/CollectionControls'
+import { applySwitchFilters, deriveSwitchFilterOptions } from '@/lib/switch-filters'
 
 interface SwitchImage {
   id: string
@@ -45,6 +47,11 @@ export interface MasterSwitch {
   topHousing?: string
   bottomHousing?: string
   stem?: string
+  stemShape?: string
+  topHousingColor?: string
+  bottomHousingColor?: string
+  stemColor?: string
+  markings?: string
   magnetOrientation?: string
   magnetPosition?: string
   magnetPolarity?: string
@@ -338,6 +345,8 @@ export default function BrowseMasterSwitchesPage() {
 
   const hasActiveFilters = search || manufacturer || type || technology || topHousing || bottomHousing || stem || topHousingColor || bottomHousingColor || stemColor || markings || springWeight || springLength || compatibility || magnetOrientation || magnetPosition || magnetPolarity || pcbThickness || progressiveSpring || doubleStage || actuationForceMin || actuationForceMax || tactileForceMin || tactileForceMax || bottomOutForceMin || bottomOutForceMax || preTravelMin || preTravelMax || bottomOutMin || bottomOutMax || initialForceMin || initialForceMax || initialMagneticFluxMin || initialMagneticFluxMax || bottomOutMagneticFluxMin || bottomOutMagneticFluxMax
 
+  const filterOptions = useMemo(() => deriveSwitchFilterOptions(switches), [switches])
+
   // Client-side filtering and sorting
   useEffect(() => {
     let filtered = [...switches]
@@ -353,126 +362,27 @@ export default function BrowseMasterSwitchesPage() {
       )
     }
 
-    // Apply filters
-    if (debouncedManufacturer) {
-      filtered = filtered.filter(s => s.manufacturer?.toLowerCase().includes(debouncedManufacturer.toLowerCase()))
+    const numberOrUndefined = (value: string) => value === '' ? undefined : Number(value)
+    const activeFilters: ActiveFilters = {
+      manufacturer: debouncedManufacturer || undefined, type: type || undefined, technology: technology || undefined,
+      topHousing: debouncedTopHousing || undefined, bottomHousing: debouncedBottomHousing || undefined, stem: debouncedStem || undefined,
+      topHousingColor: debouncedTopHousingColor || undefined, bottomHousingColor: debouncedBottomHousingColor || undefined,
+      stemColor: debouncedStemColor || undefined, markings: debouncedMarkings || undefined,
+      springWeight: debouncedSpringWeight || undefined, springLength: debouncedSpringLength || undefined,
+      compatibility: debouncedCompatibility || undefined, magnetOrientation: magnetOrientation || undefined,
+      magnetPosition: magnetPosition || undefined, magnetPolarity: magnetPolarity || undefined, pcbThickness: pcbThickness || undefined,
+      progressiveSpring: progressiveSpring === '' ? undefined : progressiveSpring === 'true',
+      doubleStage: doubleStage === '' ? undefined : doubleStage === 'true',
+      actuationForceMin: numberOrUndefined(debouncedActuationForceMin), actuationForceMax: numberOrUndefined(debouncedActuationForceMax),
+      tactileForceMin: numberOrUndefined(debouncedTactileForceMin), tactileForceMax: numberOrUndefined(debouncedTactileForceMax),
+      bottomOutForceMin: numberOrUndefined(debouncedBottomOutForceMin), bottomOutForceMax: numberOrUndefined(debouncedBottomOutForceMax),
+      preTravelMin: numberOrUndefined(debouncedPreTravelMin), preTravelMax: numberOrUndefined(debouncedPreTravelMax),
+      bottomOutMin: numberOrUndefined(debouncedBottomOutMin), bottomOutMax: numberOrUndefined(debouncedBottomOutMax),
+      initialForceMin: numberOrUndefined(debouncedInitialForceMin), initialForceMax: numberOrUndefined(debouncedInitialForceMax),
+      initialMagneticFluxMin: numberOrUndefined(debouncedInitialMagneticFluxMin), initialMagneticFluxMax: numberOrUndefined(debouncedInitialMagneticFluxMax),
+      bottomOutMagneticFluxMin: numberOrUndefined(debouncedBottomOutMagneticFluxMin), bottomOutMagneticFluxMax: numberOrUndefined(debouncedBottomOutMagneticFluxMax),
     }
-    if (type) {
-      filtered = filtered.filter(s => s.type === type)
-    }
-    if (technology) {
-      filtered = filtered.filter(s => s.technology === technology)
-    }
-    if (debouncedTopHousing) {
-      filtered = filtered.filter(s => s.topHousing?.toLowerCase().includes(debouncedTopHousing.toLowerCase()))
-    }
-    if (debouncedBottomHousing) {
-      filtered = filtered.filter(s => s.bottomHousing?.toLowerCase().includes(debouncedBottomHousing.toLowerCase()))
-    }
-    if (debouncedStem) {
-      filtered = filtered.filter(s => s.stem?.toLowerCase().includes(debouncedStem.toLowerCase()))
-    }
-    if (debouncedSpringWeight) {
-      filtered = filtered.filter(s => s.springWeight?.toLowerCase().includes(debouncedSpringWeight.toLowerCase()))
-    }
-    if (debouncedSpringLength) {
-      filtered = filtered.filter(s => s.springLength?.toLowerCase().includes(debouncedSpringLength.toLowerCase()))
-    }
-    if (debouncedCompatibility) {
-      filtered = filtered.filter(s => s.compatibility?.toLowerCase().includes(debouncedCompatibility.toLowerCase()))
-    }
-
-    // Magnetic filters
-    if (magnetOrientation) {
-      filtered = filtered.filter(s => s.magnetOrientation === magnetOrientation)
-    }
-    if (magnetPosition) {
-      filtered = filtered.filter(s => s.magnetPosition === magnetPosition)
-    }
-    if (magnetPolarity) {
-      filtered = filtered.filter(s => s.magnetPolarity === magnetPolarity)
-    }
-    if (pcbThickness) {
-      filtered = filtered.filter(s => s.pcbThickness === pcbThickness)
-    }
-
-    // Boolean filters
-    if (progressiveSpring) {
-      filtered = filtered.filter(s => s.progressiveSpring === (progressiveSpring === 'true'))
-    }
-    if (doubleStage) {
-      filtered = filtered.filter(s => s.doubleStage === (doubleStage === 'true'))
-    }
-
-    // Force ranges
-    if (debouncedActuationForceMin) {
-      const min = Number(debouncedActuationForceMin)
-      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce !== undefined && s.actuationForce >= min)
-    }
-    if (debouncedActuationForceMax) {
-      const max = Number(debouncedActuationForceMax)
-      filtered = filtered.filter(s => s.actuationForce !== null && s.actuationForce !== undefined && s.actuationForce <= max)
-    }
-    if (debouncedTactileForceMin) {
-      const min = Number(debouncedTactileForceMin)
-      filtered = filtered.filter(s => s.tactileForce !== null && s.tactileForce !== undefined && s.tactileForce >= min)
-    }
-    if (debouncedTactileForceMax) {
-      const max = Number(debouncedTactileForceMax)
-      filtered = filtered.filter(s => s.tactileForce !== null && s.tactileForce !== undefined && s.tactileForce <= max)
-    }
-    if (debouncedBottomOutForceMin) {
-      const min = Number(debouncedBottomOutForceMin)
-      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce !== undefined && s.bottomOutForce >= min)
-    }
-    if (debouncedBottomOutForceMax) {
-      const max = Number(debouncedBottomOutForceMax)
-      filtered = filtered.filter(s => s.bottomOutForce !== null && s.bottomOutForce !== undefined && s.bottomOutForce <= max)
-    }
-
-    // Travel ranges
-    if (debouncedPreTravelMin) {
-      const min = Number(debouncedPreTravelMin)
-      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel !== undefined && s.preTravel >= min)
-    }
-    if (debouncedPreTravelMax) {
-      const max = Number(debouncedPreTravelMax)
-      filtered = filtered.filter(s => s.preTravel !== null && s.preTravel !== undefined && s.preTravel <= max)
-    }
-    if (debouncedBottomOutMin) {
-      const min = Number(debouncedBottomOutMin)
-      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut !== undefined && s.bottomOut >= min)
-    }
-    if (debouncedBottomOutMax) {
-      const max = Number(debouncedBottomOutMax)
-      filtered = filtered.filter(s => s.bottomOut !== null && s.bottomOut !== undefined && s.bottomOut <= max)
-    }
-
-    // Magnetic flux ranges
-    if (debouncedInitialForceMin) {
-      const min = Number(debouncedInitialForceMin)
-      filtered = filtered.filter(s => s.initialForce !== null && s.initialForce !== undefined && s.initialForce >= min)
-    }
-    if (debouncedInitialForceMax) {
-      const max = Number(debouncedInitialForceMax)
-      filtered = filtered.filter(s => s.initialForce !== null && s.initialForce !== undefined && s.initialForce <= max)
-    }
-    if (debouncedInitialMagneticFluxMin) {
-      const min = Number(debouncedInitialMagneticFluxMin)
-      filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux !== undefined && s.initialMagneticFlux >= min)
-    }
-    if (debouncedInitialMagneticFluxMax) {
-      const max = Number(debouncedInitialMagneticFluxMax)
-      filtered = filtered.filter(s => s.initialMagneticFlux !== null && s.initialMagneticFlux !== undefined && s.initialMagneticFlux <= max)
-    }
-    if (debouncedBottomOutMagneticFluxMin) {
-      const min = Number(debouncedBottomOutMagneticFluxMin)
-      filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux !== undefined && s.bottomOutMagneticFlux >= min)
-    }
-    if (debouncedBottomOutMagneticFluxMax) {
-      const max = Number(debouncedBottomOutMagneticFluxMax)
-      filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux !== undefined && s.bottomOutMagneticFlux <= max)
-    }
+    filtered = applySwitchFilters(filtered, activeFilters)
 
     // Apply sorting
     // Only sort client-side for name and viewCount
@@ -492,7 +402,7 @@ export default function BrowseMasterSwitchesPage() {
     }
 
     setFilteredSwitches(sorted)
-  }, [switches, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, progressiveSpring, doubleStage, debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin, debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
+  }, [switches, debouncedSearch, debouncedManufacturer, type, technology, debouncedTopHousing, debouncedBottomHousing, debouncedStem, debouncedTopHousingColor, debouncedBottomHousingColor, debouncedStemColor, debouncedMarkings, debouncedSpringWeight, debouncedSpringLength, debouncedCompatibility, magnetOrientation, magnetPosition, magnetPolarity, pcbThickness, progressiveSpring, doubleStage, debouncedActuationForceMin, debouncedActuationForceMax, debouncedTactileForceMin, debouncedTactileForceMax, debouncedBottomOutForceMin, debouncedBottomOutForceMax, debouncedPreTravelMin, debouncedPreTravelMax, debouncedBottomOutMin, debouncedBottomOutMax, debouncedInitialForceMin, debouncedInitialForceMax, debouncedInitialMagneticFluxMin, debouncedInitialMagneticFluxMax, debouncedBottomOutMagneticFluxMin, debouncedBottomOutMagneticFluxMax, sort, order])
 
   
 
@@ -672,7 +582,7 @@ export default function BrowseMasterSwitchesPage() {
                 </span>
                 {hasActiveFilters && (
                   <span className="text-gray-500 dark:text-gray-400">
-                    ({totalCount} matching filters, showing {switches.length})
+                    ({filteredSwitches.length} matching filters)
                   </span>
                 )}
               </div>
@@ -775,13 +685,14 @@ export default function BrowseMasterSwitchesPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Manufacturer
               </label>
-              <input
-                type="text"
+              <select
                 value={manufacturer}
                 onChange={(e) => setManufacturer(e.target.value)}
-                placeholder="Filter by manufacturer..."
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-              />
+              >
+                <option value="">All Manufacturers</option>
+                {filterOptions.manufacturers.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
             </div>
 
             <div>
@@ -794,11 +705,7 @@ export default function BrowseMasterSwitchesPage() {
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
                 <option value="">All Types</option>
-                <option value="LINEAR">Linear</option>
-                <option value="TACTILE">Tactile</option>
-                <option value="CLICKY">Clicky</option>
-                <option value="SILENT_LINEAR">Silent Linear</option>
-                <option value="SILENT_TACTILE">Silent Tactile</option>
+                {filterOptions.types.map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
               </select>
             </div>
 
@@ -812,11 +719,7 @@ export default function BrowseMasterSwitchesPage() {
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
               >
                 <option value="">All Technologies</option>
-                <option value="MECHANICAL">Mechanical</option>
-                <option value="OPTICAL">Optical</option>
-                <option value="MAGNETIC">Magnetic</option>
-                <option value="INDUCTIVE">Inductive</option>
-                <option value="ELECTRO_CAPACITIVE">Electro Capacitive</option>
+                {filterOptions.technologies.map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}
               </select>
             </div>
           </div>
@@ -892,37 +795,31 @@ export default function BrowseMasterSwitchesPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Top Housing
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={topHousing}
                       onChange={(e) => setTopHousing(e.target.value)}
-                      placeholder="e.g., Polycarbonate"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.topHousings.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Bottom Housing
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={bottomHousing}
                       onChange={(e) => setBottomHousing(e.target.value)}
-                      placeholder="e.g., Nylon"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.bottomHousings.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Stem
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={stem}
                       onChange={(e) => setStem(e.target.value)}
-                      placeholder="e.g., POM"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.stems.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                 </div>
               </div>
@@ -935,37 +832,31 @@ export default function BrowseMasterSwitchesPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Top Housing Color
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={topHousingColor}
                       onChange={(e) => setTopHousingColor(e.target.value)}
-                      placeholder="e.g., Clear, Black"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.topHousingColors.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Bottom Housing Color
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={bottomHousingColor}
                       onChange={(e) => setBottomHousingColor(e.target.value)}
-                      placeholder="e.g., White, Red"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.bottomHousingColors.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Stem Color
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={stemColor}
                       onChange={(e) => setStemColor(e.target.value)}
-                      placeholder="e.g., Blue, Orange"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.stemColors.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -973,13 +864,11 @@ export default function BrowseMasterSwitchesPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Marking
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={markings}
                       onChange={(e) => setMarkings(e.target.value)}
-                      placeholder="e.g., 3 Plus, HG"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.markingsList.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                 </div>
               </div>
@@ -992,37 +881,31 @@ export default function BrowseMasterSwitchesPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Spring Weight
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={springWeight}
                       onChange={(e) => setSpringWeight(e.target.value)}
-                      placeholder="e.g., 62g"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.springWeights.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Spring Length
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={springLength}
                       onChange={(e) => setSpringLength(e.target.value)}
-                      placeholder="e.g., 14mm"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.springLengths.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Compatibility
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={compatibility}
                       onChange={(e) => setCompatibility(e.target.value)}
-                      placeholder="e.g., MX-style"
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
-                    />
+                    ><option value="">Any</option>{filterOptions.compatibilities.map(value => <option key={value}>{value}</option>)}</select>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -1223,8 +1106,7 @@ export default function BrowseMasterSwitchesPage() {
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Orientations</option>
-                      <option value="Horizontal">Horizontal</option>
-                      <option value="Vertical">Vertical</option>
+                      {filterOptions.magnetOrientations.map(value => <option key={value}>{value}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1237,8 +1119,7 @@ export default function BrowseMasterSwitchesPage() {
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Positions</option>
-                      <option value="Center">Center</option>
-                      <option value="Off-Center">Off-Center</option>
+                      {filterOptions.magnetPositions.map(value => <option key={value}>{value}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1251,8 +1132,7 @@ export default function BrowseMasterSwitchesPage() {
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Polarities</option>
-                      <option value="North">North</option>
-                      <option value="South">South</option>
+                      {filterOptions.magnetPolarities.map(value => <option key={value}>{value}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1265,8 +1145,7 @@ export default function BrowseMasterSwitchesPage() {
                       className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
                     >
                       <option value="">All Thicknesses</option>
-                      <option value="1.2mm">1.2mm</option>
-                      <option value="1.6mm">1.6mm</option>
+                      {filterOptions.pcbThicknesses.map(value => <option key={value}>{value}</option>)}
                     </select>
                   </div>
                 </div>
@@ -1325,7 +1204,7 @@ export default function BrowseMasterSwitchesPage() {
 
         {/* Results */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow relative overflow-visible">
-          {switches.length === 0 && !loading ? (
+          {filteredSwitches.length === 0 && !loading ? (
             <div className="p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400">
                 No switches found matching your criteria
