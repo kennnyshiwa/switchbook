@@ -21,6 +21,7 @@ RUN npx prisma generate
 
 # Build the application
 RUN npm run build
+RUN npm run build:force-curves-sync
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -44,7 +45,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --chown=nextjs:nodejs --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/dist ./dist
 
 # Create uploads directory and cache directories
 RUN mkdir -p /app/public/uploads /app/.next/cache && \
