@@ -64,7 +64,7 @@ async function queueCatalogReview(catalogEntryId: string, kind: string, reason: 
   return true
 }
 
-export async function syncForceCurveCatalog(revision: string, entries: CatalogInput[], options: { chunkSize?: number; failAfterChunks?: number; catalogRevision?: string } = {}) {
+export async function syncForceCurveCatalog(revision: string, entries: CatalogInput[], options: { chunkSize?: number; failAfterChunks?: number; failAfterReconcileChunks?: number; catalogRevision?: string } = {}) {
   const chunkSize = options.chunkSize || 50
   const uniqueEntries = [...new Map(entries.map(e => [e.path, e])).values()].sort((a,b) => a.path.localeCompare(b.path))
   const catalogRevision = options.catalogRevision || revision
@@ -142,11 +142,15 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
       const hasNonstandard = members.some(member => member.format === 'NONSTANDARD_REVIEW')
       if (await queueCatalogReview(candidateIds[0], hasNonstandard ? 'SOURCE_NONSTANDARD' : 'SOURCE_UNVERIFIED', hasNonstandard ? 'Nonstandard CSV requires format and identity review' : 'Source has no authoritative manufacturer or technology metadata', candidateIds, { measurementKey, paths: ordered.map(member => member.path), preferredCatalogEntryId: candidateIds[0] })) reviews++
     }
-    await prisma.$transaction(async tx => {
-      const [masters, manufacturers] = await Promise.all([
-        tx.masterSwitch.findMany({ where: { status: 'APPROVED' }, select: { id: true, name: true, manufacturer: true, technology: true } }),
-        tx.manufacturer.findMany({ where: { verified: true }, select: { name: true, aliases: true } }),
-      ])
+    const [masters, manufacturers] = await Promise.all([
+      prisma.masterSwitch.findMany({ where: { status: 'APPROVED' }, select: { id: true, name: true, manufacturer: true, technology: true } }),
+      prisma.manufacturer.findMany({ where: { verified: true }, select: { name: true, aliases: true } }),
+    ])
+    const reconcileGroups = [...groups.entries()]
+    let reconcileChunks = 0
+    for (let offset = 0; offset < reconcileGroups.length; offset += chunkSize) {
+      const groupChunk = reconcileGroups.slice(offset, offset + chunkSize)
+      await prisma.$transaction(async tx => {
       const makerTokens = manufacturers.flatMap(maker => [maker.name, ...maker.aliases].map(token => ({ token: normalize(token), canonical: maker.name }))).filter(x => x.token)
       const resolveMaker = (identity: string) => {
         const hits = new Set(makerTokens.filter(x => identity === x.token || identity.startsWith(`${x.token} `)).map(x => x.canonical))
@@ -160,7 +164,7 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
         reviews++
         return true
       }
-      for (const [measurementKey, members] of groups) {
+      for (const [measurementKey, members] of groupChunk) {
         if (members.some(member => member.format === 'NONSTANDARD_REVIEW')) continue
         const rows = members.map(member => catalogByPath.get(member.path)).filter((row): row is NonNullable<typeof row> => Boolean(row))
         const identity = normalize(rows[0]?.displayName)
@@ -186,16 +190,27 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
         const samePriority = compatible.filter(row => (row.repositoryPath!.endsWith(HIGH_RES_SUFFIX) ? 'HIGH_RESOLUTION_RAW' : 'RAW_DATA') === preferredFormat)
         if (samePriority.length !== 1) { await queueGroupReview('AMBIGUOUS', 'Multiple equal-priority exact catalog candidates', rows, measurementKey, master.id); continue }
         const candidate = collapsed[0]
+        const provenance = JSON.stringify({ source: FORCE_CURVE_SOURCE, revision: catalogRevision, syncRunId: run.id, rule: 'exact-path-identity-v1', measurementKey, manufacturer: canonicalMaker, contentHash: candidate.contentHash })
         const decision = await tx.forceCurveMapping.findUnique({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: master.id, catalogEntryId: candidate.id } } })
-        if (decision) continue // every prior decision, including STALE/REJECTED, is immutable to sync
+        // REVIEW_REQUIRED rows belonging to this run are private staging records.
+        // Every other prior decision, including manual, stale, and rejected rows,
+        // is immutable to sync.
+        if (decision && !(decision.state === 'REVIEW_REQUIRED' && decision.provenance === provenance)) continue
         await tx.forceCurveCatalogEntry.update({ where: { id: candidate.id }, data: { manufacturer: canonicalMaker, ...(master.technology ? { technology: master.technology } : {}) } })
-        await tx.forceCurveMapping.create({ data: { masterSwitchId: master.id, catalogEntryId: candidate.id, state: 'AUTO_APPROVED', confidence: 1, provenance: JSON.stringify({ source: FORCE_CURVE_SOURCE, revision: catalogRevision, rule: 'exact-path-identity-v1', measurementKey, manufacturer: canonicalMaker, contentHash: candidate.contentHash }) } })
-        await tx.forceCurveReviewCase.updateMany({ where: { status: 'OPEN', catalogEntryId: { in: rows.map(row => row.id) }, kind: { in: ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] } }, data: { status: 'RESOLVED', resolution: 'AUTO_APPROVED', resolvedAt: new Date(), reason: 'Automatically resolved by exact path identity rule' } })
+        if (!decision) await tx.forceCurveMapping.create({ data: { masterSwitchId: master.id, catalogEntryId: candidate.id, state: 'REVIEW_REQUIRED', confidence: 1, provenance } })
       }
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+      reconcileChunks++
+      if (options.failAfterReconcileChunks && reconcileChunks >= options.failAfterReconcileChunks) throw new Error('Injected reconciliation interruption')
+    }
+    run = await prisma.$transaction(async tx => {
+      const staged = await tx.forceCurveMapping.findMany({ where: { state: 'REVIEW_REQUIRED', provenance: { contains: `\"syncRunId\":\"${run.id}\"` } }, select: { id: true, catalogEntryId: true } })
+      const stagedIds = staged.map(item => item.id)
+      const stagedCatalogIds = staged.flatMap(item => item.catalogEntryId ? [item.catalogEntryId] : [])
+      if (stagedIds.length) await tx.forceCurveMapping.updateMany({ where: { id: { in: stagedIds }, state: 'REVIEW_REQUIRED' }, data: { state: 'AUTO_APPROVED' } })
+      if (stagedCatalogIds.length) await tx.forceCurveReviewCase.updateMany({ where: { status: 'OPEN', catalogEntryId: { in: stagedCatalogIds }, kind: { in: ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] } }, data: { status: 'RESOLVED', resolution: 'AUTO_APPROVED', resolvedAt: new Date(), reason: 'Automatically resolved by exact path identity rule' } })
       const peach = await tx.masterSwitch.findUnique({ where: { id: 'cmqo21sm103vknu3vh0tjs75x' }, select: { id: true } })
       if (peach && !await tx.forceCurveMapping.findFirst({ where: { masterSwitchId: peach.id, state: 'NO_MATCH' } })) await tx.forceCurveMapping.create({ data: { masterSwitchId: peach.id, noMatchKey: peach.id, state: 'NO_MATCH', provenance: 'regression-guard', reason: 'No verified KTT Peach Blossom curve' } })
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
-    run = await prisma.$transaction(async tx => {
       const [afterCount, reviewCount] = await Promise.all([
         tx.forceCurveCatalogEntry.count({ where: { source: FORCE_CURVE_SOURCE, exists: true } }),
         applicableReviewCount(tx, catalogRevision),

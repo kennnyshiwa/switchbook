@@ -15,6 +15,12 @@ async function main() {
   ] })
   const input = [{ path:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', sha:'a', manufacturer:'KTT', technology:'MECHANICAL' as const, metadataVerified:true, format:'HIGH_RESOLUTION_RAW' as const, measurementKey:'KTT Peach/ktt peach' }]
   const a = await syncForceCurveCatalog('db-rev-a', input, {chunkSize:1}); assert.equal(a.newCount,1); assert.equal((await getApprovedCurves('m-peach')).length,1)
+  await prisma.masterSwitch.create({data:{id:'m-atomic',name:'Atomic',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'}})
+  const atomicInput = [{path:'KTT Atomic/KTT_Atomic_HighResolutionRaw.csv',sha:'atomic',manufacturer:'KTT',technology:'MECHANICAL' as const,metadataVerified:true,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Atomic/ktt atomic'}]
+  await syncForceCurveCatalog('atomic-rev',atomicInput,{chunkSize:1,failAfterReconcileChunks:1}).then(()=>assert.fail('expected reconciliation interruption'),()=>undefined)
+  const stagedAtomic = await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-atomic'}}); assert.equal(stagedAtomic.state,'REVIEW_REQUIRED'); assert.deepEqual(await getApprovedCurves('m-atomic'),[])
+  const failedAtomic = await prisma.forceCurveSyncRun.findUniqueOrThrow({where:{source_revision:{source:FORCE_CURVE_SOURCE,revision:'atomic-rev'}}}); assert.equal(failedAtomic.status,'FAILED')
+  const resumedAtomic = await syncForceCurveCatalog('atomic-rev',atomicInput,{chunkSize:1}); assert.equal(resumedAtomic.status,'COMPLETED'); assert.equal((await getApprovedCurves('m-atomic')).length,1); assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-atomic'}})).state,'AUTO_APPROVED')
   const same = await syncForceCurveCatalog('db-rev-a', input, {chunkSize:1}); assert.equal(same.id,a.id); assert.equal(same.newCount,1)
   const b = await syncForceCurveCatalog('db-rev-b', [{...input[0],sha:'b'}], {chunkSize:1}); assert.equal(b.changedCount,1); assert.ok(b.staleCount>=1); assert.equal((await getApprovedCurves('m-peach')).length,0); assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-peach'}})).state,'STALE')
   await syncForceCurveCatalog('resume-rev', [{path:'one/TG.csv',sha:'1'},{path:'two/TG.csv',sha:'2'}], {chunkSize:1,failAfterChunks:1}).then(()=>assert.fail('expected interruption'),()=>undefined)
