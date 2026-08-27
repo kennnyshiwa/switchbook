@@ -12,7 +12,9 @@ const normalize = (value?: string | null) => (value || '').toLowerCase().replace
 export function selectAutomaticCandidates(master: MatchMaster, catalog: MatchCatalog[]) {
   // Source metadata is mandatory: unknown manufacturer or technology always fails closed.
   if (!master.manufacturer || !master.technology) return []
-  const expected = normalize(`${master.manufacturer} ${master.name}`)
+  const manufacturer = normalize(master.manufacturer)
+  const name = normalize(master.name)
+  const expected = name === manufacturer || name.startsWith(`${manufacturer} `) ? name : `${manufacturer} ${name}`
   return catalog.filter(c => c.exists && Boolean(c.metadataVerifiedAt) && Boolean(c.manufacturer) && Boolean(c.technology) && normalize(c.displayName) === expected && normalize(c.manufacturer) === normalize(master.manufacturer) && c.technology === master.technology)
 }
 

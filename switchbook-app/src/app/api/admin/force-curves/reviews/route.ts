@@ -1,59 +1,50 @@
-import { ForceCurveMappingState } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { selectAutomaticCandidates } from '@/lib/force-curves'
-async function admin() { const session = await auth(); return session?.user?.role === 'ADMIN' ? session : null }
+import { adminActor, isSameOriginMutation, linkSourceReview, resolveForceCurveReview, verifyReviewMetadata } from '@/lib/admin-force-curves'
+
+const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
+const verifySchema = z.object({ reviewId: z.string().cuid(), catalogEntryId: z.string().cuid(), manufacturer: z.string().trim().min(1).max(120), technology: z.enum(['MECHANICAL','OPTICAL','MAGNETIC','INDUCTIVE','ELECTRO_CAPACITIVE']) }).strict()
+const resolutionSchema = z.object({ reviewId: z.string().cuid(), resolution: z.enum(['MANUALLY_APPROVED','REJECTED','NO_MATCH']), catalogEntryId: z.string().cuid().optional(), reason: z.string().trim().max(1000).optional() }).strict()
 const ids = (payload: unknown) => typeof payload === 'object' && payload && Array.isArray((payload as { candidateIds?: unknown }).candidateIds) ? (payload as { candidateIds: string[] }).candidateIds : []
+
+async function actor() { return adminActor(await auth()) }
+function failure(error: unknown) {
+  const message = error instanceof Error ? error.message : 'INVALID_REVIEW_OPERATION'
+  const conflicts = ['REVIEW_ALREADY_LINKED','INCOMPATIBLE_IDENTITY','AMBIGUOUS_REVIEW_IDENTITY','CONFLICTING_OPEN_REVIEW','LINKED_MASTER_REQUIRED']
+  const notFound = ['OPEN_SOURCE_REVIEW_REQUIRED','OPEN_REVIEW_REQUIRED']
+  return NextResponse.json({ error: message }, { status: conflicts.includes(message) ? 409 : notFound.includes(message) ? 404 : 400 })
+}
+async function mutationAccess(request: NextRequest) {
+  const actorId = await actor()
+  if (!actorId) return { response: NextResponse.json({ error: 'Admin access required' }, { status: 403 }) }
+  if (!isSameOriginMutation(request)) return { response: NextResponse.json({ error: 'Same-origin request required' }, { status: 403 }) }
+  return { actorId }
+}
+
 export async function GET() {
-  if (!await admin()) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+  if (!await actor()) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
   const reviews = await prisma.forceCurveReviewCase.findMany({ where: { status: 'OPEN' }, include: { masterSwitch: { select: { id: true, name: true, manufacturer: true, technology: true } }, catalogEntry: true, feedback: true }, orderBy: { createdAt: 'asc' } })
   const allIds = [...new Set(reviews.flatMap(r => [...ids(r.payload), ...(r.catalogEntryId ? [r.catalogEntryId] : [])]))]
   const candidates = await prisma.forceCurveCatalogEntry.findMany({ where: { id: { in: allIds }, exists: true } })
   return NextResponse.json(reviews.map(r => ({ ...r, candidates: candidates.filter(c => ids(r.payload).includes(c.id) || r.catalogEntryId === c.id) })))
 }
-export async function POST(request: NextRequest) {
-  const session = await admin(); if (!session) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  const { reviewId, resolution, catalogEntryId, reason } = await request.json() as { reviewId: string; resolution: ForceCurveMappingState; catalogEntryId?: string; reason?: string }
-  if (!['MANUALLY_APPROVED','REJECTED','NO_MATCH'].includes(resolution)) return NextResponse.json({ error: 'Invalid resolution' }, { status: 400 })
-  const review = await prisma.forceCurveReviewCase.findUnique({ where: { id: reviewId }, include: { masterSwitch: true } })
-  if (!review || review.status !== 'OPEN') return NextResponse.json({ error: 'Open review not found' }, { status: 404 })
-  if (!review.masterSwitchId || !review.masterSwitch) return NextResponse.json({ error: 'Review must be linked to a master switch before resolution' }, { status: 409 })
-  let candidate = null
-  if (catalogEntryId) candidate = await prisma.forceCurveCatalogEntry.findUnique({ where: { id: catalogEntryId } })
-  if (resolution === 'MANUALLY_APPROVED') {
-    const allowed = new Set([...ids(review.payload), ...(review.catalogEntryId ? [review.catalogEntryId] : [])])
-    if (!candidate || !candidate.exists || !allowed.has(candidate.id)) return NextResponse.json({ error: 'Candidate is not an extant member of this review' }, { status: 400 })
-    if (!selectAutomaticCandidates(review.masterSwitch, [candidate]).length) return NextResponse.json({ error: 'Candidate fails manufacturer/technology/path compatibility' }, { status: 409 })
-  }
-  await prisma.$transaction(async tx => {
-    if (resolution === 'NO_MATCH') {
-      await tx.forceCurveMapping.updateMany({ where: { masterSwitchId: review.masterSwitchId!, state: { in: ['AUTO_APPROVED','MANUALLY_APPROVED'] } }, data: { state: 'STALE', reason: 'Superseded by manual no-match decision' } })
-      await tx.forceCurveMapping.upsert({ where: { noMatchKey: review.masterSwitchId! }, create: { masterSwitchId: review.masterSwitchId!, noMatchKey: review.masterSwitchId!, state: 'NO_MATCH', provenance: 'admin-review', decidedById: session.user.id, decidedAt: new Date(), reason }, update: { state: 'NO_MATCH', decidedById: session.user.id, decidedAt: new Date(), reason } })
-    } else {
-      await tx.forceCurveMapping.deleteMany({ where: { noMatchKey: review.masterSwitchId! } })
-      const existing = await tx.forceCurveMapping.findFirst({ where: { masterSwitchId: review.masterSwitchId!, catalogEntryId: catalogEntryId || review.catalogEntryId } })
-      const targetId = catalogEntryId || review.catalogEntryId
-      if (!targetId) throw new Error('Catalog entry required for candidate decision')
-      if (existing) await tx.forceCurveMapping.update({ where: { id: existing.id }, data: { state: resolution, provenance: 'admin-review', decidedById: session.user.id, decidedAt: new Date(), reason } })
-      else await tx.forceCurveMapping.create({ data: { masterSwitchId: review.masterSwitchId!, catalogEntryId: targetId, state: resolution, provenance: 'admin-review', decidedById: session.user.id, decidedAt: new Date(), reason } })
-    }
-    await tx.forceCurveReviewCase.update({ where: { id: reviewId }, data: { status: 'RESOLVED', resolution, resolvedById: session.user.id, resolvedAt: new Date() } })
-  })
-  return NextResponse.json({ success: true })
+
+export async function PUT(request: NextRequest) {
+  const access = await mutationAccess(request); if ('response' in access) return access.response
+  const parsed = linkSchema.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: 'Invalid link request' }, { status: 400 })
+  try { return NextResponse.json(await linkSourceReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
 }
+
 export async function PATCH(request: NextRequest) {
-  const session = await admin(); if (!session) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  const { reviewId, catalogEntryId, manufacturer, technology } = await request.json() as { reviewId: string; catalogEntryId: string; manufacturer: string; technology: 'MECHANICAL'|'OPTICAL'|'MAGNETIC'|'INDUCTIVE'|'ELECTRO_CAPACITIVE' }
-  const review = await prisma.forceCurveReviewCase.findUnique({ where: { id: reviewId } })
-  const entry = await prisma.forceCurveCatalogEntry.findUnique({ where: { id: catalogEntryId } })
-  if (!review || review.status !== 'OPEN' || !review.masterSwitchId || !entry?.exists) return NextResponse.json({ error: 'Open review, master, and extant catalog entry required' }, { status: 400 })
-  if (!manufacturer?.trim() || !['MECHANICAL','OPTICAL','MAGNETIC','INDUCTIVE','ELECTRO_CAPACITIVE'].includes(technology)) return NextResponse.json({ error: 'Verified manufacturer and technology required' }, { status: 400 })
-  const payload = typeof review.payload === 'object' && review.payload && !Array.isArray(review.payload) ? review.payload as Record<string, unknown> : {}
-  const candidateIds = [...new Set([...(Array.isArray(payload.candidateIds) ? payload.candidateIds as string[] : []), catalogEntryId])]
-  await prisma.$transaction([
-    prisma.forceCurveCatalogEntry.update({ where: { id: catalogEntryId }, data: { manufacturer: manufacturer.trim(), technology, metadataVerifiedAt: new Date(), metadataVerifiedById: session.user.id } }),
-    prisma.forceCurveReviewCase.update({ where: { id: reviewId }, data: { catalogEntryId, payload: { ...payload, candidateIds, metadataVerification: { catalogEntryId, manufacturer: manufacturer.trim(), technology, verifiedById: session.user.id, verifiedAt: new Date().toISOString() } } } })
-  ])
-  return NextResponse.json({ success: true })
+  const access = await mutationAccess(request); if ('response' in access) return access.response
+  const parsed = verifySchema.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: 'Invalid metadata verification request' }, { status: 400 })
+  try { return NextResponse.json(await verifyReviewMetadata({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
+}
+
+export async function POST(request: NextRequest) {
+  const access = await mutationAccess(request); if ('response' in access) return access.response
+  const parsed = resolutionSchema.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: 'Invalid resolution request' }, { status: 400 })
+  try { return NextResponse.json(await resolveForceCurveReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
 }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { prisma } from '../src/lib/prisma'
 import { FORCE_CURVE_SOURCE, getApprovedCurves, syncForceCurveCatalog } from '../src/lib/force-curves'
 import { recordForceCurveFeedback } from '../src/lib/force-curve-feedback'
+import { linkSourceReview, resolveForceCurveReview, verifyReviewMetadata } from '../src/lib/admin-force-curves'
 
 async function main() {
   await prisma.forceCurveFeedback.deleteMany(); await prisma.forceCurveReviewCase.deleteMany(); await prisma.forceCurveMapping.deleteMany(); await prisma.forceCurveCatalogEntry.deleteMany(); await prisma.forceCurveSyncRun.deleteMany(); await prisma.masterSwitch.deleteMany(); await prisma.user.deleteMany()
@@ -31,6 +32,34 @@ async function main() {
   const review = await prisma.forceCurveReviewCase.create({data:{masterSwitchId:'m-feedback',kind:'UNMATCHED',reason:'fixture',payload:{candidateIds:[]}}})
   await prisma.$transaction([prisma.forceCurveCatalogEntry.update({where:{id:feedbackCatalog.id},data:{manufacturer:'KTT',technology:'MECHANICAL',metadataVerifiedAt:new Date(),metadataVerifiedById:user.id}}),prisma.forceCurveReviewCase.update({where:{id:review.id},data:{catalogEntryId:feedbackCatalog.id,payload:{candidateIds:[feedbackCatalog.id],metadataVerification:{verifiedById:user.id}}}})])
   const verified = await prisma.forceCurveCatalogEntry.findUniqueOrThrow({where:{id:feedbackCatalog.id}}); assert.equal(verified.metadataVerifiedById,user.id); assert.ok(verified.metadataVerifiedAt)
+  const workflowSamples = [
+    {masterId:'cmcj8nlk20001ju04hkhn73i4',catalogId:'cmtbuybf90197uq2ni7cm18gf',name:'Gateron Oil King',technology:'MECHANICAL' as const,path:'Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv'},
+    {masterId:'cmgwp60xy04jwpk2om25iv882',catalogId:'cmtbuybn801aluq2njayzle8l',name:'Gateron Smoothie',technology:'MECHANICAL' as const,path:'Gateron Smoothie/Gateron_Smoothie_HighResolutionRaw.csv'},
+    {masterId:'cmgwnyflm04blpk2ow1uibj03',catalogId:'cmtbuyb5e017kuq2nqlgwl087',name:'Gateron Magnetic Jade',technology:'MAGNETIC' as const,path:'Gateron Magnetic Jade/Gateron_Magnetic_Jade_HighResolutionRaw.csv'},
+    {masterId:'cmgloohl501vfpk2os8do5jwo',catalogId:'cmtbuyaip0140uq2n2z0pe3ws',name:'Gateron G Pro 3.0 Yellow',technology:'MECHANICAL' as const,path:'Gateron G Pro 3.0 Yellow/Gateron_G_Pro_3.0_Yellow_HighResolutionRaw.csv'},
+  ]
+  let firstWorkflow: {reviewId:string;catalogId:string;masterId:string}|undefined
+  for (const sample of workflowSamples) {
+    await prisma.masterSwitch.create({data:{id:sample.masterId,name:sample.name,manufacturer:'Gateron',technology:sample.technology,submittedById:user.id,status:'APPROVED'}})
+    const catalog = await prisma.forceCurveCatalogEntry.create({data:{id:sample.catalogId,source:FORCE_CURVE_SOURCE,repositoryPath:sample.path,displayName:sample.name,revision:'exact',contentHash:`blob-${sample.catalogId}`,exists:true}})
+    const review = await prisma.forceCurveReviewCase.create({data:{catalogEntryId:catalog.id,kind:'SOURCE_UNVERIFIED',reason:'source metadata absent',payload:{candidateIds:[catalog.id]}}})
+    const linked = await linkSourceReview({reviewId:review.id,masterSwitchId:sample.masterId,catalogEntryId:catalog.id,actorId:user.id},prisma); assert.equal(linked.masterSwitchId,sample.masterId); assert.match(JSON.stringify(linked.payload),/linkAudit/)
+    const linkedAgain = await linkSourceReview({reviewId:review.id,masterSwitchId:sample.masterId,catalogEntryId:catalog.id,actorId:user.id},prisma); assert.equal(linkedAgain.id,linked.id); assert.equal(await prisma.forceCurveReviewCase.count({where:{id:review.id}}),1)
+    await verifyReviewMetadata({reviewId:review.id,catalogEntryId:catalog.id,manufacturer:'Gateron',technology:sample.technology,actorId:user.id},prisma)
+    await resolveForceCurveReview({reviewId:review.id,resolution:'MANUALLY_APPROVED',catalogEntryId:catalog.id,actorId:user.id},prisma)
+    const mapping = await prisma.forceCurveMapping.findUniqueOrThrow({where:{masterSwitchId_catalogEntryId:{masterSwitchId:sample.masterId,catalogEntryId:catalog.id}}}); assert.equal(mapping.decidedById,user.id); assert.ok(mapping.decidedAt); assert.match(mapping.provenance,/"source":"github:ThereminGoat\/force-curves"/); assert.equal((await getApprovedCurves(sample.masterId)).length,1)
+    firstWorkflow ||= {reviewId:review.id,catalogId:catalog.id,masterId:sample.masterId}
+  }
+  await resolveForceCurveReview({reviewId:firstWorkflow!.reviewId,resolution:'MANUALLY_APPROVED',catalogEntryId:firstWorkflow!.catalogId,actorId:user.id},prisma).then(()=>assert.fail('resolved review accepted twice'),()=>undefined); assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:firstWorkflow!.masterId,catalogEntryId:firstWorkflow!.catalogId}}),1)
+  const raceMaster = await prisma.masterSwitch.create({data:{id:'m-link-race',name:'Gateron Race',manufacturer:'Gateron',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'}})
+  const raceCatalog = await prisma.forceCurveCatalogEntry.create({data:{source:FORCE_CURVE_SOURCE,repositoryPath:'Gateron Race/Gateron_Race_HighResolutionRaw.csv',displayName:'Gateron Race',revision:'race',contentHash:'race-blob',exists:true}})
+  const raceReviews = await Promise.all([0,1].map(i=>prisma.forceCurveReviewCase.create({data:{catalogEntryId:raceCatalog.id,kind:'SOURCE_UNVERIFIED',reason:`race ${i}`,payload:{candidateIds:[raceCatalog.id]}}})))
+  const raceResults = await Promise.allSettled(raceReviews.map(item=>linkSourceReview({reviewId:item.id,masterSwitchId:raceMaster.id,catalogEntryId:raceCatalog.id,actorId:user.id},prisma)))
+  assert.equal(raceResults.filter(result=>result.status==='fulfilled').length,1)
+  const rejectedRace = raceResults.find(result=>result.status==='rejected'); assert.equal(rejectedRace?.status,'rejected'); assert.equal(rejectedRace.status==='rejected'&&rejectedRace.reason instanceof Error?rejectedRace.reason.message:null,'CONFLICTING_OPEN_REVIEW')
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{status:'OPEN',masterSwitchId:raceMaster.id,catalogEntryId:raceCatalog.id}}),1)
+  const raceWinner = await prisma.forceCurveReviewCase.findFirstOrThrow({where:{status:'OPEN',masterSwitchId:raceMaster.id,catalogEntryId:raceCatalog.id}})
+  const repeatedRaceWinner = await linkSourceReview({reviewId:raceWinner.id,masterSwitchId:raceMaster.id,catalogEntryId:raceCatalog.id,actorId:user.id},prisma); assert.equal(repeatedRaceWinner.id,raceWinner.id); assert.equal(await prisma.forceCurveReviewCase.count({where:{status:'OPEN',masterSwitchId:raceMaster.id,catalogEntryId:raceCatalog.id}}),1)
   await prisma.forceCurveReviewCase.createMany({data:[
     {masterSwitchId:'m-peach',kind:'UNMATCHED',reason:'legacy empty-catalog noise',payload:{candidateIds:[]}},
     {masterSwitchId:'m-feedback',kind:'UNMATCHED',reason:'legacy empty-catalog noise',payload:{candidateIds:[]}},

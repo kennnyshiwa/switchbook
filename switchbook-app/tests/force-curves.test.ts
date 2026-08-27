@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { catalogUrl, classifyCatalogTree, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
+import { adminActor, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: new Date(), exists: true, ...overrides })
 test('automatic matching accepts one exact compatible candidate', () => assert.deepEqual(selectAutomaticCandidates(master, [curve()]).map(c => c.id), ['c1']))
+test('automatic matching accepts an exact production name with its manufacturer already prefixed', () => assert.deepEqual(selectAutomaticCandidates({id:'oil',name:'Gateron Oil King',manufacturer:'Gateron',technology:'MECHANICAL'}, [curve({displayName:'Gateron Oil King',manufacturer:'Gateron'})]).map(c => c.id), ['c1']))
 test('automatic matching exposes ambiguity rather than choosing first', () => assert.equal(selectAutomaticCandidates(master, [curve(), curve({id:'c2'})]).length, 2))
 test('missing, manufacturer-conflicting, technology-conflicting, and absent metadata fail closed', () => {
   assert.equal(selectAutomaticCandidates(master, [curve({exists:false})]).length, 0)
@@ -70,4 +72,27 @@ test('KTT Peach Sun and other Blossom paths cannot auto-match Peach Blossom with
   const paths = ['KTT Peach Sun/KTT_Peach_Sun_HighResolutionRaw.csv','Cherry Blossom/Cherry Blossom Raw Data CSV.csv','Jerrzi Cherry Blossom/Jerrzi_Cherry_Blossom_HighResolutionRaw.csv']
   const candidates = classifyCatalogTree(paths.map((path, i) => ({type:'blob',path,sha:String(i)}))).map((entry, i) => ({id:String(i),displayName:measurementDisplayName(entry.path),manufacturer:null,technology:null,metadataVerifiedAt:null,exists:true}))
   assert.deepEqual(selectAutomaticCandidates(peachBlossom, candidates), [])
+})
+test('admin mutation authorization denies anonymous/non-admin and requires exact same origin', () => {
+  assert.equal(adminActor(null), null)
+  assert.equal(adminActor({user:{id:'u1',role:'USER'}}), null)
+  assert.equal(adminActor({user:{id:'a1',role:'ADMIN'}}), 'a1')
+  const request = (origin: string | null) => ({headers:new Headers(origin ? {origin} : {}),nextUrl:new URL('https://switchbook.app/api/admin/force-curves/reviews')})
+  assert.equal(isSameOriginMutation(request(null)), false)
+  assert.equal(isSameOriginMutation(request('https://evil.example')), false)
+  assert.equal(isSameOriginMutation(request('https://switchbook.app')), true)
+})
+test('manual source linking uses exact manufacturer/name folder identity and rejects fuzzy paths', () => {
+  const production = [
+    ['Gateron Oil King','Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv'],
+    ['Gateron Smoothie','Gateron Smoothie/Gateron_Smoothie_HighResolutionRaw.csv'],
+    ['Gateron Magnetic Jade','Gateron Magnetic Jade/Gateron_Magnetic_Jade_HighResolutionRaw.csv'],
+    ['Gateron G Pro 3.0 Yellow','Gateron G Pro 3.0 Yellow/Gateron_G_Pro_3.0_Yellow_HighResolutionRaw.csv'],
+  ]
+  for (const [name,repositoryPath] of production) assert.equal(exactCatalogMasterIdentity({name,manufacturer:'Gateron'},{displayName:name,repositoryPath}),true)
+  assert.equal(exactCatalogMasterIdentity({name:'Oil King',manufacturer:'Gateron'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv'}),true)
+  assert.equal(exactCatalogMasterIdentity({name:'Gateron Oil King',manufacturer:'Gateron'},{displayName:'Gateron Oil King V2',repositoryPath:'Gateron Oil King V2/TG.csv'}),false)
+  assert.equal(exactCatalogMasterIdentity({name:'Gateron Oil King',manufacturer:'KTT'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/TG.csv'}),false)
+  assert.equal(exactCatalogMasterIdentity({name:'GateronX Oil King',manufacturer:'Gateron'},{displayName:'GateronX Oil King',repositoryPath:'GateronX Oil King/TG.csv'}),false)
+  assert.equal(exactCatalogMasterIdentity({name:'Peach Blossom',manufacturer:'KTT'},{displayName:'Cherry Blossom',repositoryPath:'Cherry Blossom/TG.csv'}),false)
 })
