@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
+import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, forceCurveSyncRevision, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
 import { adminActor, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
+test('sync run identity deterministically versions upstream content and matching algorithm', () => {
+  assert.equal(forceCurveSyncRevision('abc123'),'abc123:formats-v3:exact-match-v1')
+  assert.equal(forceCurveSyncRevision('abc123'),forceCurveSyncRevision('abc123'))
+  assert.notEqual(forceCurveSyncRevision('abc123'),'abc123:formats-v2')
+})
 test('automatic matching accepts one exact compatible candidate', () => assert.deepEqual(selectAutomaticCandidates(master, [curve()]).map(c => c.id), ['c1']))
 test('automatic matching accepts an exact production name with its manufacturer already prefixed', () => assert.deepEqual(selectAutomaticCandidates({id:'oil',name:'Gateron Oil King',manufacturer:'Gateron',technology:'MECHANICAL'}, [curve({displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv',manufacturer:'Gateron'})]).map(c => c.id), ['c1']))
 test('automatic matching exposes ambiguity rather than choosing first', () => assert.equal(selectAutomaticCandidates(master, [curve(), curve({id:'c2'})]).length, 2))

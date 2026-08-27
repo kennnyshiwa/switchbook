@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { prisma } from '../src/lib/prisma'
-import { FORCE_CURVE_SOURCE, getApprovedCurves, syncForceCurveCatalog } from '../src/lib/force-curves'
+import { FORCE_CURVE_SOURCE, forceCurveSyncRevision, getApprovedCurves, syncForceCurveCatalog } from '../src/lib/force-curves'
 import { recordForceCurveFeedback } from '../src/lib/force-curve-feedback'
 import { linkSourceReview, resolveForceCurveReview, verifyReviewMetadata } from '../src/lib/admin-force-curves'
 
@@ -60,6 +60,24 @@ async function main() {
   assert.ok(await prisma.forceCurveReviewCase.findFirst({where:{kind:'AMBIGUOUS',masterSwitchId:'m-equal',status:'OPEN'}}))
   assert.equal((await prisma.forceCurveMapping.findUniqueOrThrow({where:{id:(await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-manual'}})).id}})).state,'MANUALLY_APPROVED')
   assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-rejected'}})).state,'REJECTED')
+  await prisma.masterSwitch.create({data:{id:'m-algorithm',name:'Algorithm',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'}})
+  await prisma.forceCurveSyncRun.create({data:{source:FORCE_CURVE_SOURCE,revision:'algorithm-upstream:formats-v2',status:'COMPLETED',cursor:'1',beforeCount:0,afterCount:1,completedAt:new Date()}})
+  const algorithmInput = [{path:'KTT Algorithm/KTT_Algorithm_HighResolutionRaw.csv',sha:'algorithm-sha',format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Algorithm/ktt algorithm'}]
+  const algorithmRun = await syncForceCurveCatalog(forceCurveSyncRevision('algorithm-upstream'),algorithmInput,{catalogRevision:'algorithm-upstream'})
+  assert.equal(algorithmRun.revision,'algorithm-upstream:formats-v3:exact-match-v1')
+  assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-algorithm'}})).state,'AUTO_APPROVED')
+  const algorithmState = {
+    mappings:await prisma.forceCurveMapping.findMany({select:{id:true,state:true,updatedAt:true},orderBy:{id:'asc'}}),
+    reviews:await prisma.forceCurveReviewCase.findMany({select:{id:true,status:true,updatedAt:true},orderBy:{id:'asc'}}),
+    catalog:await prisma.forceCurveCatalogEntry.findMany({select:{id:true,updatedAt:true},orderBy:{id:'asc'}}),
+  }
+  const algorithmRerun = await syncForceCurveCatalog(forceCurveSyncRevision('algorithm-upstream'),algorithmInput,{catalogRevision:'algorithm-upstream'})
+  assert.equal(algorithmRerun.id,algorithmRun.id)
+  assert.deepEqual({
+    mappings:await prisma.forceCurveMapping.findMany({select:{id:true,state:true,updatedAt:true},orderBy:{id:'asc'}}),
+    reviews:await prisma.forceCurveReviewCase.findMany({select:{id:true,status:true,updatedAt:true},orderBy:{id:'asc'}}),
+    catalog:await prisma.forceCurveCatalogEntry.findMany({select:{id:true,updatedAt:true},orderBy:{id:'asc'}}),
+  },algorithmState)
   const feedbackCatalog = await prisma.forceCurveCatalogEntry.create({data:{source:FORCE_CURVE_SOURCE,repositoryPath:'KTT Feedback/TG.csv',displayName:'KTT Feedback',manufacturer:'KTT',technology:'MECHANICAL',exists:true}})
   await prisma.forceCurveMapping.create({data:{masterSwitchId:'m-feedback',catalogEntryId:feedbackCatalog.id,state:'AUTO_APPROVED',provenance:'fixture'}})
   const feedback = await recordForceCurveFeedback({userId:user.id,masterSwitchId:'m-feedback',catalogEntryId:feedbackCatalog.id,switchName:'Feedback',manufacturer:'KTT',incorrectMatch:'KTT Feedback/TG.csv',feedbackType:'no_match_found'})

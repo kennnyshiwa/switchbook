@@ -2,6 +2,8 @@ import { ForceCurveMappingState, Prisma, SwitchTechnology } from '@prisma/client
 import { prisma } from '@/lib/prisma'
 
 export const FORCE_CURVE_SOURCE = 'github:ThereminGoat/force-curves'
+export const FORCE_CURVE_SYNC_ALGORITHM = 'formats-v3:exact-match-v1'
+export const forceCurveSyncRevision = (catalogRevision: string) => `${catalogRevision}:${FORCE_CURVE_SYNC_ALGORITHM}`
 export const APPROVED_STATES: ForceCurveMappingState[] = ['AUTO_APPROVED', 'MANUALLY_APPROVED']
 export type CatalogFormat = 'RAW_DATA' | 'HIGH_RESOLUTION_RAW' | 'NONSTANDARD_REVIEW'
 export type CatalogInput = { path: string; sha?: string; manufacturer?: string; technology?: SwitchTechnology; metadataVerified?: boolean; format?: CatalogFormat; measurementKey?: string }
