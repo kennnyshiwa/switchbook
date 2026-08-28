@@ -99,6 +99,34 @@ export async function deferForceCurveReviews(input:{reviewIds:string[];reason?:s
   })
 }
 
+export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwitchId:string;catalogEntryId:string;actorId:string},db:Db) {
+  const unique=[...new Set(input.reviewIds)];if(!unique.length||unique.length>100) throw new Error('INVALID_REVIEW_SELECTION')
+  return db.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id IN (${Prisma.join(unique)}) FOR UPDATE`
+    await tx.$queryRaw`SELECT id FROM "MasterSwitch" WHERE id = ${input.masterSwitchId} FOR UPDATE`
+    const [rows,master,candidate]=await Promise.all([
+      tx.forceCurveReviewCase.findMany({where:{id:{in:unique}},include:{masterSwitch:true}}),
+      tx.masterSwitch.findUnique({where:{id:input.masterSwitchId}}),
+      tx.forceCurveCatalogEntry.findUnique({where:{id:input.catalogEntryId}}),
+    ])
+    if(rows.length!==unique.length||rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
+    if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
+    if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!exactCatalogMasterIdentity(master,candidate)) throw new Error('INCOMPATIBLE_IDENTITY')
+    const shaped=rows.map(r=>({...r,candidates:[candidate]})) as QueueReview[]
+    if(new Set(rows.map(r=>sourceIdentity({...r,candidates:[]} as QueueReview))).size!==1) throw new Error('MIXED_SOURCE_GROUP')
+    if(rows.some(r=>!SOURCE_REVIEW_KINDS.includes(r.kind as typeof SOURCE_REVIEW_KINDS[number])||!candidateIds(r.payload).includes(candidate.id))) throw new Error('REVIEW_CANDIDATE_REQUIRED')
+    const allCandidateIds=[...new Set(rows.flatMap(r=>candidateIds(r.payload)))]
+    const allCandidates=await tx.forceCurveCatalogEntry.findMany({where:{id:{in:allCandidateIds},source:FORCE_CURVE_SOURCE,exists:true}})
+    if(allCandidates.some(entry=>!exactCatalogMasterIdentity(master,entry))) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
+    if(new Set(shaped.map(sourceIdentity)).size!==1) throw new Error('MIXED_SOURCE_GROUP')
+    const conflicting=await tx.forceCurveReviewCase.findFirst({where:{id:{notIn:unique},status:'OPEN',masterSwitchId:master.id,catalogEntryId:{in:allCandidateIds}}})
+    if(conflicting) throw new Error('CONFLICTING_OPEN_REVIEW')
+    const now=new Date().toISOString()
+    for(const row of rows) await tx.forceCurveReviewCase.update({where:{id:row.id},data:{masterSwitchId:master.id,catalogEntryId:candidate.id,payload:{...objectPayload(row.payload),linkAudit:{actorId:input.actorId,linkedAt:now,source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id}} as Prisma.InputJsonValue}})
+    return {linked:rows.length,masterSwitchId:master.id,catalogEntryId:candidate.id}
+  })
+}
+
 export async function bulkApproveForceCurveReviews(input:{reviewIds:string[];catalogEntryId:string;actorId:string;reason?:string},db:Db) {
   const unique=[...new Set(input.reviewIds)]
   if (!unique.length || unique.length>100) throw new Error('INVALID_REVIEW_SELECTION')
@@ -107,10 +135,15 @@ export async function bulkApproveForceCurveReviews(input:{reviewIds:string[];cat
     const rows=await tx.forceCurveReviewCase.findMany({where:{id:{in:unique}},include:{masterSwitch:true}})
     const candidate=await tx.forceCurveCatalogEntry.findUnique({where:{id:input.catalogEntryId}})
     if(rows.length!==unique.length || !candidate?.exists) throw new Error('OPEN_REVIEW_REQUIRED')
-    if(rows.every(r=>r.status==='RESOLVED'&&r.resolution==='MANUALLY_APPROVED')) return {approved:rows.length,replayed:true,masterSwitchId:rows[0].masterSwitchId,catalogEntryId:candidate.id}
-    if(rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_REVIEW_REQUIRED')
     const masterIds=new Set(rows.flatMap(r=>r.masterSwitchId?[r.masterSwitchId]:[]))
     if(masterIds.size!==1 || rows.some(r=>!r.masterSwitch || candidateIds(r.payload).length!==1 || !candidateIds(r.payload).includes(candidate.id) || !exactCatalogMasterIdentity(r.masterSwitch,candidate) || selectAutomaticCandidates(r.masterSwitch,[candidate]).length!==1)) throw new Error('UNSAFE_BULK_APPROVAL')
+    if(rows.every(r=>r.status==='RESOLVED'&&r.resolution==='MANUALLY_APPROVED')) {
+      const masterSwitchId=rows[0].masterSwitchId!
+      const mapping=await tx.forceCurveMapping.findUnique({where:{masterSwitchId_catalogEntryId:{masterSwitchId,catalogEntryId:candidate.id}}})
+      if(mapping?.state!=='MANUALLY_APPROVED') throw new Error('BULK_REPLAY_MISMATCH')
+      return {approved:rows.length,replayed:true,masterSwitchId,catalogEntryId:candidate.id}
+    }
+    if(rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_REVIEW_REQUIRED')
     if(rows[0].masterSwitch && normalize(rows[0].masterSwitch.name)==='peach blossom' && !candidate.metadataVerifiedAt) throw new Error('PEACH_BLOSSOM_AUTHORITATIVE_EVIDENCE_REQUIRED')
     // Bulk is restricted to repeated evidence for one source identity and one exact candidate.
     const queueRows=rows.map(r=>({...r,candidates:[candidate]})) as QueueReview[]

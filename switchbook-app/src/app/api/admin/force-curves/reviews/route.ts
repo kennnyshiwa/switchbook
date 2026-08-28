@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { adminActor, bulkApproveForceCurveReviews, buildReviewQueue, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '@/lib/admin-force-curves'
+import { adminActor, bulkApproveForceCurveReviews, buildReviewQueue, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '@/lib/admin-force-curves'
 
 const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
+const groupLinkSchema = z.object({ reviewIds:z.array(z.string().cuid()).min(1).max(100),masterSwitchId:z.string().cuid(),catalogEntryId:z.string().cuid()}).strict()
 const verifySchema = z.object({ reviewId: z.string().cuid(), catalogEntryId: z.string().cuid(), manufacturer: z.string().trim().min(1).max(120), technology: z.enum(['MECHANICAL','OPTICAL','MAGNETIC','INDUCTIVE','ELECTRO_CAPACITIVE']) }).strict()
 const resolutionSchema = z.object({ reviewId: z.string().cuid(), resolution: z.enum(['MANUALLY_APPROVED','REJECTED','NO_MATCH']), catalogEntryId: z.string().cuid().optional(), reason: z.string().trim().max(1000).optional() }).strict()
 const queueActionSchema = z.discriminatedUnion('action',[
@@ -38,7 +39,10 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   const access = await mutationAccess(request); if ('response' in access) return access.response
-  const parsed = linkSchema.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: 'Invalid link request' }, { status: 400 })
+  const body=await request.json().catch(()=>null)
+  const group=groupLinkSchema.safeParse(body)
+  if(group.success) try{return NextResponse.json(await linkSourceReviewGroup({...group.data,actorId:access.actorId},prisma))}catch(error){return failure(error)}
+  const parsed = linkSchema.safeParse(body); if (!parsed.success) return NextResponse.json({ error: 'Invalid link request' }, { status: 400 })
   try { return NextResponse.json(await linkSourceReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
 }
 

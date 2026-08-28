@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { prisma } from '../src/lib/prisma'
 import { FORCE_CURVE_SOURCE, forceCurveSyncRevision, getApprovedCurves, syncForceCurveCatalog } from '../src/lib/force-curves'
 import { recordForceCurveFeedback } from '../src/lib/force-curve-feedback'
-import { bulkApproveForceCurveReviews, deferForceCurveReviews, linkSourceReview, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '../src/lib/admin-force-curves'
+import { bulkApproveForceCurveReviews, buildReviewQueue, deferForceCurveReviews, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '../src/lib/admin-force-curves'
 
 async function main() {
   await prisma.forceCurveFeedback.deleteMany(); await prisma.forceCurveReviewCase.deleteMany(); await prisma.forceCurveMapping.deleteMany(); await prisma.forceCurveCatalogEntry.deleteMany(); await prisma.forceCurveSyncRun.deleteMany(); await prisma.masterSwitch.deleteMany(); await prisma.user.deleteMany()
@@ -210,12 +210,20 @@ async function main() {
   const approved=await bulkApproveForceCurveReviews({reviewIds:queueReviews.map(r=>r.id),catalogEntryId:queueCatalog.id,actorId:user.id},prisma);assert.equal(approved.approved,2);assert.equal((await getApprovedCurves(queueMaster.id)).length,1)
   assert.equal((await bulkApproveForceCurveReviews({reviewIds:queueReviews.map(r=>r.id),catalogEntryId:queueCatalog.id,actorId:user.id},prisma)).replayed,true)
   const ambiguousCatalog=await prisma.forceCurveCatalogEntry.create({data:{id:'queue-db-ambiguous',source:FORCE_CURVE_SOURCE,repositoryPath:'KTT Queue DB/alternate.csv',displayName:'KTT Queue DB',contentHash:'queue-db-alt',exists:true}})
+  await bulkApproveForceCurveReviews({reviewIds:queueReviews.map(r=>r.id),catalogEntryId:ambiguousCatalog.id,actorId:user.id},prisma).then(()=>assert.fail('altered replay accepted'),error=>assert.equal((error as Error).message,'UNSAFE_BULK_APPROVAL'))
   const ambiguousReview=await prisma.forceCurveReviewCase.create({data:{masterSwitchId:queueMaster.id,catalogEntryId:queueCatalog.id,kind:'AMBIGUOUS',reason:'two candidates',payload:{measurementKey:'KTT Queue DB/ambiguous',candidateIds:[queueCatalog.id,ambiguousCatalog.id]}}})
   await bulkApproveForceCurveReviews({reviewIds:[ambiguousReview.id],catalogEntryId:queueCatalog.id,actorId:user.id},prisma).then(()=>assert.fail('unsafe ambiguity approved'),error=>assert.equal((error as Error).message,'UNSAFE_BULK_APPROVAL'))
   assert.equal((await prisma.forceCurveReviewCase.findUniqueOrThrow({where:{id:ambiguousReview.id}})).status,'OPEN')
   const noMatchReviews=await Promise.all([1,2].map(i=>prisma.forceCurveReviewCase.create({data:{masterSwitchId:queueMaster.id,kind:'UNMATCHED',reason:`no match ${i}`,payload:{measurementKey:'KTT Queue DB/no match',candidateIds:[]}}})))
   assert.equal((await resolveNoMatchGroup({reviewIds:noMatchReviews.map(r=>r.id),actorId:user.id},prisma)).resolved,2);assert.deepEqual(await getApprovedCurves(queueMaster.id),[])
   assert.equal((await resolveNoMatchGroup({reviewIds:noMatchReviews.map(r=>r.id),actorId:user.id},prisma)).replayed,true)
+  const unlinkedMaster=await prisma.masterSwitch.create({data:{id:'m-group-link',name:'Group Link',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'}})
+  const unlinkedCatalog=await prisma.forceCurveCatalogEntry.create({data:{id:'group-link-catalog',source:FORCE_CURVE_SOURCE,repositoryPath:'KTT Group Link/KTT_Group_Link_HighResolutionRaw.csv',displayName:'KTT Group Link',contentHash:'group-link-sha',exists:true}})
+  const unlinked=await Promise.all([1,2,3].map(i=>prisma.forceCurveReviewCase.create({data:{catalogEntryId:unlinkedCatalog.id,kind:'SOURCE_UNVERIFIED',reason:`unlinked evidence ${i}`,payload:{measurementKey:'KTT Group Link/ktt group link',candidateIds:[unlinkedCatalog.id],paths:[unlinkedCatalog.repositoryPath]}}})))
+  assert.equal((await linkSourceReviewGroup({reviewIds:unlinked.map(r=>r.id),masterSwitchId:unlinkedMaster.id,catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma)).linked,3)
+  const linkedRows=await prisma.forceCurveReviewCase.findMany({where:{id:{in:unlinked.map(r=>r.id)}},include:{masterSwitch:true}});assert.ok(linkedRows.every(r=>r.masterSwitchId===unlinkedMaster.id))
+  const linkedQueue=buildReviewQueue(linkedRows.map(r=>({...r,candidates:[unlinkedCatalog]})));assert.equal(linkedQueue.uniqueSourceCount,1);assert.equal(linkedQueue.remainingActionable,1)
+  assert.equal((await bulkApproveForceCurveReviews({reviewIds:unlinked.map(r=>r.id),catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma)).approved,3);assert.equal((await getApprovedCurves(unlinkedMaster.id)).length,1)
   console.log(JSON.stringify({runs:await prisma.forceCurveSyncRun.count(),catalog:await prisma.forceCurveCatalogEntry.count(),reviews:await prisma.forceCurveReviewCase.count(),peachApprovedUrls:(await getApprovedCurves('cmqo21sm103vknu3vh0tjs75x')).map(x=>x.url)},null,2))
 }
 main().finally(()=>prisma.$disconnect())
