@@ -17,8 +17,9 @@ async function main() {
   const a = await syncForceCurveCatalog('db-rev-a', input, {chunkSize:1}); assert.equal(a.newCount,1); assert.equal((await getApprovedCurves('m-peach')).length,1)
   await prisma.masterSwitch.create({data:{id:'m-atomic',name:'Atomic',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'}})
   const atomicInput = [{path:'KTT Atomic/KTT_Atomic_HighResolutionRaw.csv',sha:'atomic',manufacturer:'KTT',technology:'MECHANICAL' as const,metadataVerified:true,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:'KTT Atomic/ktt atomic'}]
+  const beforeAtomic = {approved:await getApprovedCurves('m-atomic'),open:await prisma.forceCurveReviewCase.count({where:{status:'OPEN'}})}
   await syncForceCurveCatalog('atomic-rev',atomicInput,{chunkSize:1,failAfterReconcileChunks:1}).then(()=>assert.fail('expected reconciliation interruption'),()=>undefined)
-  const stagedAtomic = await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-atomic'}}); assert.equal(stagedAtomic.state,'REVIEW_REQUIRED'); assert.deepEqual(await getApprovedCurves('m-atomic'),[])
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:'m-atomic'}}),0); assert.deepEqual(await getApprovedCurves('m-atomic'),beforeAtomic.approved); assert.equal(await prisma.forceCurveReviewCase.count({where:{status:'OPEN'}}),beforeAtomic.open); assert.ok(await prisma.forceCurveSyncStage.findFirst({where:{run:{revision:'atomic-rev'},outputType:'MAPPING'}}))
   const failedAtomic = await prisma.forceCurveSyncRun.findUniqueOrThrow({where:{source_revision:{source:FORCE_CURVE_SOURCE,revision:'atomic-rev'}}}); assert.equal(failedAtomic.status,'FAILED')
   const resumedAtomic = await syncForceCurveCatalog('atomic-rev',atomicInput,{chunkSize:1}); assert.equal(resumedAtomic.status,'COMPLETED'); assert.equal((await getApprovedCurves('m-atomic')).length,1); assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-atomic'}})).state,'AUTO_APPROVED')
   const same = await syncForceCurveCatalog('db-rev-a', input, {chunkSize:1}); assert.equal(same.id,a.id); assert.equal(same.newCount,1)
@@ -148,6 +149,18 @@ async function main() {
       {path:`Exact Pair ${i}/Exact_Pair_${i}_HighResolutionRaw.csv`,sha:`hi-${i}`,format:'HIGH_RESOLUTION_RAW' as const,measurementKey:key},
     ]
   }).flat().concat(Array.from({length:107},(_,i)=>({path:`Exact Solo ${i}/Exact Solo ${i} Raw Data CSV.csv`,sha:`solo-${i}`,format:'RAW_DATA' as const,measurementKey:`Exact Solo ${i}/exact solo ${i}`})))
+  const largeFailureBaseline = {
+    mappings:await prisma.forceCurveMapping.findMany({select:{id:true,state:true,provenance:true},orderBy:{id:'asc'}}),
+    open:await prisma.forceCurveReviewCase.count({where:{status:'OPEN'}}),
+  }
+  await syncForceCurveCatalog('large-failure:formats-v2',upstream,{chunkSize:50,failAfterReconcileChunks:3,catalogRevision:'large-failure'}).then(()=>assert.fail('expected large reconciliation interruption'),()=>undefined)
+  assert.deepEqual(await prisma.forceCurveMapping.findMany({select:{id:true,state:true,provenance:true},orderBy:{id:'asc'}}),largeFailureBaseline.mappings)
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{status:'OPEN'}}),largeFailureBaseline.open)
+  assert.equal(await prisma.forceCurveSyncStage.count({where:{run:{revision:'large-failure:formats-v2'}}}),300)
+  const resumedLarge = await syncForceCurveCatalog('large-failure:formats-v2',upstream,{chunkSize:50,catalogRevision:'large-failure'}); assert.equal(resumedLarge.status,'COMPLETED'); assert.equal(resumedLarge.cursor,'5351')
+  const resumedLargeState = {mappings:await prisma.forceCurveMapping.count(),open:await prisma.forceCurveReviewCase.count({where:{status:'OPEN'}})}
+  assert.equal((await syncForceCurveCatalog('large-failure:formats-v2',upstream,{chunkSize:50,catalogRevision:'large-failure'})).id,resumedLarge.id)
+  assert.deepEqual({mappings:await prisma.forceCurveMapping.count(),open:await prisma.forceCurveReviewCase.count({where:{status:'OPEN'}})},resumedLargeState)
   const concurrentRevision = 'exact-upstream:formats-v2'
   const concurrent = await Promise.all([
     syncForceCurveCatalog(concurrentRevision,upstream,{chunkSize:250,catalogRevision:'exact-upstream'}),

@@ -39,3 +39,27 @@ migration changes are introduced. Failed runs may leave `REVIEW_REQUIRED` rows
 whose provenance contains their `syncRunId`; these are invisible to public
 approved reads and can be retained for retry or removed only after an audited
 rollback decision.
+
+## Second corrective iteration
+
+Production evidence from release `4c014d4` localized the remaining P2028 to a
+nominal 50-group transaction that still executed multiple sequential queries for
+every group. It expired at 5,002 ms and leaked 18 `REVIEW_REQUIRED` mappings and
+230 new open outcome reviews before rollback.
+
+The replacement introduces `ForceCurveSyncStage`, a private run-owned table.
+Reconciliation is now pure in-memory classification followed by bounded
+`createMany(..., skipDuplicates)` stage writes. Neither mappings nor the open
+review queue changes before publish. The final transaction uses four set-based
+SQL statements to insert mappings, adopt legacy partial staging from the failed
+release, insert only missing open reviews, and resolve source reviews for exact
+matches. Indexed anti-joins safely reuse the already-partial production queue.
+Run completion, audit counts, and Peach Blossom's durable `NO_MATCH` remain in
+the same atomic transaction. No timeout was increased.
+
+The production-shaped DB fixture now injects failure after three chunks of the
+5,351-blob/2,729-group input, asserts mappings and open reviews are byte-for-byte
+unchanged, verifies 300 private staged outputs, resumes, and verifies a repeated
+rerun is idempotent. The smaller exact-match fixture makes the same visibility
+assertion. Independent QA must run this DB suite against disposable PostgreSQL,
+including migration application and transaction timing.

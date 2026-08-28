@@ -369,6 +369,7 @@ model ForceCurveReviewCase {
   feedback       ForceCurveFeedback[]
 
   @@index([status, kind])
+  @@index([catalogEntryId, status, kind, masterSwitchId], map: "fc_review_dedupe_idx")
 }
 
 model ForceCurveSyncRun {
@@ -389,8 +390,29 @@ model ForceCurveSyncRun {
   startedAt      DateTime             @default(now())
   completedAt    DateTime?
   updatedAt      DateTime             @updatedAt
+  stagedOutputs  ForceCurveSyncStage[]
 
   @@unique([source, revision])
+}
+
+model ForceCurveSyncStage {
+  id             String            @id @default(cuid())
+  runId          String
+  outputKey      String
+  outputType     String
+  masterSwitchId String?
+  catalogEntryId String?
+  mappingState   ForceCurveMappingState?
+  confidence     Float?
+  provenance     String?
+  reviewKind     String?
+  reason         String?
+  payload        Json?
+  createdAt      DateTime          @default(now())
+  run            ForceCurveSyncRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, outputKey])
+  @@index([runId, outputType])
 }
 
 model MasterSwitchEdit {
