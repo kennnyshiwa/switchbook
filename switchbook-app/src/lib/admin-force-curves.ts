@@ -112,13 +112,14 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(rows.length!==unique.length||rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
     if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
     if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!exactCatalogMasterIdentity(master,candidate)) throw new Error('INCOMPATIBLE_IDENTITY')
-    const shaped=rows.map(r=>({...r,candidates:[candidate]})) as QueueReview[]
-    if(new Set(rows.map(r=>sourceIdentity({...r,candidates:[]} as QueueReview))).size!==1) throw new Error('MIXED_SOURCE_GROUP')
     if(rows.some(r=>!SOURCE_REVIEW_KINDS.includes(r.kind as typeof SOURCE_REVIEW_KINDS[number])||!candidateIds(r.payload).includes(candidate.id))) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allCandidateIds=[...new Set(rows.flatMap(r=>candidateIds(r.payload)))]
     const allCandidates=await tx.forceCurveCatalogEntry.findMany({where:{id:{in:allCandidateIds},source:FORCE_CURVE_SOURCE,exists:true}})
     if(allCandidates.some(entry=>!exactCatalogMasterIdentity(master,entry))) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
-    if(new Set(shaped.map(sourceIdentity)).size!==1) throw new Error('MIXED_SOURCE_GROUP')
+    // Use the exact same loaded catalog evidence as buildReviewQueue. This is
+    // essential for legacy rows whose payload contains only candidateIds.
+    const shaped=rows.map(r=>({...r,candidates:allCandidates.filter(entry=>candidateIds(r.payload).includes(entry.id))})) as QueueReview[]
+    if(shaped.some(r=>!r.candidates.length)||new Set(shaped.map(sourceIdentity)).size!==1) throw new Error('MIXED_SOURCE_GROUP')
     const conflicting=await tx.forceCurveReviewCase.findFirst({where:{id:{notIn:unique},status:'OPEN',masterSwitchId:master.id,catalogEntryId:{in:allCandidateIds}}})
     if(conflicting) throw new Error('CONFLICTING_OPEN_REVIEW')
     const now=new Date().toISOString()
