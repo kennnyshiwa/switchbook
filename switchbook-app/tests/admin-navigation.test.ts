@@ -14,11 +14,14 @@ test('admin dashboard exposes an accessible force curve review control', () => {
 
 test('master switch admin loading is single-shot and APIs are bounded projections', () => {
   const page = readFileSync(new URL('../src/app/admin/master-switches/page.tsx', import.meta.url), 'utf8')
+  const providers = readFileSync(new URL('../src/components/Providers.tsx', import.meta.url), 'utf8')
   const submissions = readFileSync(new URL('../src/app/api/admin/master-switches/route.ts', import.meta.url), 'utf8')
   const edits = readFileSync(new URL('../src/app/api/admin/master-switch-edits/route.ts', import.meta.url), 'utf8')
   assert.match(page, /loadedFilter\.current === filter/)
   assert.match(page, /loadedFilter\.current = filter/)
   assert.doesNotMatch(page, /useSession/)
+  assert.match(providers, /SessionProvider session=\{session\} refetchOnWindowFocus=\{false\}/)
+  assert.match(providers, /fetch\('\/api\/auth\/session', \{ cache: 'no-store' \}\)/)
   assert.match(page, /loadAdminMasterSwitchData\(filter\)/)
   assert.match(submissions, /select:\s*\{/)
   assert.match(edits, /select:\s*\{/)
