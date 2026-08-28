@@ -141,6 +141,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Actions */}
+        <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">Administration</h2>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             href="/admin/users"
@@ -217,6 +218,18 @@ export default async function AdminDashboard() {
               </h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Review and approve community switch submissions
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/force-curves"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Force Curve Review Queue</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Review and match imported force curve sources
               </p>
             </div>
           </Link>
