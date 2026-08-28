@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, forceCurveSyncRevision, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
-import { adminActor, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
+import { adminActor, buildReviewQueue, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('sync run identity deterministically versions upstream content and matching algorithm', () => {
@@ -36,6 +36,12 @@ test('Peach Blossom behavior: durable NO_MATCH suppresses conflicting approval a
   const result = resolveApprovedCurveRecords([{ state: 'NO_MATCH', catalogEntry: null }, { state: 'AUTO_APPROVED', catalogEntry: { id:'bad',displayName:'Cherry Blossom',repositoryPath:'Cherry Blossom/TG.csv',exists:true } }])
   assert.deepEqual(result, []); assert.equal(JSON.stringify(result).includes('TG.csv'), false)
 })
+
+const queueReview=(overrides:Record<string,unknown>={})=>({id:'r1',kind:'SOURCE_UNVERIFIED',reason:'source evidence',masterSwitchId:'m1',catalogEntryId:'c1',payload:{candidateIds:['c1']},masterSwitch:{id:'m1',name:'Gateron Oil King',manufacturer:'Gateron',technology:'MECHANICAL'},candidates:[{id:'c1',displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/TG.csv',manufacturer:'Gateron',technology:'MECHANICAL',contentHash:'sha',revision:'rev',exists:true}],...overrides}) as any
+test('review queue groups repeated source evidence and counts unique actionable work',()=>{const queue=buildReviewQueue([queueReview(),queueReview({id:'r2'})]);assert.equal(queue.rawReviewCount,2);assert.equal(queue.uniqueSourceCount,1);assert.equal(queue.remainingActionable,1);assert.equal(queue.items[0].bucket,'DUPLICATE');assert.equal(queue.items[0].confidence,1)})
+test('review queue never calls ambiguity actionable',()=>{const queue=buildReviewQueue([queueReview({candidates:[queueReview().candidates[0],{...queueReview().candidates[0],id:'c2',repositoryPath:'Gateron Oil King/alternate.csv'}]})]);assert.equal(queue.items[0].bucket,'AMBIGUITY');assert.equal(queue.remainingActionable,0)})
+test('review queue distinguishes unambiguous no-match and durable defer',()=>{const queue=buildReviewQueue([queueReview({kind:'UNMATCHED',reason:'no match',catalogEntryId:null,candidates:[],payload:{queueWorkflow:{status:'DEFERRED'}}})]);assert.equal(queue.items[0].bucket,'NO_MATCH');assert.equal(queue.items[0].deferred,true);assert.equal(queue.remainingActionable,0)})
+test('review queue reports conflicts separately',()=>{const queue=buildReviewQueue([queueReview(),queueReview({id:'r2',masterSwitchId:'m2',masterSwitch:{id:'m2',name:'Other',manufacturer:'KTT',technology:'MECHANICAL'}})]);assert.equal(queue.items[0].bucket,'CONFLICT');assert.equal(queue.remainingActionable,0)})
 test('actual upstream formats preserve exact path/hash and pair to one measurement', () => {
   const entries = classifyCatalogTree([
     {type:'blob',path:"'X' Green/'X' Green Raw Data CSV.csv",sha:'7be19f'},

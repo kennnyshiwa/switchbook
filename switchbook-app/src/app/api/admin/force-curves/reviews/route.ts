@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { adminActor, isSameOriginMutation, linkSourceReview, resolveForceCurveReview, verifyReviewMetadata } from '@/lib/admin-force-curves'
+import { adminActor, bulkApproveForceCurveReviews, buildReviewQueue, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, resolveForceCurveReview, verifyReviewMetadata } from '@/lib/admin-force-curves'
 
 const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
 const verifySchema = z.object({ reviewId: z.string().cuid(), catalogEntryId: z.string().cuid(), manufacturer: z.string().trim().min(1).max(120), technology: z.enum(['MECHANICAL','OPTICAL','MAGNETIC','INDUCTIVE','ELECTRO_CAPACITIVE']) }).strict()
 const resolutionSchema = z.object({ reviewId: z.string().cuid(), resolution: z.enum(['MANUALLY_APPROVED','REJECTED','NO_MATCH']), catalogEntryId: z.string().cuid().optional(), reason: z.string().trim().max(1000).optional() }).strict()
+const queueActionSchema = z.discriminatedUnion('action',[
+  z.object({action:z.literal('DEFER'),reviewIds:z.array(z.string().cuid()).min(1).max(100),reason:z.string().trim().max(1000).optional()}).strict(),
+  z.object({action:z.literal('BULK_APPROVE'),reviewIds:z.array(z.string().cuid()).min(1).max(100),catalogEntryId:z.string().cuid(),reason:z.string().trim().max(1000).optional()}).strict(),
+])
 const ids = (payload: unknown) => typeof payload === 'object' && payload && Array.isArray((payload as { candidateIds?: unknown }).candidateIds) ? (payload as { candidateIds: string[] }).candidateIds : []
 
 async function actor() { return adminActor(await auth()) }
@@ -28,7 +32,7 @@ export async function GET() {
   const reviews = await prisma.forceCurveReviewCase.findMany({ where: { status: 'OPEN' }, include: { masterSwitch: { select: { id: true, name: true, manufacturer: true, technology: true } }, catalogEntry: true, feedback: true }, orderBy: { createdAt: 'asc' } })
   const allIds = [...new Set(reviews.flatMap(r => [...ids(r.payload), ...(r.catalogEntryId ? [r.catalogEntryId] : [])]))]
   const candidates = await prisma.forceCurveCatalogEntry.findMany({ where: { id: { in: allIds }, exists: true } })
-  return NextResponse.json(reviews.map(r => ({ ...r, candidates: candidates.filter(c => ids(r.payload).includes(c.id) || r.catalogEntryId === c.id) })))
+  return NextResponse.json(buildReviewQueue(reviews.map(r => ({ ...r, candidates: candidates.filter(c => ids(r.payload).includes(c.id) || r.catalogEntryId === c.id) }))))
 }
 
 export async function PUT(request: NextRequest) {
@@ -45,6 +49,13 @@ export async function PATCH(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const access = await mutationAccess(request); if ('response' in access) return access.response
-  const parsed = resolutionSchema.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: 'Invalid resolution request' }, { status: 400 })
+  const body=await request.json().catch(() => null)
+  const queueAction=queueActionSchema.safeParse(body)
+  if(queueAction.success) try {
+    return NextResponse.json(queueAction.data.action==='DEFER'
+      ? await deferForceCurveReviews({...queueAction.data,actorId:access.actorId},prisma)
+      : await bulkApproveForceCurveReviews({...queueAction.data,actorId:access.actorId},prisma))
+  } catch(error){ return failure(error) }
+  const parsed = resolutionSchema.safeParse(body); if (!parsed.success) return NextResponse.json({ error: 'Invalid resolution request' }, { status: 400 })
   try { return NextResponse.json(await resolveForceCurveReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
 }

@@ -4,6 +4,13 @@ import { FORCE_CURVE_SOURCE, selectAutomaticCandidates } from '@/lib/force-curve
 type Db = PrismaClient
 type AdminSession = { user?: { id?: string; role?: string } } | null | undefined
 
+export type ReviewBucket = 'ACTIONABLE'|'DUPLICATE'|'NO_MATCH'|'AMBIGUITY'|'CONFLICT'|'OTHER'
+export type QueueReview = {
+  id:string; kind:string; reason:string; masterSwitchId:string|null; catalogEntryId:string|null
+  payload: Prisma.JsonValue|null; masterSwitch:{id:string;name:string;manufacturer:string|null;technology:SwitchTechnology|null}|null
+  candidates:{id:string;displayName:string;repositoryPath:string;manufacturer:string|null;technology:SwitchTechnology|null;contentHash:string|null;revision:string|null;exists:boolean}[]
+}
+
 const SOURCE_REVIEW_KINDS = ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] as const
 const TECHNOLOGIES: SwitchTechnology[] = ['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']
 const normalize = (value?: string | null) => (value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -35,6 +42,76 @@ function objectPayload(payload: Prisma.JsonValue | null) {
 function candidateIds(payload: Prisma.JsonValue | null) {
   const value = objectPayload(payload).candidateIds
   return Array.isArray(value) && value.every(id => typeof id === 'string') ? value as string[] : []
+}
+
+export function reviewWorkflow(payload: Prisma.JsonValue | null) {
+  const workflow = objectPayload(payload).queueWorkflow
+  return typeof workflow === 'object' && workflow && !Array.isArray(workflow) ? workflow as Record<string, Prisma.JsonValue> : {}
+}
+
+/** Source-centric identity. A repository folder is one measured source switch; files below it are repeated evidence. */
+export function sourceIdentity(review: QueueReview) {
+  const paths = review.candidates.map(c => c.repositoryPath).sort()
+  const path = review.candidates.find(c => c.id === review.catalogEntryId)?.repositoryPath || paths[0]
+  if (path) return normalize(path.split('/')[0]) || path.toLowerCase()
+  if (review.masterSwitchId) return `master:${review.masterSwitchId}`
+  return `review:${review.id}`
+}
+
+export function classifyReviewGroup(reviews: QueueReview[]): {bucket:ReviewBucket;confidence:number;actionable:boolean} {
+  const masters = new Set(reviews.flatMap(r => r.masterSwitchId ? [r.masterSwitchId] : []))
+  const candidates = new Map(reviews.flatMap(r => r.candidates.filter(c => c.exists).map(c => [c.id,c])))
+  if (masters.size > 1 || reviews.some(r => /conflict/i.test(`${r.kind} ${r.reason}`))) return {bucket:'CONFLICT',confidence:0,actionable:false}
+  if (!candidates.size && reviews.every(r => /unmatched|no.?match/i.test(`${r.kind} ${r.reason}`))) return {bucket:'NO_MATCH',confidence:1,actionable:masters.size === 1}
+  if (candidates.size > 1) return {bucket:'AMBIGUITY',confidence:0,actionable:false}
+  const exact = candidates.size === 1 && masters.size === 1 && reviews.every(r => r.masterSwitch && exactCatalogMasterIdentity(r.masterSwitch,[...candidates.values()][0]))
+  if (exact) return {bucket: reviews.length > 1 ? 'DUPLICATE':'ACTIONABLE',confidence:1,actionable:true}
+  if (reviews.length > 1) return {bucket:'DUPLICATE',confidence:0,actionable:false}
+  return {bucket:'OTHER',confidence:0,actionable:false}
+}
+
+export function buildReviewQueue(reviews: QueueReview[]) {
+  const groups = new Map<string,QueueReview[]>()
+  for (const review of reviews) { const key=sourceIdentity(review); groups.set(key,[...(groups.get(key)||[]),review]) }
+  const items=[...groups].map(([sourceKey,evidence])=>({sourceKey,evidence,...classifyReviewGroup(evidence),deferred:evidence.every(r=>reviewWorkflow(r.payload).status==='DEFERRED')}))
+    .sort((a,b)=>Number(b.actionable)-Number(a.actionable)||b.confidence-a.confidence||a.sourceKey.localeCompare(b.sourceKey))
+  const counts = items.reduce((v,item)=>({...v,[item.bucket]:(v[item.bucket]||0)+1}),{} as Record<string,number>)
+  return {items,counts,rawReviewCount:reviews.length,uniqueSourceCount:items.length,remainingActionable:items.filter(i=>i.actionable&&!i.deferred).length,deferredCount:items.filter(i=>i.deferred).length}
+}
+
+export async function deferForceCurveReviews(input:{reviewIds:string[];reason?:string;actorId:string},db:Db) {
+  const unique=[...new Set(input.reviewIds)]
+  if (!unique.length || unique.length>100) throw new Error('INVALID_REVIEW_SELECTION')
+  return db.$transaction(async tx => {
+    const reviews=await tx.forceCurveReviewCase.findMany({where:{id:{in:unique},status:'OPEN'}})
+    if(reviews.length!==unique.length) throw new Error('OPEN_REVIEW_REQUIRED')
+    const now=new Date().toISOString()
+    for(const review of reviews) await tx.forceCurveReviewCase.update({where:{id:review.id},data:{payload:{...objectPayload(review.payload),queueWorkflow:{status:'DEFERRED',actorId:input.actorId,at:now,reason:input.reason||null}} as Prisma.InputJsonValue}})
+    return {deferred:reviews.length}
+  })
+}
+
+export async function bulkApproveForceCurveReviews(input:{reviewIds:string[];catalogEntryId:string;actorId:string;reason?:string},db:Db) {
+  const unique=[...new Set(input.reviewIds)]
+  if (!unique.length || unique.length>100) throw new Error('INVALID_REVIEW_SELECTION')
+  return db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id IN (${Prisma.join(unique)}) FOR UPDATE`
+    const rows=await tx.forceCurveReviewCase.findMany({where:{id:{in:unique},status:'OPEN'},include:{masterSwitch:true}})
+    const candidate=await tx.forceCurveCatalogEntry.findUnique({where:{id:input.catalogEntryId}})
+    if(rows.length!==unique.length || !candidate?.exists) throw new Error('OPEN_REVIEW_REQUIRED')
+    const masterIds=new Set(rows.flatMap(r=>r.masterSwitchId?[r.masterSwitchId]:[]))
+    if(masterIds.size!==1 || rows.some(r=>!r.masterSwitch || !candidateIds(r.payload).includes(candidate.id) || !exactCatalogMasterIdentity(r.masterSwitch,candidate) || selectAutomaticCandidates(r.masterSwitch,[candidate]).length!==1)) throw new Error('UNSAFE_BULK_APPROVAL')
+    if(rows[0].masterSwitch && normalize(rows[0].masterSwitch.name)==='peach blossom' && !candidate.metadataVerifiedAt) throw new Error('PEACH_BLOSSOM_AUTHORITATIVE_EVIDENCE_REQUIRED')
+    // Bulk is restricted to repeated evidence for one source identity and one exact candidate.
+    const queueRows=rows.map(r=>({...r,candidates:[candidate]})) as QueueReview[]
+    if(new Set(queueRows.map(sourceIdentity)).size!==1 || !classifyReviewGroup(queueRows).actionable) throw new Error('UNSAFE_BULK_APPROVAL')
+    const masterSwitchId=rows[0].masterSwitchId!
+    const now=new Date(); const provenance=JSON.stringify({workflow:'admin-review-bulk',reviewIds:unique,actorId:input.actorId,decidedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,masterSwitchId,catalogEntryId:candidate.id})
+    await tx.forceCurveMapping.deleteMany({where:{noMatchKey:masterSwitchId}})
+    await tx.forceCurveMapping.upsert({where:{masterSwitchId_catalogEntryId:{masterSwitchId,catalogEntryId:candidate.id}},create:{masterSwitchId,catalogEntryId:candidate.id,state:'MANUALLY_APPROVED',confidence:1,provenance,reason:input.reason,decidedById:input.actorId,decidedAt:now},update:{state:'MANUALLY_APPROVED',confidence:1,provenance,reason:input.reason,decidedById:input.actorId,decidedAt:now}})
+    await tx.forceCurveReviewCase.updateMany({where:{id:{in:unique},status:'OPEN'},data:{status:'RESOLVED',resolution:'MANUALLY_APPROVED',resolvedById:input.actorId,resolvedAt:now}})
+    return {approved:unique.length,masterSwitchId,catalogEntryId:candidate.id}
+  })
 }
 
 export async function linkSourceReview(input: { reviewId: string; masterSwitchId: string; catalogEntryId: string; actorId: string }, db: Db) {
@@ -97,6 +174,7 @@ export async function resolveForceCurveReview(input: { reviewId: string; resolut
       if (!candidate || !candidate.exists || !candidateIds(review.payload).includes(candidate.id)) throw new Error('REVIEW_CANDIDATE_REQUIRED')
       if (!exactCatalogMasterIdentity(review.masterSwitch, candidate)) throw new Error('INCOMPATIBLE_IDENTITY')
       if (input.resolution === 'MANUALLY_APPROVED' && !selectAutomaticCandidates(review.masterSwitch, [candidate]).length) throw new Error('INCOMPATIBLE_IDENTITY')
+      if (input.resolution === 'MANUALLY_APPROVED' && normalize(review.masterSwitch.name) === 'peach blossom' && !candidate.metadataVerifiedAt) throw new Error('PEACH_BLOSSOM_AUTHORITATIVE_EVIDENCE_REQUIRED')
     }
     const now = new Date()
     const provenance = JSON.stringify({ workflow: 'admin-review', reviewId: review.id, actorId: input.actorId, decidedAt: now.toISOString(), source: candidate?.source || review.catalogEntryId && FORCE_CURVE_SOURCE, repositoryPath: candidate?.repositoryPath || null, masterSwitchId: review.masterSwitchId, catalogEntryId: candidate?.id || review.catalogEntryId })
