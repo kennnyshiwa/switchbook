@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -53,6 +53,7 @@ export default function AdminMasterSwitchesPage() {
   const [activeTab, setActiveTab] = useState<'submissions' | 'edits'>('submissions');
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
   const [expandedEdit, setExpandedEdit] = useState<string | null>(null);
+  const loadedFilter = useRef<string | null>(null);
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -82,9 +83,13 @@ export default function AdminMasterSwitchesPage() {
     if (status === 'loading') return;
     
     if (!session || session.user.role !== 'ADMIN') {
+      loadedFilter.current = null;
       router.push('/dashboard');
       return;
     }
+
+    if (loadedFilter.current === filter) return;
+    loadedFilter.current = filter;
 
     setLoading(true);
     Promise.all([

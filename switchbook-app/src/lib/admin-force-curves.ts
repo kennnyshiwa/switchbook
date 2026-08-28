@@ -23,7 +23,17 @@ export function adminActor(session: AdminSession) {
 export function isSameOriginMutation(request: { headers: { get(name: string): string | null }; nextUrl: { origin: string } }) {
   const origin = request.headers.get('origin')
   if (!origin) return false
-  try { return new URL(origin).origin === request.nextUrl.origin } catch { return false }
+  const forwardedHost = request.headers.get('x-forwarded-host') || request.headers.get('host')
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  if (!forwardedHost || !forwardedProto || forwardedHost.includes(',') || !['http', 'https'].includes(forwardedProto)) return false
+  try {
+    const canonicalOrigin = new URL(process.env.NEXTAUTH_URL || request.nextUrl.origin).origin
+    const originUrl = new URL(origin)
+    const proxyUrl = new URL(`${forwardedProto}://${forwardedHost}`)
+    if (originUrl.username || originUrl.password || originUrl.pathname !== '/' || originUrl.search || originUrl.hash) return false
+    if (proxyUrl.username || proxyUrl.password || proxyUrl.pathname !== '/' || proxyUrl.search || proxyUrl.hash) return false
+    return originUrl.origin === canonicalOrigin && proxyUrl.origin === canonicalOrigin
+  } catch { return false }
 }
 
 export function exactCatalogMasterIdentity(master: { name: string; manufacturer: string | null }, entry: { displayName: string; repositoryPath: string }) {

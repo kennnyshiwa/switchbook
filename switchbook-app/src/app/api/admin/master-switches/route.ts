@@ -18,7 +18,14 @@ export async function GET(req: NextRequest) {
 
     const submissions = await prisma.masterSwitch.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        manufacturer: true,
+        type: true,
+        status: true,
+        createdAt: true,
+        originalSubmissionData: true,
         submittedBy: {
           select: {
             id: true,
@@ -29,7 +36,8 @@ export async function GET(req: NextRequest) {
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      take: 100,
     })
 
     return NextResponse.json(submissions)

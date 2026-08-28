@@ -18,7 +18,14 @@ export async function GET(req: NextRequest) {
 
     const editSuggestions = await prisma.masterSwitchEdit.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        masterSwitchId: true,
+        changedFields: true,
+        newData: true,
+        previousData: true,
+        status: true,
+        editedAt: true,
         masterSwitch: {
           select: {
             id: true,
@@ -36,7 +43,8 @@ export async function GET(req: NextRequest) {
       },
       orderBy: {
         editedAt: 'desc'
-      }
+      },
+      take: 100,
     })
 
     return NextResponse.json(editSuggestions)

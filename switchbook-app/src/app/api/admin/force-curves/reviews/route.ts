@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { adminActor, bulkApproveForceCurveReviews, buildReviewQueue, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '@/lib/admin-force-curves'
+import { adminActor, bulkApproveForceCurveReviews, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '@/lib/admin-force-curves'
+import { getForceCurveReviewQueuePage } from '@/lib/admin-force-curve-queue'
 
 const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
 const groupLinkSchema = z.object({ reviewIds:z.array(z.string().cuid()).min(1).max(100),masterSwitchId:z.string().cuid(),catalogEntryId:z.string().cuid()}).strict()
@@ -13,7 +14,6 @@ const queueActionSchema = z.discriminatedUnion('action',[
   z.object({action:z.literal('BULK_APPROVE'),reviewIds:z.array(z.string().cuid()).min(1).max(100),catalogEntryId:z.string().cuid(),reason:z.string().trim().max(1000).optional()}).strict(),
   z.object({action:z.literal('GROUP_NO_MATCH'),reviewIds:z.array(z.string().cuid()).min(1).max(100),reason:z.string().trim().max(1000).optional()}).strict(),
 ])
-const ids = (payload: unknown) => typeof payload === 'object' && payload && Array.isArray((payload as { candidateIds?: unknown }).candidateIds) ? (payload as { candidateIds: string[] }).candidateIds : []
 
 async function actor() { return adminActor(await auth()) }
 function failure(error: unknown) {
@@ -29,12 +29,14 @@ async function mutationAccess(request: NextRequest) {
   return { actorId }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   if (!await actor()) return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-  const reviews = await prisma.forceCurveReviewCase.findMany({ include: { masterSwitch: { select: { id: true, name: true, manufacturer: true, technology: true } }, catalogEntry: true, feedback: true }, orderBy: { createdAt: 'asc' } })
-  const allIds = [...new Set(reviews.flatMap(r => [...ids(r.payload), ...(r.catalogEntryId ? [r.catalogEntryId] : [])]))]
-  const candidates = await prisma.forceCurveCatalogEntry.findMany({ where: { id: { in: allIds }, exists: true } })
-  return NextResponse.json(buildReviewQueue(reviews.map(r => ({ ...r, candidates: candidates.filter(c => ids(r.payload).includes(c.id) || r.catalogEntryId === c.id) }))))
+  const page = Number(request.nextUrl.searchParams.get('page') || 1)
+  const pageSize = Number(request.nextUrl.searchParams.get('pageSize') || 50)
+  const query = request.nextUrl.searchParams.get('query') || ''
+  const bucket = request.nextUrl.searchParams.get('bucket') || 'ALL'
+  const status = request.nextUrl.searchParams.get('status') || 'OPEN'
+  return NextResponse.json(await getForceCurveReviewQueuePage({ page, pageSize, query, bucket: bucket as never, status: status as never }, prisma))
 }
 
 export async function PUT(request: NextRequest) {

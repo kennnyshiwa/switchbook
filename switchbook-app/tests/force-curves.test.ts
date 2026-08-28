@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, forceCurveSyncRevision, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
 import { adminActor, buildReviewQueue, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
+import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('sync run identity deterministically versions upstream content and matching algorithm', () => {
@@ -95,14 +96,40 @@ test('KTT Peach Sun and other Blossom paths cannot auto-match Peach Blossom with
   const candidates = classifyCatalogTree(paths.map((path, i) => ({type:'blob',path,sha:String(i)}))).map((entry, i) => ({id:String(i),displayName:measurementDisplayName(entry.path),repositoryPath:entry.path,contentHash:entry.sha,manufacturer:null,technology:null,metadataVerifiedAt:null,exists:true}))
   assert.deepEqual(selectAutomaticCandidates(peachBlossom, candidates), [])
 })
-test('admin mutation authorization denies anonymous/non-admin and requires exact same origin', () => {
+test('admin mutation authorization denies anonymous/non-admin and validates canonical proxy origin', () => {
   assert.equal(adminActor(null), null)
   assert.equal(adminActor({user:{id:'u1',role:'USER'}}), null)
   assert.equal(adminActor({user:{id:'a1',role:'ADMIN'}}), 'a1')
-  const request = (origin: string | null) => ({headers:new Headers(origin ? {origin} : {}),nextUrl:new URL('https://switchbook.app/api/admin/force-curves/reviews')})
+  const prior = process.env.NEXTAUTH_URL
+  process.env.NEXTAUTH_URL = 'https://switchbook.app'
+  const request = (origin: string | null, host='switchbook.app', proto='https') => ({headers:new Headers({...origin ? {origin} : {},host,'x-forwarded-host':host,'x-forwarded-proto':proto}),nextUrl:new URL('https://0.0.0.0:3000/api/admin/force-curves/reviews')})
   assert.equal(isSameOriginMutation(request(null)), false)
   assert.equal(isSameOriginMutation(request('https://evil.example')), false)
   assert.equal(isSameOriginMutation(request('https://switchbook.app')), true)
+  assert.equal(isSameOriginMutation(request('not a url')), false)
+  assert.equal(isSameOriginMutation(request('https://switchbook.app/forged-path')), false)
+  assert.equal(isSameOriginMutation(request('https://user@switchbook.app')), false)
+  assert.equal(isSameOriginMutation(request('https://switchbook.app','evil.example')), false)
+  assert.equal(isSameOriginMutation(request('https://switchbook.app','switchbook.app','http')), false)
+  assert.equal(isSameOriginMutation({headers:new Headers({origin:'https://switchbook.app',host:'switchbook.app'}),nextUrl:new URL('https://0.0.0.0:3000')}), false)
+  if (prior === undefined) delete process.env.NEXTAUTH_URL; else process.env.NEXTAUTH_URL = prior
+})
+test('review queue service projects with an ID map and bounds serialized page items while preserving global counts', async () => {
+  const reviews = Array.from({length:250},(_,index)=>({id:`r${index}`,kind:'SOURCE_UNVERIFIED',status:'OPEN',resolution:null,reason:'source evidence',masterSwitchId:null,catalogEntryId:`c${index}`,payload:{measurementKey:`source/${index}`,candidateIds:[`c${index}`]},masterSwitch:null}))
+  const candidates = Array.from({length:250},(_,index)=>({id:`c${index}`,displayName:`Switch ${index}`,repositoryPath:`Switch ${index}/TG.csv`,manufacturer:null,technology:null,contentHash:'sha',revision:'rev',exists:true}))
+  const calls:any[]=[]
+  const db={forceCurveReviewCase:{findMany:async(options:any)=>{calls.push(options);return reviews}},forceCurveCatalogEntry:{findMany:async(options:any)=>{calls.push(options);return candidates}}} as any
+  const page=await getForceCurveReviewQueuePage({page:2,pageSize:100,status:'OPEN'},db)
+  assert.equal(page.rawReviewCount,250)
+  assert.equal(page.uniqueSourceCount,250)
+  assert.equal(page.filteredSourceCount,250)
+  assert.equal(page.items.length,100)
+  assert.equal(page.pagination.pageCount,3)
+  assert.equal(page.items[0].evidence[0].candidates[0].id,page.items[0].evidence[0].catalogEntryId)
+  assert.equal(calls.length,2)
+  assert.ok(calls[0].select)
+  assert.ok(calls[1].select)
+  assert.ok(Buffer.byteLength(JSON.stringify(page)) < 250_000)
 })
 test('manual source linking uses exact manufacturer/name folder identity and rejects fuzzy paths', () => {
   const production = [

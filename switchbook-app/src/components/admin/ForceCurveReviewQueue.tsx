@@ -1,12 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Candidate = { id: string; displayName: string; repositoryPath: string; revision: string | null; contentHash: string | null; manufacturer: string | null; technology: string | null }
 type Master = { id: string; name: string; manufacturer: string | null; technology: string | null }
 type Evidence = { id: string; kind: string; reason: string; status: 'OPEN' | 'RESOLVED'; catalogEntryId: string | null; masterSwitch: Master | null; candidates: Candidate[] }
 type Item = { sourceKey: string; primaryReviewId: string; bucket: string; confidence: number; actionable: boolean; deferred: boolean; status: 'OPEN' | 'RESOLVED'; evidence: Evidence[] }
-type Queue = { items: Item[]; counts: Record<string, number>; rawReviewCount: number; uniqueSourceCount: number; openSourceCount: number; resolvedSourceCount: number; remainingActionable: number; deferredCount: number }
+type Queue = { items: Item[]; counts: Record<string, number>; rawReviewCount: number; uniqueSourceCount: number; openSourceCount: number; resolvedSourceCount: number; remainingActionable: number; deferredCount: number; filteredSourceCount: number; pagination: { page: number; pageSize: number; pageCount: number; hasPrevious: boolean; hasNext: boolean } }
 
 const controlClass = 'min-h-11 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/30'
 const secondaryButtonClass = 'min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 dark:focus-visible:ring-offset-gray-800'
@@ -18,22 +18,33 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
   const [status, setStatus] = useState('OPEN')
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
-  const [visibleLimit, setVisibleLimit] = useState(100)
   const [masterQuery, setMasterQuery] = useState<Record<string, string>>({})
   const [masterResults, setMasterResults] = useState<Record<string, Master[]>>({})
   const [chosenMaster, setChosenMaster] = useState<Record<string, string>>({})
 
-  const items = useMemo(() => queue.items.filter(item =>
-    (bucket === 'ALL' || item.bucket === bucket) &&
-    (status === 'ALL' || (status === 'DEFERRED' ? item.status === 'OPEN' && item.deferred : item.status === status && !item.deferred)) &&
-    `${item.sourceKey} ${item.evidence.flatMap(e => [e.reason, e.kind, e.masterSwitch?.name, e.masterSwitch?.manufacturer, ...e.candidates.map(c => c.repositoryPath)]).join(' ')}`.toLowerCase().includes(query.toLowerCase())
-  ), [queue, query, bucket, status])
+  const initialLoad = useRef(true)
 
-  async function refreshQueue() {
-    const fresh = await fetch('/api/admin/force-curves/reviews')
+  async function refreshQueue(page = queue.pagination.page, signal?: AbortSignal) {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(queue.pagination.pageSize), query, bucket, status })
+    const fresh = await fetch(`/api/admin/force-curves/reviews?${params}`, { signal })
     if (!fresh.ok) throw new Error('Saved, but refresh failed')
     setQueue(await fresh.json())
   }
+
+  useEffect(() => {
+    if (initialLoad.current) { initialLoad.current = false; return }
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      setBusy('queue-filter')
+      setError('')
+      refreshQueue(1, controller.signal).catch(error => {
+        if (error instanceof Error && error.name !== 'AbortError') setError('Queue refresh failed')
+      }).finally(() => setBusy(''))
+    }, query ? 200 : 0)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  // Refresh only when server-side filters change; refreshQueue deliberately uses current state.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, bucket, status])
 
   async function mutate(item: Item, body: object) {
     setBusy(item.sourceKey)
@@ -122,10 +133,10 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
 
       {error && <div role="alert" className="flex items-start justify-between gap-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"><span>{error}</span><button type="button" className="min-h-11 min-w-11 rounded-md font-bold hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-red-900/60" onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       {busy && <p className="text-sm font-medium text-blue-700 dark:text-blue-300" role="status">Updating queue…</p>}
-      <p className="text-sm text-gray-600 dark:text-gray-400">Showing {items.length} source items. Bulk approval appears only for homogeneous, exact, high-confidence repeated evidence.</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">Showing {queue.items.length} of {queue.filteredSourceCount} matching source items. Bulk approval appears only for homogeneous, exact, high-confidence repeated evidence.</p>
 
       <div className="space-y-4">
-        {items.slice(0, visibleLimit).map(item => {
+        {queue.items.map(item => {
           const first = item.evidence.find(e => e.id === item.primaryReviewId)!
           const candidate = first.candidates.find(c => c.id === first.catalogEntryId) || first.candidates[0]
           const master = first.masterSwitch
@@ -155,8 +166,8 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
           )
         })}
       </div>
-      {items.length > visibleLimit && <button type="button" className={`${secondaryButtonClass} w-full`} onClick={() => setVisibleLimit(value => value + 100)}>Show 100 more ({items.length - visibleLimit} remaining)</button>}
-      {!items.length && <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm dark:border-gray-600 dark:bg-gray-800"><h2 className="text-base font-semibold text-gray-900 dark:text-white">No source items found</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Try changing the search, bucket, or status filters.</p></div>}
+      {queue.pagination.pageCount > 1 && <nav className="flex items-center justify-between gap-3" aria-label="Queue pages"><button type="button" disabled={!queue.pagination.hasPrevious || Boolean(busy)} className={secondaryButtonClass} onClick={() => refreshQueue(queue.pagination.page - 1)}>Previous</button><span className="text-sm text-gray-600 dark:text-gray-400">Page {queue.pagination.page} of {queue.pagination.pageCount}</span><button type="button" disabled={!queue.pagination.hasNext || Boolean(busy)} className={secondaryButtonClass} onClick={() => refreshQueue(queue.pagination.page + 1)}>Next</button></nav>}
+      {!queue.items.length && <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm dark:border-gray-600 dark:bg-gray-800"><h2 className="text-base font-semibold text-gray-900 dark:text-white">No source items found</h2><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Try changing the search, bucket, or status filters.</p></div>}
     </section>
   )
 }

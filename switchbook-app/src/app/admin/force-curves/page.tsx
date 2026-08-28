@@ -3,22 +3,13 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import ForceCurveReviewQueue from '@/components/admin/ForceCurveReviewQueue'
-import { buildReviewQueue } from '@/lib/admin-force-curves'
+import { getForceCurveReviewQueuePage } from '@/lib/admin-force-curve-queue'
 
 export default async function Page() {
   const session = await auth()
   if (session?.user?.role !== 'ADMIN') redirect('/dashboard')
 
-  const reviews = await prisma.forceCurveReviewCase.findMany({
-    include: { masterSwitch: { select: { id: true, name: true, manufacturer: true, technology: true, type: true } }, catalogEntry: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  const ids = [...new Set(reviews.flatMap(review => typeof review.payload === 'object' && review.payload && !Array.isArray(review.payload) && Array.isArray((review.payload as { candidateIds?: unknown }).candidateIds) ? (review.payload as { candidateIds: string[] }).candidateIds : []))]
-  const candidates = await prisma.forceCurveCatalogEntry.findMany({ where: { id: { in: ids }, exists: true } })
-  const enriched = reviews.map(review => {
-    const candidateIds = typeof review.payload === 'object' && review.payload && !Array.isArray(review.payload) && Array.isArray((review.payload as { candidateIds?: unknown }).candidateIds) ? (review.payload as { candidateIds: string[] }).candidateIds : []
-    return { ...review, candidates: candidates.filter(candidate => candidateIds.includes(candidate.id)) }
-  })
+  const queue = await getForceCurveReviewQueuePage({}, prisma)
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -30,7 +21,7 @@ export default async function Page() {
             <p className="mt-2 max-w-3xl text-sm text-gray-600 sm:text-base dark:text-gray-400">Review imported force curve sources, resolve conflicts, and attach exact MasterSwitch records.</p>
           </div>
         </div>
-        <ForceCurveReviewQueue initialQueue={buildReviewQueue(enriched)} />
+        <ForceCurveReviewQueue initialQueue={queue} />
       </div>
     </main>
   )
