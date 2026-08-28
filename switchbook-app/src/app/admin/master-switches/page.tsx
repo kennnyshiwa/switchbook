@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { linkify } from '@/utils/linkify';
+import { loadAdminMasterSwitchData } from '@/lib/admin-master-switch-loading';
 
 interface MasterSwitchSubmission {
   id: string;
@@ -43,8 +42,6 @@ interface EditSuggestion {
 }
 
 export default function AdminMasterSwitchesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const [submissions, setSubmissions] = useState<MasterSwitchSubmission[]>([]);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,23 +77,15 @@ export default function AdminMasterSwitchesPage() {
   }, [filter]);
 
   useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (!session || session.user.role !== 'ADMIN') {
-      loadedFilter.current = null;
-      router.push('/dashboard');
-      return;
-    }
-
     if (loadedFilter.current === filter) return;
     loadedFilter.current = filter;
 
     setLoading(true);
-    Promise.all([
-      fetchSubmissions(),
-      fetchEditSuggestions()
-    ]).finally(() => setLoading(false));
-  }, [session, status, router, filter, fetchSubmissions, fetchEditSuggestions]);
+    loadAdminMasterSwitchData(filter)
+      .then(data => { setSubmissions(data.submissions); setEditSuggestions(data.edits) })
+      .catch(error => console.error('Failed to fetch admin MasterSwitch data:', error))
+      .finally(() => setLoading(false));
+  }, [filter]);
 
   const handleApprove = async (id: string) => {
     if (!confirm('Are you sure you want to approve this submission?')) return;

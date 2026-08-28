@@ -18,6 +18,8 @@ test('master switch admin loading is single-shot and APIs are bounded projection
   const edits = readFileSync(new URL('../src/app/api/admin/master-switch-edits/route.ts', import.meta.url), 'utf8')
   assert.match(page, /loadedFilter\.current === filter/)
   assert.match(page, /loadedFilter\.current = filter/)
+  assert.doesNotMatch(page, /useSession/)
+  assert.match(page, /loadAdminMasterSwitchData\(filter\)/)
   assert.match(submissions, /select:\s*\{/)
   assert.match(edits, /select:\s*\{/)
   assert.match(submissions, /take: 100/)

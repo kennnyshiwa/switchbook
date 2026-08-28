@@ -1,5 +1,6 @@
 import "./canonical-switch-share.test";
 import "./admin-navigation.test";
+import "./admin-master-switch-loading.test";
 import "./client-api-error.test";
 import "./compose-secrets.test";
 import "./image-optimization.test";
