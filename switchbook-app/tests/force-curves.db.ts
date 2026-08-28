@@ -29,8 +29,22 @@ async function main() {
   const legacyProvenance = JSON.stringify({source:FORCE_CURVE_SOURCE,revision:'legacy-recovery',syncRunId:legacyRun.id,rule:'exact-path-identity-v1',measurementKey:'KTT Legacy Recovery/ktt legacy recovery',manufacturer:'KTT',contentHash:'legacy-recovery-sha'})
   await prisma.forceCurveMapping.create({data:{masterSwitchId:'m-legacy-recovery',catalogEntryId:legacyCatalog.id,state:'REVIEW_REQUIRED',confidence:1,provenance:legacyProvenance}})
   const legacyReview = await prisma.forceCurveReviewCase.create({data:{catalogEntryId:legacyCatalog.id,kind:'SOURCE_UNVERIFIED',reason:'legacy partial release',payload:{candidateIds:[legacyCatalog.id]}}})
+  await prisma.masterSwitch.createMany({data:[
+    {id:'m-legacy-unrelated',name:'Legacy Unrelated',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-legacy-manual',name:'Legacy Manual',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+    {id:'m-legacy-malformed',name:'Legacy Malformed',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'},
+  ]})
+  const ownershipCatalogs = await Promise.all(['unrelated','manual','malformed'].map(label=>prisma.forceCurveCatalogEntry.create({data:{id:`legacy-${label}-catalog`,source:FORCE_CURVE_SOURCE,repositoryPath:`Legacy ${label}/TG.csv`,displayName:`Legacy ${label}`,revision:'ownership-fixture',contentHash:`${label}-sha`,exists:true}})))
+  await prisma.forceCurveMapping.createMany({data:[
+    {masterSwitchId:'m-legacy-unrelated',catalogEntryId:ownershipCatalogs[0].id,state:'REVIEW_REQUIRED',provenance:JSON.stringify({syncRunId:'different-run'})},
+    {masterSwitchId:'m-legacy-manual',catalogEntryId:ownershipCatalogs[1].id,state:'REVIEW_REQUIRED',provenance:'manual-review'},
+    {masterSwitchId:'m-legacy-malformed',catalogEntryId:ownershipCatalogs[2].id,state:'REVIEW_REQUIRED',provenance:`garbage {"syncRunId":"${legacyRun.id}"} trailing`},
+  ]})
+  const malformedReview = await prisma.forceCurveReviewCase.create({data:{catalogEntryId:ownershipCatalogs[2].id,kind:'SOURCE_UNVERIFIED',reason:'must remain open',payload:{candidateIds:[ownershipCatalogs[2].id]}}})
   const recoveredLegacy = await syncForceCurveCatalog('legacy-recovery',[{path:legacyPath,sha:'legacy-recovery-sha',manufacturer:'KTT',technology:'MECHANICAL',metadataVerified:true,format:'HIGH_RESOLUTION_RAW',measurementKey:'KTT Legacy Recovery/ktt legacy recovery'}],{chunkSize:1})
   assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-legacy-recovery'}})).state,'AUTO_APPROVED'); assert.equal((await prisma.forceCurveReviewCase.findUniqueOrThrow({where:{id:legacyReview.id}})).status,'RESOLVED'); assert.equal(await prisma.forceCurveReviewCase.count({where:{catalogEntryId:legacyCatalog.id,kind:'SOURCE_UNVERIFIED'}}),1); assert.equal(recoveredLegacy.reviewCount,0)
+  for (const masterSwitchId of ['m-legacy-unrelated','m-legacy-manual','m-legacy-malformed']) assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId}})).state,'REVIEW_REQUIRED')
+  assert.equal((await prisma.forceCurveReviewCase.findUniqueOrThrow({where:{id:malformedReview.id}})).status,'OPEN')
   const same = await syncForceCurveCatalog('db-rev-a', input, {chunkSize:1}); assert.equal(same.id,a.id); assert.equal(same.newCount,1)
   const b = await syncForceCurveCatalog('db-rev-b', [{...input[0],sha:'b'}], {chunkSize:1}); assert.equal(b.changedCount,1); assert.ok(b.staleCount>=1); assert.equal((await getApprovedCurves('m-peach')).length,0); assert.equal((await prisma.forceCurveMapping.findFirstOrThrow({where:{masterSwitchId:'m-peach'}})).state,'STALE')
   await syncForceCurveCatalog('resume-rev', [{path:'one/TG.csv',sha:'1'},{path:'two/TG.csv',sha:'2'}], {chunkSize:1,failAfterChunks:1}).then(()=>assert.fail('expected interruption'),()=>undefined)
