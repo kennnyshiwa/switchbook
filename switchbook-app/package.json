@@ -22,6 +22,7 @@
     "force-curves:sync": "node dist/sync-force-curves.cjs",
     "test": "tsx --test tests/run-tests.ts",
     "test:admin-browser": "tsx --test tests/admin-master-switch-cardinality.browser.ts",
+    "test:admin-force-curve-browser": "tsx --test tests/admin-force-curve-performance.browser.ts",
     "test:force-curves-db": "tsx tests/force-curves.db.ts"
   },
   "keywords": [],

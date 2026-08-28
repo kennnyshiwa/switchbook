@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { adminActor, bulkApproveForceCurveReviews, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '@/lib/admin-force-curves'
-import { getForceCurveReviewQueuePage } from '@/lib/admin-force-curve-queue'
+import { getForceCurveReviewQueuePage, invalidateForceCurveReviewQueue } from '@/lib/admin-force-curve-queue'
 
 const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
 const groupLinkSchema = z.object({ reviewIds:z.array(z.string().cuid()).min(1).max(100),masterSwitchId:z.string().cuid(),catalogEntryId:z.string().cuid()}).strict()
@@ -16,6 +16,7 @@ const queueActionSchema = z.discriminatedUnion('action',[
 ])
 
 async function actor() { return adminActor(await auth()) }
+function changed(result: unknown) { invalidateForceCurveReviewQueue(prisma); return NextResponse.json(result) }
 function failure(error: unknown) {
   const message = error instanceof Error ? error.message : 'INVALID_REVIEW_OPERATION'
   const conflicts = ['REVIEW_ALREADY_LINKED','INCOMPATIBLE_IDENTITY','AMBIGUOUS_REVIEW_IDENTITY','CONFLICTING_OPEN_REVIEW','LINKED_MASTER_REQUIRED']
@@ -43,15 +44,15 @@ export async function PUT(request: NextRequest) {
   const access = await mutationAccess(request); if ('response' in access) return access.response
   const body=await request.json().catch(()=>null)
   const group=groupLinkSchema.safeParse(body)
-  if(group.success) try{return NextResponse.json(await linkSourceReviewGroup({...group.data,actorId:access.actorId},prisma))}catch(error){return failure(error)}
+  if(group.success) try{return changed(await linkSourceReviewGroup({...group.data,actorId:access.actorId},prisma))}catch(error){return failure(error)}
   const parsed = linkSchema.safeParse(body); if (!parsed.success) return NextResponse.json({ error: 'Invalid link request' }, { status: 400 })
-  try { return NextResponse.json(await linkSourceReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
+  try { return changed(await linkSourceReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
 }
 
 export async function PATCH(request: NextRequest) {
   const access = await mutationAccess(request); if ('response' in access) return access.response
   const parsed = verifySchema.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: 'Invalid metadata verification request' }, { status: 400 })
-  try { return NextResponse.json(await verifyReviewMetadata({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
+  try { return changed(await verifyReviewMetadata({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
 }
 
 export async function POST(request: NextRequest) {
@@ -59,12 +60,12 @@ export async function POST(request: NextRequest) {
   const body=await request.json().catch(() => null)
   const queueAction=queueActionSchema.safeParse(body)
   if(queueAction.success) try {
-    return NextResponse.json(queueAction.data.action==='DEFER'
+    return changed(queueAction.data.action==='DEFER'
       ? await deferForceCurveReviews({...queueAction.data,actorId:access.actorId},prisma)
       : queueAction.data.action==='GROUP_NO_MATCH'
         ? await resolveNoMatchGroup({...queueAction.data,actorId:access.actorId},prisma)
         : await bulkApproveForceCurveReviews({...queueAction.data,actorId:access.actorId},prisma))
   } catch(error){ return failure(error) }
   const parsed = resolutionSchema.safeParse(body); if (!parsed.success) return NextResponse.json({ error: 'Invalid resolution request' }, { status: 400 })
-  try { return NextResponse.json(await resolveForceCurveReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
+  try { return changed(await resolveForceCurveReview({ ...parsed.data, actorId: access.actorId }, prisma)) } catch (error) { return failure(error) }
 }

@@ -118,7 +118,8 @@ test('review queue service projects with an ID map and bounds serialized page it
   const reviews = Array.from({length:250},(_,index)=>({id:`r${index}`,kind:'SOURCE_UNVERIFIED',status:'OPEN',resolution:null,reason:'source evidence',masterSwitchId:null,catalogEntryId:`c${index}`,payload:{measurementKey:`source/${index}`,candidateIds:[`c${index}`]},masterSwitch:null}))
   const candidates = Array.from({length:250},(_,index)=>({id:`c${index}`,displayName:`Switch ${index}`,repositoryPath:`Switch ${index}/TG.csv`,manufacturer:null,technology:null,contentHash:'sha',revision:'rev',exists:true}))
   const calls:any[]=[]
-  const db={forceCurveReviewCase:{findMany:async(options:any)=>{calls.push(options);return reviews}},forceCurveCatalogEntry:{findMany:async(options:any)=>{calls.push(options);return candidates}}} as any
+  const version={_count:{_all:250},_max:{updatedAt:new Date(1)}}
+  const db={forceCurveReviewCase:{aggregate:async()=>version,findMany:async(options:any)=>{calls.push(options);return reviews}},forceCurveCatalogEntry:{aggregate:async()=>version,findMany:async(options:any)=>{calls.push(options);return candidates}},masterSwitch:{aggregate:async()=>({_count:{_all:0},_max:{updatedAt:null}})}} as any
   const page=await getForceCurveReviewQueuePage({page:2,pageSize:100,status:'OPEN'},db)
   assert.equal(page.rawReviewCount,250)
   assert.equal(page.uniqueSourceCount,250)
@@ -129,7 +130,28 @@ test('review queue service projects with an ID map and bounds serialized page it
   assert.equal(calls.length,2)
   assert.ok(calls[0].select)
   assert.ok(calls[1].select)
+  assert.equal('payload' in page.items[0].evidence[0],false)
+  assert.equal('exists' in page.items[0].evidence[0].candidates[0],false)
   assert.ok(Buffer.byteLength(JSON.stringify(page)) < 250_000)
+})
+test('production-cardinality queue cache preserves truth and bounds warm latency and response shape', async () => {
+  const sourceCount=5484,openSourceCount=2725,rawReviewCount=10512
+  const candidates=Array.from({length:sourceCount},(_,i)=>({id:`c${i}`,displayName:`Switch ${i}`,repositoryPath:`Switch ${i}/TG.csv`,manufacturer:null,technology:null,contentHash:`sha-${i}`,revision:'rev',exists:true}))
+  const reviews=Array.from({length:rawReviewCount},(_,i)=>{const source=i<sourceCount?i:i-sourceCount;return {id:`r${i}`,kind:'SOURCE_UNVERIFIED',status:source<openSourceCount?'OPEN':'RESOLVED',resolution:null,reason:`source evidence ${i}`,masterSwitchId:null,catalogEntryId:`c${source}`,payload:{measurementKey:`source/${source}`,candidateIds:[`c${source}`],diagnostic:'x'.repeat(900)},masterSwitch:null}})
+  let version={_count:{_all:rawReviewCount},_max:{updatedAt:new Date(1)}}
+  let reviewLoads=0,candidateLoads=0
+  const db={forceCurveReviewCase:{aggregate:async()=>version,findMany:async()=>{reviewLoads++;return reviews}},forceCurveCatalogEntry:{aggregate:async()=>({_count:{_all:sourceCount},_max:{updatedAt:new Date(1)}}),findMany:async()=>{candidateLoads++;return candidates}},masterSwitch:{aggregate:async()=>({_count:{_all:0},_max:{updatedAt:null}})}} as any
+  const cold=await getForceCurveReviewQueuePage({page:1,pageSize:50,bucket:'ALL',status:'OPEN'},db)
+  const samples:number[]=[]
+  for(let i=0;i<8;i++){const started=performance.now();const page=await getForceCurveReviewQueuePage({page:1,pageSize:50,bucket:'ALL',status:'OPEN'},db);samples.push(performance.now()-started);assert.deepEqual([page.rawReviewCount,page.uniqueSourceCount,page.openSourceCount,page.filteredSourceCount,page.items.length,page.pagination.pageCount],[10512,5484,2725,2725,50,55]);assert.ok(Buffer.byteLength(JSON.stringify(page))<200_000)}
+  assert.deepEqual([cold.rawReviewCount,cold.uniqueSourceCount,cold.openSourceCount],[10512,5484,2725])
+  const searched=await getForceCurveReviewQueuePage({query:'measurement:source 5483',status:'RESOLVED',bucket:'OTHER'},db)
+  assert.deepEqual([searched.filteredSourceCount,searched.items.length,searched.items[0].sourceKey],[1,1,'measurement:source 5483'])
+  assert.equal(reviewLoads,1);assert.equal(candidateLoads,1)
+  assert.ok(Math.max(...samples)<750,`warm queue service exceeded 750ms: ${samples.join(', ')}`)
+  version={_count:{_all:rawReviewCount},_max:{updatedAt:new Date(2)}}
+  await getForceCurveReviewQueuePage({status:'OPEN'},db)
+  assert.equal(reviewLoads,2);assert.equal(candidateLoads,2)
 })
 test('manual source linking uses exact manufacturer/name folder identity and rejects fuzzy paths', () => {
   const production = [
