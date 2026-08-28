@@ -80,7 +80,7 @@ export function classifyReviewGroup(reviews: QueueReview[]): {bucket:ReviewBucke
 export function buildReviewQueue(reviews: QueueReview[]) {
   const groups = new Map<string,QueueReview[]>()
   for (const review of reviews) { const key=sourceIdentity(review); groups.set(key,[...(groups.get(key)||[]),review]) }
-  const items=[...groups].map(([sourceKey,evidence])=>{const open=evidence.filter(r=>r.status==='OPEN');return {sourceKey,evidence,...classifyReviewGroup(open.length?open:evidence),status:(open.length?'OPEN':'RESOLVED') as 'OPEN'|'RESOLVED',deferred:open.length>0&&open.every(r=>reviewWorkflow(r.payload).status==='DEFERRED')}})
+  const items=[...groups].map(([sourceKey,evidence])=>{const open=evidence.filter(r=>r.status==='OPEN'),primary=open[0]||evidence[0];return {sourceKey,evidence,primaryReviewId:primary.id,...classifyReviewGroup(open.length?open:evidence),status:(open.length?'OPEN':'RESOLVED') as 'OPEN'|'RESOLVED',deferred:open.length>0&&open.every(r=>reviewWorkflow(r.payload).status==='DEFERRED')}})
     .sort((a,b)=>Number(b.actionable)-Number(a.actionable)||b.confidence-a.confidence||a.sourceKey.localeCompare(b.sourceKey))
   const counts = items.reduce((v,item)=>({...v,[item.bucket]:(v[item.bucket]||0)+1}),{} as Record<string,number>)
   return {items,counts,rawReviewCount:reviews.length,uniqueSourceCount:items.length,openSourceCount:items.filter(i=>i.status==='OPEN').length,resolvedSourceCount:items.filter(i=>i.status==='RESOLVED').length,remainingActionable:items.filter(i=>i.status==='OPEN'&&i.actionable&&!i.deferred).length,deferredCount:items.filter(i=>i.status==='OPEN'&&i.deferred).length}
