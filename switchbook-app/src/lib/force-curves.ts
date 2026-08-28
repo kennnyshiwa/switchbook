@@ -10,6 +10,12 @@ export type CatalogInput = { path: string; sha?: string; manufacturer?: string; 
 export type MatchMaster = { id: string; name: string; manufacturer: string | null; technology: SwitchTechnology | null }
 export type MatchCatalog = { id: string; displayName: string; repositoryPath?: string; contentHash?: string | null; manufacturer: string | null; technology: SwitchTechnology | null; metadataVerifiedAt?: Date | null; exists: boolean }
 const normalize = (value?: string | null) => (value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+function syncRunFromProvenance(value: string) {
+  try {
+    const parsed = JSON.parse(value) as { syncRunId?: unknown }
+    return typeof parsed.syncRunId === 'string' ? parsed.syncRunId : null
+  } catch { return null }
+}
 
 export function normalizedMasterIdentity(master: MatchMaster) {
   if (!master.manufacturer) return ''
@@ -135,8 +141,8 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
       prisma.masterSwitch.findMany({ where: { status: 'APPROVED' }, select: { id: true, name: true, manufacturer: true, technology: true } }),
       prisma.manufacturer.findMany({ where: { verified: true }, select: { name: true, aliases: true } }),
     ])
-    const decisions = await prisma.forceCurveMapping.findMany({ select: { masterSwitchId: true, catalogEntryId: true, state: true } })
-    const decided = new Set(decisions.filter(item => item.catalogEntryId).map(item => `${item.masterSwitchId}:${item.catalogEntryId}`))
+    const decisions = await prisma.forceCurveMapping.findMany({ select: { masterSwitchId: true, catalogEntryId: true, state: true, provenance: true } })
+    const decided = new Map(decisions.filter(item => item.catalogEntryId).map(item => [`${item.masterSwitchId}:${item.catalogEntryId}`, item]))
     const noMatch = new Set(decisions.filter(item => item.state === 'NO_MATCH').map(item => item.masterSwitchId))
     const makerTokens = manufacturers.flatMap(maker => [maker.name, ...maker.aliases].map(token => ({ token: normalize(token), canonical: maker.name }))).filter(x => x.token)
     const resolveMaker = (identity: string) => {
@@ -186,7 +192,9 @@ export async function syncForceCurveCatalog(revision: string, entries: CatalogIn
         if (samePriority.length !== 1) { stageReview(`group:equal:${measurementKey}`, 'AMBIGUOUS', 'Multiple equal-priority exact catalog candidates', rows, measurementKey, master.id); continue }
         const candidate = collapsed[0]
         const provenance = JSON.stringify({ source: FORCE_CURVE_SOURCE, revision: catalogRevision, syncRunId: run.id, rule: 'exact-path-identity-v1', measurementKey, manufacturer: canonicalMaker, contentHash: candidate.contentHash })
-        if (!decided.has(`${master.id}:${candidate.id}`)) staged.push({ runId: run.id, outputKey: `mapping:${master.id}:${candidate.id}`, outputType: 'MAPPING', masterSwitchId: master.id, catalogEntryId: candidate.id, mappingState: 'AUTO_APPROVED', confidence: 1, provenance })
+        const priorDecision = decided.get(`${master.id}:${candidate.id}`)
+        const adoptedLegacyStage = priorDecision?.state === 'REVIEW_REQUIRED' && syncRunFromProvenance(priorDecision.provenance) === run.id
+        if (!priorDecision || adoptedLegacyStage) staged.push({ runId: run.id, outputKey: `mapping:${master.id}:${candidate.id}`, outputType: 'MAPPING', masterSwitchId: master.id, catalogEntryId: candidate.id, mappingState: 'AUTO_APPROVED', confidence: 1, provenance })
       }
       if (staged.length) await prisma.forceCurveSyncStage.createMany({ data: staged, skipDuplicates: true })
       reconcileChunks++

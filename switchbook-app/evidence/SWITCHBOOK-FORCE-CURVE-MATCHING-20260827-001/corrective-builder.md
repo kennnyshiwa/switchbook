@@ -63,3 +63,18 @@ unchanged, verifies 300 private staged outputs, resumes, and verifies a repeated
 rerun is idempotent. The smaller exact-match fixture makes the same visibility
 assertion. Independent QA must run this DB suite against disposable PostgreSQL,
 including migration application and transaction timing.
+
+## Legacy staging recovery correction
+
+Independent QA found that a `REVIEW_REQUIRED` mapping left by the first failed
+corrective release was promoted, but its source review remained open: the legacy
+mapping suppressed a new mapping-stage row, while source-review resolution joins
+only mapping-stage catalog IDs. Reconciliation now parses provenance as JSON and
+emits a mapping-stage marker only when the existing row is `REVIEW_REQUIRED` and
+its exact `syncRunId` belongs to the current run. Unrelated manual or malformed
+provenance remains immutable. The final set-based resolution therefore includes
+the adopted catalog ID without broadening its update predicate.
+
+The DB regression constructs this precise leftover state and asserts one mapping
+becomes `AUTO_APPROVED`, its existing source review becomes `RESOLVED`, no review
+is duplicated, and the completed run records `reviewCount=0`.
