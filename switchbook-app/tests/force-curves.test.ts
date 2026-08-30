@@ -205,7 +205,11 @@ test('80Retros Retro family preserves each variant when resolving GAME1989 alias
   const redCalls:any[]=[]
   const redResolution=await resolveUniqueCatalogMaster({manufacturer:{findMany:async()=>[{name:'KTT',aliases:[]},{name:'HMX',aliases:[]}]},masterSwitch:{findMany:async(args:any)=>{redCalls.push(args);return [red]}}},redEntry)
   assert.equal(redResolution.uniqueMasterId,red.id)
-  assert.equal(redCalls[0].where.name.contains,'retros')
+  assert.equal(redCalls[0].where.name.contains,'red')
+  const twoWordEntry = { displayName: '80Retros Retro Deep Red', repositoryPath: '80Retros Retro Deep Red/TG.csv', technology: 'MECHANICAL' as const }
+  const twoWord = { id: 'right-deep-red', name: '80Retros GAME1989 Deep Red', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
+  assert.equal(catalogMasterCompatibility(twoWord, twoWordEntry, [{name:'KTT'}]).compatible, true)
+  assert.equal(catalogMasterCompatibility(red, twoWordEntry, [{name:'KTT'}]).compatible, false)
   for (const wrong of [
     {name:'80Retros GAME1989 Red',manufacturer:'KTT'},
     {name:'80Retros GAME1989 Orange',manufacturer:'HMX'},
