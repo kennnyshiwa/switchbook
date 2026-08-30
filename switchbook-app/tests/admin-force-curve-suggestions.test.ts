@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { findNextRankedIndex, rankForceCurveSuggestion } from '../src/lib/admin-force-curve-suggestions'
+import { forceCurveAttachErrorMessage } from '../src/lib/admin-force-curve-attach-feedback'
 
 const catalog = { id: 'c1', displayName: 'Acer Yellow', repositoryPath: 'Acer Yellow/TG.csv', manufacturer: null, technology: null }
 const master = (id: string, name: string, manufacturer: string | null = 'Acer', technology: string | null = 'MECHANICAL') => ({ id, name, manufacturer, technology })
@@ -93,4 +94,34 @@ test('discoverability preserves keyboard focus and mobile-safe responsive layout
   const queueProgress = component.indexOf('aria-label="Queue progress"')
   const stickyFilters = component.indexOf('sticky top-0')
   assert.ok(rankStatus > 0 && rankStatus < queueProgress && queueProgress < stickyFilters, 'mobile rank heading and action must render before stats and filters')
+})
+
+test('rejected manual attachment stays actionable and persistent on its exact mobile card', () => {
+  const component = readFileSync(new URL('../src/components/admin/ForceCurveReviewQueue.tsx', import.meta.url), 'utf8')
+  assert.match(component, /useState<Record<string, AttachFeedback>>\(\{\}\)/)
+  assert.match(component, /setAttachFeedback\(value => \(\{ \.\.\.value, \[item\.sourceKey\]: \{ status: 'loading'/)
+  assert.match(component, /data-testid=\{`attach-feedback-\$\{item\.sourceKey\}`\}/)
+  assert.match(component, /role=\{cardAttachFeedback\.status === 'error' \? 'alert' : 'status'\}/)
+  assert.match(component, /break-words rounded-md border p-3 text-sm/)
+  assert.match(component, /cardAttachFeedback\?\.status === 'loading' \? 'Attaching…'/)
+  assert.doesNotMatch(component, /setChosenMaster\([^\n]+catch/)
+  assert.doesNotMatch(component, /setOverrideAcknowledged\([^\n]+catch/)
+  assert.doesNotMatch(component, /setOverrideReason\([^\n]+catch/)
+  assert.equal(forceCurveAttachErrorMessage('APPROVED_MASTER_REQUIRED'), 'This MasterSwitch cannot be attached yet because its approved record is missing manufacturer or technology. Complete the MasterSwitch metadata, then retry.')
+})
+
+test('manual attachment rejection preserves authorization and does not refresh or change skip/defer behavior', () => {
+  const component = readFileSync(new URL('../src/components/admin/ForceCurveReviewQueue.tsx', import.meta.url), 'utf8')
+  const chooseMaster = component.slice(component.indexOf('async function chooseMaster'), component.indexOf('async function attachSuggestion'))
+  const rejected = chooseMaster.indexOf('if (!response.ok) throw')
+  const optimisticSuccess = chooseMaster.indexOf('setQueue')
+  const refresh = chooseMaster.indexOf('await refreshQueue()')
+  const caught = chooseMaster.indexOf('} catch (e)')
+  assert.ok(rejected > 0 && rejected < optimisticSuccess && optimisticSuccess < refresh && refresh < caught)
+  assert.match(chooseMaster, /method: 'PUT'/)
+  assert.doesNotMatch(chooseMaster.slice(caught), /setQueue|refreshQueue|method: 'POST'/)
+  assert.match(component, /rankAssistEnabled \? `deterministic queue class/)
+  assert.match(component, /Skip \/ defer/)
+  const route = readFileSync(new URL('../src/app/api/admin/force-curves/reviews/route.ts', import.meta.url), 'utf8')
+  assert.match(route, /mutationAccess\(request\)/)
 })

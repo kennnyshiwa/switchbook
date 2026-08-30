@@ -31,6 +31,7 @@ test('master switch admin loading is single-shot and APIs are bounded projection
 
 test('force curve UI pages and refreshes a bounded server-side queue', () => {
   const source = readFileSync(new URL('../src/components/admin/ForceCurveReviewQueue.tsx', import.meta.url), 'utf8')
+  const attachFeedback = readFileSync(new URL('../src/lib/admin-force-curve-attach-feedback.ts', import.meta.url), 'utf8')
   assert.match(source, /pageSize/)
   assert.match(source, /queue\.pagination\.hasNext/)
   assert.match(source, /refreshQueue\(queue\.pagination\.page/)
@@ -43,10 +44,10 @@ test('force curve UI pages and refreshes a bounded server-side queue', () => {
   assert.match(source, /Audit reason/)
   assert.match(source, /onSubmit=\{event => \{ event\.preventDefault\(\); void findMasters\(item\) \}\}/)
   assert.match(source, /masterQuery\[item\.sourceKey\] \?\? catalog\?\.displayName/)
-  assert.match(source, /That MasterSwitch does not exactly match this catalog switch/)
+  assert.match(attachFeedback, /That MasterSwitch does not exactly match this catalog switch/)
   assert.match(source, /MasterSwitch attached successfully, but the queue refresh timed out/)
   assert.match(source, /window\.setTimeout\(\(\) => timeout\.abort\(\), 15_000\)/)
-  assert.match(source, /The source evidence changed while this page was open/)
+  assert.match(attachFeedback, /The source evidence changed while this page was open/)
   assert.match(source, /target="_blank" rel="noopener noreferrer"/)
   assert.match(source, /View source on GitHub/)
   assert.match(source, /min-h-11/)
