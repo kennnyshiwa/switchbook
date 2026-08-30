@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { MasterSwitch } from '@/app/switches/browse/page-client'
 import ForceCurvesButton from '@/components/ForceCurvesButton'
+import {
+  getVirtualSwitchCardWidth,
+  getVirtualSwitchRowHeight,
+} from '@/lib/virtual-switch-list-geometry'
 
 interface VirtualSwitchListProps {
   switches: MasterSwitch[]
@@ -21,7 +25,6 @@ const BREAKPOINTS = {
 
 const FIXED_IMAGE_HEIGHT = 200 // Placeholder; calculate based on aspect-square
 const TEXT_PADDING = 16 // px for text area below image
-const GAP = 16 // gap-4 = 1rem = 16px
 const CARD_PADDING = 8 // internal card padding estimate
 
 const NAME_FONT = '500 0.875rem sans-serif' // font-medium text-sm
@@ -52,8 +55,7 @@ export default function VirtualSwitchList({ switches, onSwitchClick, selectedFor
 
   // Calculate card width
   const cardWidth = useMemo(() => {
-    if (!containerSize.width || !columnCount) return 0
-    return (containerSize.width - GAP * (columnCount - 1)) / columnCount
+    return getVirtualSwitchCardWidth(containerSize.width, columnCount)
   }, [containerSize.width, columnCount])
 
   // Precompute row heights using Pretext for variable name text
@@ -89,7 +91,7 @@ export default function VirtualSwitchList({ switches, onSwitchClick, selectedFor
         if (textHeight > maxTextHeight) maxTextHeight = textHeight
       }
 
-      const rowHeight = imageHeight + maxTextHeight + GAP // add gap for row spacing if needed
+      const rowHeight = getVirtualSwitchRowHeight(imageHeight, maxTextHeight)
 
       newRows.push(rowSwitches)
       newRowHeights.push(rowHeight)
