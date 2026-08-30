@@ -47,6 +47,11 @@ test('force curve UI pages and refreshes a bounded server-side queue', () => {
   assert.match(source, /MasterSwitch attached successfully, but the queue refresh timed out/)
   assert.match(source, /window\.setTimeout\(\(\) => timeout\.abort\(\), 15_000\)/)
   assert.match(source, /The source evidence changed while this page was open/)
+  assert.match(source, /target="_blank" rel="noopener noreferrer"/)
+  assert.match(source, /View source on GitHub/)
+  assert.match(source, /min-h-11/)
+  assert.match(source, /aria-label=\{`Open \$\{sourceLink\.publisher\}/)
+  assert.doesNotMatch(source, /View source on GitHub[^<]+onClick=/)
 })
 
 test('force curve compatibility overrides are explicit, validated, and audited server-side', () => {

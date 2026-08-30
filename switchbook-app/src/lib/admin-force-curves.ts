@@ -9,7 +9,7 @@ export type QueueReview = {
   id:string; kind:string; reason:string; masterSwitchId:string|null; catalogEntryId:string|null
   status:'OPEN'|'RESOLVED'; resolution?:ForceCurveMappingState|null
   payload: Prisma.JsonValue|null; masterSwitch:{id:string;name:string;manufacturer:string|null;technology:SwitchTechnology|null}|null
-  candidates:{id:string;displayName:string;repositoryPath:string;manufacturer:string|null;technology:SwitchTechnology|null;contentHash:string|null;revision:string|null;exists:boolean}[]
+  candidates:{id:string;source:string;displayName:string;repositoryPath:string;manufacturer:string|null;technology:SwitchTechnology|null;contentHash:string|null;revision:string|null;exists:boolean}[]
 }
 
 const SOURCE_REVIEW_KINDS = ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] as const

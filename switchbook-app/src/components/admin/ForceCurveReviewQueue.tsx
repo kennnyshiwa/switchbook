@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { findNextRankedIndex } from '@/lib/admin-force-curve-suggestions'
+import { forceCurveReviewSourceLink } from '@/lib/admin-force-curve-source'
 
-type Candidate = { id: string; displayName: string; repositoryPath: string; revision: string | null; contentHash: string | null; manufacturer: string | null; technology: string | null }
+type Candidate = { id: string; source: string; displayName: string; repositoryPath: string; revision: string | null; contentHash: string | null; manufacturer: string | null; technology: string | null }
 type Master = { id: string; name: string; manufacturer: string | null; technology: string | null; compatibility?: { compatible: boolean; reason: string } }
 type Evidence = { id: string; kind: string; reason: string; status: 'OPEN' | 'RESOLVED'; catalogEntryId: string | null; masterSwitch: Master | null; candidates: Candidate[] }
 type Item = { sourceKey: string; primaryReviewId: string; bucket: string; confidence: number; actionable: boolean; deferred: boolean; status: 'OPEN' | 'RESOLVED'; evidence: Evidence[] }
@@ -304,6 +305,7 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
           const suggestionState = suggestions[item.sourceKey]
           const suggestion = suggestionState?.suggestion
           const isActive = activeIndex === queue.items.indexOf(item)
+          const sourceLink = forceCurveReviewSourceLink(candidate?.source, candidate?.repositoryPath)
           return (
             <article key={item.sourceKey} ref={node => { cardRefs.current[item.sourceKey] = node }} tabIndex={rankAssistEnabled ? 0 : undefined} onFocus={() => { setActiveIndex(queue.items.indexOf(item)); activeStartedAt.current = Date.now() }} className={`overflow-hidden rounded-lg border bg-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-800 ${isActive && rankAssistEnabled ? 'border-blue-400 dark:border-blue-500' : 'border-gray-200 dark:border-gray-700'}`}>
               <header className="flex flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 dark:border-gray-700">
@@ -315,6 +317,7 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Source identity & evidence</h3>
                   <p className="font-medium text-gray-900 dark:text-white">{candidate?.displayName || 'No catalog candidate'}</p>
                   <p className="mt-1 break-all text-sm text-gray-600 dark:text-gray-300">{candidate?.repositoryPath || first.reason}</p>
+                  <a className="mt-3 inline-flex min-h-11 items-center rounded-md text-sm font-medium text-blue-700 underline decoration-blue-300 underline-offset-4 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:text-blue-300 dark:hover:text-blue-100 dark:focus-visible:ring-offset-gray-800" href={sourceLink.href} target="_blank" rel="noopener noreferrer" aria-label={`Open ${sourceLink.publisher} ${sourceLink.exactFile ? 'force curve source file' : 'force curve repository'} for ${candidate?.displayName || item.sourceKey} in a new tab`}>View source on GitHub · {sourceLink.publisher}</a>
                   {candidate && <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-400"><dt className="font-medium">Hash</dt><dd className="break-all">{candidate.contentHash || 'missing'}</dd><dt className="font-medium">Revision</dt><dd>{candidate.revision || 'unknown'}</dd></dl>}
                   <details className="mt-4 text-gray-700 dark:text-gray-300"><summary className="min-h-11 cursor-pointer rounded-md py-3 text-sm font-medium hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:text-blue-400">All evidence ({item.evidence.length})</summary><ul className="space-y-2 border-l-2 border-gray-200 pl-3 text-xs dark:border-gray-600">{item.evidence.map(e => <li key={e.id}><span className="font-semibold">{e.kind}:</span> {e.reason}</li>)}</ul></details>
                 </div>

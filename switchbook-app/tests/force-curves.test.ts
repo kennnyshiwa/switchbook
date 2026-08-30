@@ -4,6 +4,7 @@ import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, deriveMea
 import { adminActor, buildReviewQueue, catalogMasterCompatibility, catalogMasterSearchTerms, exactCatalogMasterIdentity, isSameOriginMutation, resolveUniqueCatalogMaster, uniqueCatalogMasterCompatibility } from '../src/lib/admin-force-curves'
 import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue'
 import { forceCurvePickerPosition } from '../src/lib/force-curve-picker'
+import { forceCurveReviewSourceLink } from '../src/lib/admin-force-curve-source'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('sync run identity deterministically versions upstream content and matching algorithm', () => {
@@ -29,6 +30,25 @@ test('missing path evidence and manufacturer/technology conflicts fail closed wh
   assert.equal(selectAutomaticCandidates(master, [curve({manufacturer:null, technology:null, metadataVerifiedAt:null})]).length, 1)
 })
 test('exact TG.csv file identity is encoded segment-by-segment', () => assert.equal(catalogUrl('KTT Peach/TG.csv'), 'https://github.com/ThereminGoat/force-curves/blob/main/KTT%20Peach/TG.csv'))
+test('admin review source links preserve trusted GitHub publisher capitalization and encode exact files', () => {
+  assert.deepEqual(forceCurveReviewSourceLink('github:ThereminGoat/force-curves', 'KTT Peach/KTT Peach Raw Data CSV.csv'), {
+    publisher: 'ThereminGoat',
+    href: 'https://github.com/ThereminGoat/force-curves/blob/main/KTT%20Peach/KTT%20Peach%20Raw%20Data%20CSV.csv',
+    exactFile: true,
+  })
+  assert.deepEqual(forceCurveReviewSourceLink('github:AEBoards/force-curves', 'AEBoards Naevy EC/TG #1.csv'), {
+    publisher: 'AEBoards',
+    href: 'https://github.com/AEBoards/force-curves/blob/main/AEBoards%20Naevy%20EC/TG%20%231.csv',
+    exactFile: true,
+  })
+})
+test('admin review source links fail safely to a deterministic trusted repository', () => {
+  const fallback = {publisher:'ThereminGoat',href:'https://github.com/ThereminGoat/force-curves',exactFile:false}
+  assert.deepEqual(forceCurveReviewSourceLink(undefined, undefined), fallback)
+  assert.deepEqual(forceCurveReviewSourceLink('javascript:alert(1)', '../escape.csv'), fallback)
+  assert.deepEqual(forceCurveReviewSourceLink('github:evil.example/repo', 'Switch/TG.csv'), fallback)
+  assert.equal(forceCurveReviewSourceLink('github:AEBoards/force-curves', 'Switch/data:text.csv').href.startsWith('https://github.com/'), true)
+})
 test('approved read supports multiple curves and excludes stale/deleted rows', () => {
   const rows = [
     { state: 'MANUALLY_APPROVED' as const, decidedAt:new Date('2026-08-30T00:00:00Z'), catalogEntry: { id:'stock',source:'github:ThereminGoat/force-curves',displayName:'KTT Peach',repositoryPath:'KTT Peach/KTT Peach Stock HighResolutionRaw.csv',exists:true } },
@@ -139,7 +159,7 @@ test('admin mutation authorization denies anonymous/non-admin and validates cano
 })
 test('review queue service projects with an ID map and bounds serialized page items while preserving global counts', async () => {
   const reviews = Array.from({length:250},(_,index)=>({id:`r${index}`,kind:'SOURCE_UNVERIFIED',status:'OPEN',resolution:null,reason:'source evidence',masterSwitchId:null,catalogEntryId:`c${index}`,payload:{measurementKey:`source/${index}`,candidateIds:[`c${index}`]},masterSwitch:null}))
-  const candidates = Array.from({length:250},(_,index)=>({id:`c${index}`,displayName:`Switch ${index}`,repositoryPath:`Switch ${index}/TG.csv`,manufacturer:null,technology:null,contentHash:'sha',revision:'rev',exists:true}))
+  const candidates = Array.from({length:250},(_,index)=>({id:`c${index}`,source:'github:ThereminGoat/force-curves',displayName:`Switch ${index}`,repositoryPath:`Switch ${index}/TG.csv`,manufacturer:null,technology:null,contentHash:'sha',revision:'rev',exists:true}))
   const calls:any[]=[]
   const version={_count:{_all:250},_max:{updatedAt:new Date(1)}}
   const db={forceCurveReviewCase:{aggregate:async()=>version,findMany:async(options:any)=>{calls.push(options);return reviews}},forceCurveCatalogEntry:{aggregate:async()=>version,findMany:async(options:any)=>{calls.push(options);return candidates}},masterSwitch:{aggregate:async()=>({_count:{_all:0},_max:{updatedAt:null}})}} as any
@@ -150,6 +170,7 @@ test('review queue service projects with an ID map and bounds serialized page it
   assert.equal(page.items.length,100)
   assert.equal(page.pagination.pageCount,3)
   assert.equal(page.items[0].evidence[0].candidates[0].id,page.items[0].evidence[0].catalogEntryId)
+  assert.equal(page.items[0].evidence[0].candidates[0].source,'github:ThereminGoat/force-curves')
   assert.equal(calls.length,2)
   assert.ok(calls[0].select)
   assert.ok(calls[1].select)

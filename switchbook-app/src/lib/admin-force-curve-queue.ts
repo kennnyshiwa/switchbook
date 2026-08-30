@@ -82,7 +82,7 @@ export async function getForceCurveReviewQueuePage(filters: ForceCurveQueueFilte
     started = performance.now()
   const candidates = await db.forceCurveCatalogEntry.findMany({
     where: { id: { in: allIds }, exists: true },
-    select: { id: true, displayName: true, repositoryPath: true, manufacturer: true, technology: true, contentHash: true, revision: true, exists: true },
+    select: { id: true, source: true, displayName: true, repositoryPath: true, manufacturer: true, technology: true, contentHash: true, revision: true, exists: true },
   })
     diagnose?.('candidate-query', performance.now() - started)
     started = performance.now()
