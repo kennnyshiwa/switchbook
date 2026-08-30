@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, forceCurveSyncRevision, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
-import { adminActor, buildReviewQueue, catalogMasterCompatibility, exactCatalogMasterIdentity, isSameOriginMutation, resolveUniqueCatalogMaster, uniqueCatalogMasterCompatibility } from '../src/lib/admin-force-curves'
+import { adminActor, buildReviewQueue, catalogMasterCompatibility, catalogMasterSearchTerms, exactCatalogMasterIdentity, isSameOriginMutation, resolveUniqueCatalogMaster, uniqueCatalogMasterCompatibility } from '../src/lib/admin-force-curves'
 import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
@@ -188,7 +188,6 @@ test('80Retros Game1989 accepts the full product identity while blocking sibling
   assert.equal(uniqueCatalogMasterCompatibility({id:'a',name:'Generic',manufacturer:'KTT'},{displayName:'Generic',repositoryPath:'Generic/TG.csv'},[],[{id:'a',name:'Generic',manufacturer:'KTT'},{id:'b',name:'Generic',manufacturer:'HMX'}]).compatible,false)
 })
 test('80Retros Retro family preserves each variant when resolving GAME1989 aliases', async () => {
-  const { catalogMasterSearchTerms } = await import('../src/lib/admin-force-curves')
   const entry = { displayName: '80Retros Retro Orange', repositoryPath: '80Retros Retro Orange/80Retros_Retro_Orange_HighResolutionRaw.csv', technology: 'MECHANICAL' as const }
   const right = { id: 'right-orange', name: '80Retros GAME1989 Orange', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
   assert.equal(catalogMasterCompatibility(right, entry, [{name:'KTT'},{name:'HMX'}]).compatible, true)
@@ -222,6 +221,17 @@ test('80Retros Retro family preserves each variant when resolving GAME1989 alias
   const resolution=await resolveUniqueCatalogMaster({manufacturer:{findMany:async()=>[{name:'KTT',aliases:[]},{name:'HMX',aliases:[]}]},masterSwitch:{findMany:async(args:any)=>{calls.push(args);return [right]}}},entry)
   assert.equal(resolution.uniqueMasterId,right.id)
   assert.equal(calls[0].where.name.contains,'orange')
+})
+
+test('catalog search expands genuine canonical parent folders for measurement suffixes only', () => {
+  const sample = { displayName: 'AEBoards Naevy EC 1', repositoryPath: 'AEBoards Naevy EC/AEBoards Naevy EC 1/AEBoards_Naevy_EC_1_HighResolutionRaw.csv' }
+  assert.deepEqual(catalogMasterSearchTerms(sample.displayName, sample), ['AEBoards Naevy EC 1', 'AEBoards Naevy EC'])
+  const actuations = { displayName: 'AEBoards Naevy EC 17000 Actuations', repositoryPath: 'AEBoards Naevy EC/AEBoards Naevy EC 17000 Actuations/TG.csv' }
+  assert.deepEqual(catalogMasterSearchTerms(actuations.displayName, actuations), ['AEBoards Naevy EC 17000 Actuations', 'AEBoards Naevy EC'])
+
+  assert.deepEqual(catalogMasterSearchTerms('Naevy', { ...sample, repositoryPath: 'Unrelated Product/AEBoards Naevy EC 1/TG.csv' }), ['Naevy'])
+  assert.deepEqual(catalogMasterSearchTerms('Naevy', { ...sample, repositoryPath: '/AEBoards Naevy EC 1/TG.csv' }), ['Naevy'])
+  assert.deepEqual(catalogMasterSearchTerms('Naevy', { ...sample, repositoryPath: 'AEBoards Naevy EC 1/TG.csv' }), ['Naevy'])
 })
 test('authoritative compatibility resolver uses a bounded mandatory-anchor query and fails closed at its cap', async () => {
   const calls:any[]=[]

@@ -71,6 +71,18 @@ function canonicalProductIdentityTokens(value: string) {
 
 export function catalogMasterSearchTerms(query: string, entry: CompatibleEntry) {
   const terms = [query.trim()].filter(Boolean)
+  // Upstream may store multiple measurements below one canonical product
+  // folder (for example numbered samples or actuation counts). The displayed
+  // measurement label then extends that folder identity. Search the canonical
+  // parent as well, but only for a strict ordered token prefix; unrelated or
+  // malformed paths must not broaden search.
+  const sourceFolder = entry.repositoryPath.split('/')[0]?.trim() || ''
+  const folderTokens = identityTokens(sourceFolder)
+  const displayTokens = identityTokens(entry.displayName)
+  const canonicalParent = folderTokens.length > 0
+    && displayTokens.length > folderTokens.length
+    && folderTokens.every((token, index) => displayTokens[index] === token)
+  if (canonicalParent) terms.push(sourceFolder)
   const sourceVariant = retroFamilyVariant(entry.displayName, RETRO_FAMILY_SOURCE_PREFIX)
   const queryVariant = retroFamilyVariant(query, RETRO_FAMILY_SOURCE_PREFIX)
     || retroFamilyVariant(`80Retros ${query}`, RETRO_FAMILY_SOURCE_PREFIX)
