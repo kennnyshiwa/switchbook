@@ -228,7 +228,7 @@ async function main() {
   assert.equal((await linkSourceReviewGroup({reviewIds:unlinked.map(r=>r.id),masterSwitchId:unlinkedMaster.id,catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma)).linked,3)
   const linkedRows=await prisma.forceCurveReviewCase.findMany({where:{id:{in:unlinked.map(r=>r.id)}},include:{masterSwitch:true}});assert.ok(linkedRows.every(r=>r.masterSwitchId===unlinkedMaster.id&&r.status==='RESOLVED'&&r.resolution==='MANUALLY_APPROVED'&&(r.payload as any).queueWorkflow.status==='ATTACHED'&&(r.payload as any).linkAudit.masterSwitchId===unlinkedMaster.id))
   assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:unlinkedMaster.id,catalogEntryId:unlinkedCatalog.id,state:'MANUALLY_APPROVED'}}),1)
-  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:unlinkedMaster.id,catalogEntryId:staleCatalog.id,state:'STALE',reason:'Superseded by exact manual source attachment'}}),1)
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:unlinkedMaster.id,catalogEntryId:staleCatalog.id,state:'STALE',reason:'Superseded by explicit reviewed source attachment'}}),1)
   const linkedQueue=buildReviewQueue(linkedRows.map(r=>({...r,candidates:[unlinkedCatalog]})));assert.equal(linkedQueue.uniqueSourceCount,1);assert.equal(linkedQueue.openSourceCount,0);assert.equal(linkedQueue.resolvedSourceCount,1);assert.equal(linkedQueue.remainingActionable,0)
   invalidateForceCurveReviewQueue(prisma)
   const openAfterAttach=await getForceCurveReviewQueuePage({status:'OPEN',query:'KTT Group Link',page:9,pageSize:1},prisma);assert.equal(openAfterAttach.filteredSourceCount,0);assert.equal(openAfterAttach.pagination.page,1);assert.equal(openAfterAttach.pagination.pageCount,1)
