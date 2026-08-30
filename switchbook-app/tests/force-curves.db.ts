@@ -3,6 +3,7 @@ import { prisma } from '../src/lib/prisma'
 import { FORCE_CURVE_SOURCE, forceCurveSyncRevision, getApprovedCurves, syncForceCurveCatalog } from '../src/lib/force-curves'
 import { recordForceCurveFeedback } from '../src/lib/force-curve-feedback'
 import { bulkApproveForceCurveReviews, buildReviewQueue, deferForceCurveReviews, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '../src/lib/admin-force-curves'
+import { getForceCurveReviewQueuePage, invalidateForceCurveReviewQueue } from '../src/lib/admin-force-curve-queue'
 
 async function main() {
   await prisma.forceCurveFeedback.deleteMany(); await prisma.forceCurveReviewCase.deleteMany(); await prisma.forceCurveMapping.deleteMany(); await prisma.forceCurveCatalogEntry.deleteMany(); await prisma.forceCurveSyncRun.deleteMany(); await prisma.masterSwitch.deleteMany(); await prisma.user.deleteMany()
@@ -224,9 +225,52 @@ async function main() {
   const unlinked=await Promise.all([1,2,3].map(i=>prisma.forceCurveReviewCase.create({data:{catalogEntryId:unlinkedCatalog.id,kind:'SOURCE_UNVERIFIED',reason:`unlinked evidence ${i}`,payload:{candidateIds:[unlinkedCatalog.id]}}})))
   const beforeLinkQueue=buildReviewQueue([{...staleHistory,masterSwitch:unlinkedMaster,candidates:[staleCatalog]},...unlinked.map(r=>({...r,masterSwitch:null,candidates:[unlinkedCatalog]}))]);assert.equal(beforeLinkQueue.uniqueSourceCount,1);assert.ok(unlinked.some(r=>r.id===beforeLinkQueue.items[0].primaryReviewId))
   assert.equal((await linkSourceReviewGroup({reviewIds:unlinked.map(r=>r.id),masterSwitchId:unlinkedMaster.id,catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma)).linked,3)
-  const linkedRows=await prisma.forceCurveReviewCase.findMany({where:{id:{in:unlinked.map(r=>r.id)}},include:{masterSwitch:true}});assert.ok(linkedRows.every(r=>r.masterSwitchId===unlinkedMaster.id))
-  const linkedQueue=buildReviewQueue(linkedRows.map(r=>({...r,candidates:[unlinkedCatalog]})));assert.equal(linkedQueue.uniqueSourceCount,1);assert.equal(linkedQueue.remainingActionable,1)
-  assert.equal((await bulkApproveForceCurveReviews({reviewIds:unlinked.map(r=>r.id),catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma)).approved,3);assert.equal((await getApprovedCurves(unlinkedMaster.id)).length,1)
+  const linkedRows=await prisma.forceCurveReviewCase.findMany({where:{id:{in:unlinked.map(r=>r.id)}},include:{masterSwitch:true}});assert.ok(linkedRows.every(r=>r.masterSwitchId===unlinkedMaster.id&&r.status==='OPEN'&&(r.payload as any).queueWorkflow.status==='ATTACHED'&&(r.payload as any).linkAudit.masterSwitchId===unlinkedMaster.id))
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:unlinkedMaster.id}}),0)
+  const linkedQueue=buildReviewQueue(linkedRows.map(r=>({...r,candidates:[unlinkedCatalog]})));assert.equal(linkedQueue.uniqueSourceCount,1);assert.equal(linkedQueue.openSourceCount,0);assert.equal(linkedQueue.resolvedSourceCount,1);assert.equal(linkedQueue.remainingActionable,0)
+  invalidateForceCurveReviewQueue(prisma)
+  const openAfterAttach=await getForceCurveReviewQueuePage({status:'OPEN',query:'KTT Group Link',page:9,pageSize:1},prisma);assert.equal(openAfterAttach.filteredSourceCount,0);assert.equal(openAfterAttach.pagination.page,1);assert.equal(openAfterAttach.pagination.pageCount,1)
+  const historyAfterAttach=await getForceCurveReviewQueuePage({status:'RESOLVED',query:'KTT Group Link',pageSize:1},prisma);assert.equal(historyAfterAttach.filteredSourceCount,1);assert.equal(historyAfterAttach.items[0].attached,true);assert.ok(historyAfterAttach.items[0].evidence.every(row=>row.status==='RESOLVED'))
+  const attachedSnapshot=JSON.stringify(await prisma.forceCurveReviewCase.findMany({where:{id:{in:unlinked.map(r=>r.id)}},orderBy:{id:'asc'}}))
+  const catalogSnapshot=JSON.stringify(await prisma.forceCurveCatalogEntry.findUniqueOrThrow({where:{id:unlinkedCatalog.id}}))
+  const immutableError=async(operation:Promise<unknown>)=>operation.then(()=>assert.fail('attached review mutated'),error=>assert.equal((error as Error).message,'ATTACHED_REVIEW_IMMUTABLE'))
+  await immutableError(deferForceCurveReviews({reviewIds:unlinked.map(r=>r.id),actorId:user.id},prisma))
+  await immutableError(bulkApproveForceCurveReviews({reviewIds:unlinked.map(r=>r.id),catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma))
+  await immutableError(resolveNoMatchGroup({reviewIds:unlinked.map(r=>r.id),actorId:user.id},prisma))
+  await immutableError(linkSourceReview({reviewId:unlinked[0].id,masterSwitchId:unlinkedMaster.id,catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma))
+  await immutableError(verifyReviewMetadata({reviewId:unlinked[0].id,catalogEntryId:unlinkedCatalog.id,manufacturer:'KTT',technology:'MECHANICAL',actorId:user.id},prisma))
+  await immutableError(resolveForceCurveReview({reviewId:unlinked[0].id,resolution:'MANUALLY_APPROVED',catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma))
+  assert.equal(JSON.stringify(await prisma.forceCurveReviewCase.findMany({where:{id:{in:unlinked.map(r=>r.id)}},orderBy:{id:'asc'}})),attachedSnapshot)
+  assert.equal(JSON.stringify(await prisma.forceCurveCatalogEntry.findUniqueOrThrow({where:{id:unlinkedCatalog.id}})),catalogSnapshot)
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:unlinkedMaster.id}}),0)
+  // Production-shaped 80Retros group: repeated raw/high-resolution evidence may
+  // include one MANUFACTURER_CONFLICT diagnostic for the same canonical source.
+  const exact80Master=await prisma.masterSwitch.create({data:{id:'m-80retros-r2-db',name:'80Retros QAExact KTT Game1989 Retro Blue',manufacturer:'KTT',technology:'MECHANICAL',submittedById:user.id,status:'APPROVED'}})
+  const exact80Raw=await prisma.forceCurveCatalogEntry.create({data:{id:'c-80retros-r2-raw',source:FORCE_CURVE_SOURCE,repositoryPath:'80Retros QAExact 1989 Retro Blue/raw.csv',displayName:'80Retros QAExact 1989 Retro Blue',contentHash:'80-r2-raw',exists:true}})
+  const exact80High=await prisma.forceCurveCatalogEntry.create({data:{id:'c-80retros-r2-high',source:FORCE_CURVE_SOURCE,repositoryPath:'80Retros QAExact 1989 Retro Blue/high.csv',displayName:'80Retros QAExact 1989 Retro Blue',contentHash:'80-r2-high',exists:true}})
+  const exact80Key='80Retros QAExact 1989 Retro Blue/80retros qaexact 1989 retro blue'
+  const exact80Reviews=await Promise.all([
+    ['SOURCE_UNVERIFIED',[exact80Raw.id]],
+    ['MANUFACTURER_CONFLICT',[exact80Raw.id,exact80High.id]],
+    ['SOURCE_UNVERIFIED',[exact80High.id]],
+  ].map(([kind,ids],i)=>prisma.forceCurveReviewCase.create({data:{id:`r-80retros-r2-${i}`,catalogEntryId:exact80High.id,kind:kind as string,reason:'production-shaped exact source',payload:{measurementKey:exact80Key,candidateIds:ids}}})))
+  const exact80Before=JSON.stringify(await prisma.forceCurveReviewCase.findMany({where:{id:{in:exact80Reviews.map(r=>r.id)}},orderBy:{id:'asc'}}))
+  await linkSourceReviewGroup({reviewIds:[exact80Reviews[1].id],masterSwitchId:exact80Master.id,catalogEntryId:exact80High.id,actorId:user.id},prisma).then(()=>assert.fail('one-row subset attached'),error=>assert.equal((error as Error).message,'INCOMPLETE_SOURCE_GROUP'))
+  await linkSourceReviewGroup({reviewIds:exact80Reviews.slice(1).map(r=>r.id),masterSwitchId:exact80Master.id,catalogEntryId:exact80High.id,actorId:user.id},prisma).then(()=>assert.fail('two-row subset attached'),error=>assert.equal((error as Error).message,'INCOMPLETE_SOURCE_GROUP'))
+  assert.equal(JSON.stringify(await prisma.forceCurveReviewCase.findMany({where:{id:{in:exact80Reviews.map(r=>r.id)}},orderBy:{id:'asc'}})),exact80Before)
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:exact80Master.id}}),0)
+  assert.equal((await linkSourceReviewGroup({reviewIds:exact80Reviews.map(r=>r.id),masterSwitchId:exact80Master.id,catalogEntryId:exact80High.id,actorId:user.id},prisma)).linked,3)
+  const exact80Attached=JSON.stringify(await prisma.forceCurveReviewCase.findMany({where:{id:{in:exact80Reviews.map(r=>r.id)}},orderBy:{id:'asc'}}))
+  assert.equal((await linkSourceReviewGroup({reviewIds:exact80Reviews.map(r=>r.id),masterSwitchId:exact80Master.id,catalogEntryId:exact80High.id,actorId:user.id},prisma)).replayed,true)
+  await linkSourceReviewGroup({reviewIds:exact80Reviews.map(r=>r.id),masterSwitchId:exact80Master.id,catalogEntryId:exact80Raw.id,actorId:user.id},prisma).then(()=>assert.fail('changed-target replay attached'),error=>assert.equal((error as Error).message,'REVIEW_ALREADY_LINKED'))
+  assert.equal(JSON.stringify(await prisma.forceCurveReviewCase.findMany({where:{id:{in:exact80Reviews.map(r=>r.id)}},orderBy:{id:'asc'}})),exact80Attached)
+  const unrelatedConflict=await prisma.forceCurveReviewCase.create({data:{id:'r-80retros-r2-other-conflict',catalogEntryId:exact80High.id,kind:'TECHNOLOGY_CONFLICT',reason:'must not be group-linkable',payload:{measurementKey:exact80Key,candidateIds:[exact80High.id]}}})
+  await linkSourceReviewGroup({reviewIds:[unrelatedConflict.id],masterSwitchId:exact80Master.id,catalogEntryId:exact80High.id,actorId:user.id},prisma).then(()=>assert.fail('unrelated conflict linked'),error=>assert.equal((error as Error).message,'REVIEW_CANDIDATE_REQUIRED'))
+  const wrongSource80=await prisma.forceCurveCatalogEntry.create({data:{id:'c-80retros-r2-wrong-source',source:'wrong:source',repositoryPath:'80Retros QAExact 1989 Retro Blue/wrong.csv',displayName:'80Retros QAExact 1989 Retro Blue',contentHash:'wrong-source',exists:true}})
+  const stale80=await prisma.forceCurveCatalogEntry.create({data:{id:'c-80retros-r2-stale',source:FORCE_CURVE_SOURCE,repositoryPath:'80Retros QAExact 1989 Retro Blue/stale.csv',displayName:'80Retros QAExact 1989 Retro Blue',contentHash:'stale',exists:false}})
+  const invalidUnion=await prisma.forceCurveReviewCase.create({data:{id:'r-80retros-r2-invalid-union',catalogEntryId:exact80High.id,kind:'SOURCE_UNVERIFIED',reason:'union contains unavailable identities',payload:{measurementKey:exact80Key,candidateIds:[exact80High.id,wrongSource80.id,stale80.id,'c-80retros-r2-missing']}}})
+  await linkSourceReviewGroup({reviewIds:[invalidUnion.id],masterSwitchId:exact80Master.id,catalogEntryId:exact80High.id,actorId:user.id},prisma).then(()=>assert.fail('invalid candidate union linked'),error=>assert.equal((error as Error).message,'REVIEW_CANDIDATE_REQUIRED'))
+  assert.equal((await getApprovedCurves(unlinkedMaster.id)).length,0)
   const otherCatalog=await prisma.forceCurveCatalogEntry.create({data:{id:'group-link-other',source:FORCE_CURVE_SOURCE,repositoryPath:'KTT Other Source/KTT_Other_Source_HighResolutionRaw.csv',displayName:'KTT Other Source',contentHash:'other-source-sha',exists:true}})
   const mixed=await Promise.all([[unlinkedCatalog,'mixed-a'],[otherCatalog,'mixed-b']].map(([catalog,id])=>prisma.forceCurveReviewCase.create({data:{id:id as string,catalogEntryId:(catalog as typeof unlinkedCatalog).id,kind:'SOURCE_UNVERIFIED',reason:'mixed rollback',payload:{candidateIds:[(catalog as typeof unlinkedCatalog).id]}}})))
   await linkSourceReviewGroup({reviewIds:mixed.map(r=>r.id),masterSwitchId:unlinkedMaster.id,catalogEntryId:unlinkedCatalog.id,actorId:user.id},prisma).then(()=>assert.fail('mixed sources linked'),error=>assert.ok(['REVIEW_CANDIDATE_REQUIRED','AMBIGUOUS_REVIEW_IDENTITY','MIXED_SOURCE_GROUP'].includes((error as Error).message)))

@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { buildReviewQueue, QueueReview, ReviewBucket } from '@/lib/admin-force-curves'
+import { buildReviewQueue, QueueReview, ReviewBucket, reviewWorkflow } from '@/lib/admin-force-curves'
 
 const PAGE_SIZE_DEFAULT = 50
 const PAGE_SIZE_MAX = 100
@@ -43,12 +43,16 @@ function projectItem(item: ReturnType<typeof buildReviewQueue>['items'][number])
     confidence: item.confidence,
     actionable: item.actionable,
     deferred: item.deferred,
+    attached: item.attached,
     status: item.status,
     evidence: item.evidence.map(review => ({
       id: review.id,
       kind: review.kind,
       reason: review.reason,
-      status: review.status,
+      // ATTACHED is complete queue work but deliberately remains OPEN in the
+      // adjudication model. Project it as resolved so a later source refresh
+      // cannot make the client resubmit historical evidence with new rows.
+      status: review.status === 'OPEN' && reviewWorkflow(review.payload).status === 'ATTACHED' ? 'RESOLVED' : review.status,
       catalogEntryId: review.catalogEntryId,
       masterSwitch: review.masterSwitch,
       candidates: review.candidates.map(({ exists: _exists, ...candidate }) => candidate),
