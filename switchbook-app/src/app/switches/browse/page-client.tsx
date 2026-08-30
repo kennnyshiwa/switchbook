@@ -63,6 +63,7 @@ export interface MasterSwitch {
   inCollection: boolean
   inWishlist: boolean
   userCount: number
+  hasForceCurve: boolean
   submittedBy: {
     id: string
     username: string

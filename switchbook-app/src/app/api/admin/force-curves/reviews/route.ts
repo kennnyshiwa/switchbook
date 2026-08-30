@@ -19,7 +19,7 @@ async function actor() { return adminActor(await auth()) }
 function changed(result: unknown) { invalidateForceCurveReviewQueue(prisma); return NextResponse.json(result) }
 function failure(error: unknown) {
   const message = error instanceof Error ? error.message : 'INVALID_REVIEW_OPERATION'
-  const conflicts = ['REVIEW_ALREADY_LINKED','INCOMPATIBLE_IDENTITY','AMBIGUOUS_REVIEW_IDENTITY','CONFLICTING_OPEN_REVIEW','LINKED_MASTER_REQUIRED']
+  const conflicts = ['ATTACHED_REVIEW_IMMUTABLE','ATTACH_REPLAY_MISMATCH','INCOMPLETE_SOURCE_GROUP','REVIEW_ALREADY_LINKED','INCOMPATIBLE_IDENTITY','AMBIGUOUS_REVIEW_IDENTITY','CONFLICTING_OPEN_REVIEW','CONFLICTING_APPROVED_MAPPING','LINKED_MASTER_REQUIRED']
   const notFound = ['OPEN_SOURCE_REVIEW_REQUIRED','OPEN_REVIEW_REQUIRED']
   return NextResponse.json({ error: message }, { status: conflicts.includes(message) ? 409 : notFound.includes(message) ? 404 : 400 })
 }

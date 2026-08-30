@@ -28,14 +28,21 @@ async function main() {
   ]
   const reviews = await Promise.all(reviewShapes.map((shape,i) => prisma.forceCurveReviewCase.create({data:{catalogEntryId:shape.catalogEntryId,kind:shape.kind,reason:`R2 exact evidence ${i}`,payload:{measurementKey:'80Retros 1989 Retro Blue/80retros 1989 retro blue',candidateIds:shape.candidateIds,paths:[shape.catalogEntryId===raw.id?raw.repositoryPath:catalog.repositoryPath]}}})))
   const reviewIds=reviews.map(r=>r.id)
+  const legacyAt=new Date().toISOString()
+  for(const review of reviews.slice(0,2)) await prisma.forceCurveReviewCase.update({where:{id:review.id},data:{masterSwitchId:masters[0].id,catalogEntryId:catalog.id,payload:{...(review.payload as object),queueWorkflow:{status:'ATTACHED',actorId:user.id,at:legacyAt},linkAudit:{actorId:user.id,linkedAt:legacyAt,source:FORCE_CURVE_SOURCE,repositoryPath:catalog.repositoryPath,masterSwitchId:masters[0].id,catalogEntryId:catalog.id}}}})
+  await rejected(linkSourceReviewGroup({reviewIds:reviewIds.slice(0,2),masterSwitchId:masters[0].id,catalogEntryId:catalog.id,actorId:user.id},prisma),['INCOMPLETE_SOURCE_GROUP'])
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:masters[0].id}}),0)
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'OPEN'}}),3)
+  await prisma.forceCurveReviewCase.update({where:{id:reviews[2].id},data:{masterSwitchId:masters[0].id,catalogEntryId:catalog.id,payload:{...(reviews[2].payload as object),queueWorkflow:{status:'ATTACHED',actorId:user.id,at:legacyAt},linkAudit:{actorId:user.id,linkedAt:legacyAt,source:FORCE_CURVE_SOURCE,repositoryPath:catalog.repositoryPath,masterSwitchId:masters[0].id,catalogEntryId:catalog.id}}}})
   const linked=await linkSourceReviewGroup({reviewIds,masterSwitchId:masters[0].id,catalogEntryId:catalog.id,actorId:user.id},prisma)
   assert.deepEqual(linked,{linked:3,masterSwitchId:masters[0].id,catalogEntryId:catalog.id})
   const repeated=await linkSourceReviewGroup({reviewIds,masterSwitchId:masters[0].id,catalogEntryId:catalog.id,actorId:user.id},prisma)
   assert.equal(repeated.linked,3)
-  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'OPEN',masterSwitchId:masters[0].id,catalogEntryId:catalog.id}}),3)
-  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:{in:masters.map(m=>m.id)}}}),0)
-  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:masters[0].id}}),0)
-  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'OPEN'}}),3)
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'RESOLVED',resolution:'MANUALLY_APPROVED',masterSwitchId:masters[0].id,catalogEntryId:catalog.id}}),3)
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:{in:masters.map(m=>m.id)}}}),1)
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:masters[0].id,catalogEntryId:catalog.id,state:'MANUALLY_APPROVED'}}),1)
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'OPEN'}}),0)
+  assert.ok((await prisma.forceCurveReviewCase.findMany({where:{id:{in:reviewIds}}})).every(row=>(row.payload as any).linkAudit.linkedAt===legacyAt))
 
   for (const wrong of masters.slice(1,4)) {
     const review=await prisma.forceCurveReviewCase.create({data:{catalogEntryId:catalog.id,kind:'SOURCE_UNVERIFIED',reason:'R2 wrong variant',payload:{candidateIds:[catalog.id]}}})
@@ -59,6 +66,6 @@ async function main() {
   const capped=await resolveUniqueCatalogMaster(prisma,{displayName:'CapIdentity',repositoryPath:'CapIdentity/TG.csv',technology:'MECHANICAL'})
   assert.equal(capped.uniqueMasterId,null);assert.match(capped.reason,/more than 200/)
   assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:{in:[...masters.slice(1).map(m=>m.id),duplicate.id]}}}),0)
-  console.log(JSON.stringify({migrations:34,exactReviews:3,exactMappings:0,negativeVariants:3,crossMaker:2,ambiguousRejected:1,capCandidates:201,repeatStable:true}))
+  console.log(JSON.stringify({migrations:34,exactReviews:3,exactMappings:1,negativeVariants:3,crossMaker:2,ambiguousRejected:1,capCandidates:201,repeatStable:true}))
 }
 main().finally(()=>prisma.$disconnect())

@@ -182,9 +182,10 @@ export async function deferForceCurveReviews(input:{reviewIds:string[];reason?:s
   const unique=[...new Set(input.reviewIds)]
   if (!unique.length || unique.length>100) throw new Error('INVALID_REVIEW_SELECTION')
   return db.$transaction(async tx => {
-    const reviews=await tx.forceCurveReviewCase.findMany({where:{id:{in:unique},status:'OPEN'}})
+    const reviews=await tx.forceCurveReviewCase.findMany({where:{id:{in:unique}}})
     if(reviews.length!==unique.length) throw new Error('OPEN_REVIEW_REQUIRED')
     if(reviews.some(isAttachedReview)) throw new Error('ATTACHED_REVIEW_IMMUTABLE')
+    if(reviews.some(review=>review.status!=='OPEN')) throw new Error('OPEN_REVIEW_REQUIRED')
     if(reviews.every(r=>reviewWorkflow(r.payload).status==='DEFERRED')) return {deferred:reviews.length,replayed:true}
     const now=new Date().toISOString()
     for(const review of reviews) await tx.forceCurveReviewCase.update({where:{id:review.id},data:{payload:{...objectPayload(review.payload),queueWorkflow:{status:'DEFERRED',actorId:input.actorId,at:now,reason:input.reason||null}} as Prisma.InputJsonValue}})
@@ -202,9 +203,11 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
       tx.masterSwitch.findUnique({where:{id:input.masterSwitchId}}),
       tx.forceCurveCatalogEntry.findUnique({where:{id:input.catalogEntryId}}),
     ])
-    if(rows.length!==unique.length||rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
-    const replay=rows.every(row=>isAttachedReview(row)&&row.masterSwitchId===input.masterSwitchId&&row.catalogEntryId===input.catalogEntryId)
-    if(rows.some(isAttachedReview)&&!replay) throw new Error('REVIEW_ALREADY_LINKED')
+    if(rows.length!==unique.length) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
+    const replay=rows.every(row=>row.status==='RESOLVED'&&row.resolution==='MANUALLY_APPROVED'&&isAttachedReview(row)&&row.masterSwitchId===input.masterSwitchId&&row.catalogEntryId===input.catalogEntryId)
+    const legacyAttached=rows.every(row=>row.status==='OPEN'&&isAttachedReview(row)&&row.masterSwitchId===input.masterSwitchId&&row.catalogEntryId===input.catalogEntryId)
+    if(rows.some(isAttachedReview)&&!replay&&!legacyAttached) throw new Error('REVIEW_ALREADY_LINKED')
+    if(!replay&&!legacyAttached&&rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
     if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
     const selectedResolution=candidate?await resolveUniqueCatalogMaster(tx,candidate):null
     if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!selectedResolution||!resolvedCatalogMasterCompatibility(master,candidate,selectedResolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
@@ -233,12 +236,25 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     const siblingCatalogMap=new Map(siblingCatalog.map(entry=>[entry.id,entry]))
     const openSourceRows=await tx.forceCurveReviewCase.findMany({where:{status:'OPEN',kind:{in:[...GROUP_LINKABLE_REVIEW_KINDS]}},include:{masterSwitch:true}})
     const completeIds=openSourceRows.filter(row=>!isAttachedReview(row)&&sourceIdentity({...row,candidates:candidateIds(row.payload).flatMap(id=>siblingCatalogMap.get(id)||[])} as QueueReview)===sourceKey).map(row=>row.id).sort()
-    if(!replay&&(completeIds.length!==unique.length||completeIds.some((id,index)=>id!==[...unique].sort()[index]))) throw new Error('INCOMPLETE_SOURCE_GROUP')
+    const legacySourceRows=openSourceRows.filter(row=>sourceIdentity({...row,candidates:candidateIds(row.payload).flatMap(id=>siblingCatalogMap.get(id)||[])} as QueueReview)===sourceKey)
+    if(!replay&&!legacyAttached&&(completeIds.length!==unique.length||completeIds.some((id,index)=>id!==[...unique].sort()[index]))) throw new Error('INCOMPLETE_SOURCE_GROUP')
+    if(legacyAttached&&(legacySourceRows.length!==unique.length||legacySourceRows.some(row=>!isAttachedReview(row)||row.masterSwitchId!==master.id||row.catalogEntryId!==candidate.id)||legacySourceRows.map(row=>row.id).sort().some((id,index)=>id!==[...unique].sort()[index]))) throw new Error('INCOMPLETE_SOURCE_GROUP')
     const conflicts=await tx.forceCurveReviewCase.findMany({where:{id:{notIn:unique},status:'OPEN',masterSwitchId:master.id,catalogEntryId:{in:allCandidateIds}},select:{payload:true}})
     if(conflicts.some(row=>!isAttachedReview(row))) throw new Error('CONFLICTING_OPEN_REVIEW')
-    const now=new Date().toISOString()
-    if(!replay) for(const row of rows) await tx.forceCurveReviewCase.update({where:{id:row.id},data:{masterSwitchId:master.id,catalogEntryId:candidate.id,payload:{...objectPayload(row.payload),queueWorkflow:{status:'ATTACHED',actorId:input.actorId,at:now},linkAudit:{actorId:input.actorId,linkedAt:now,source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id}} as Prisma.InputJsonValue}})
-    return {linked:rows.length,masterSwitchId:master.id,catalogEntryId:candidate.id,...replay?{replayed:true}:{}}
+    if(replay) {
+      const mapping=await tx.forceCurveMapping.findUnique({where:{masterSwitchId_catalogEntryId:{masterSwitchId:master.id,catalogEntryId:candidate.id}}})
+      if(mapping?.state!=='MANUALLY_APPROVED') throw new Error('ATTACH_REPLAY_MISMATCH')
+      return {linked:rows.length,masterSwitchId:master.id,catalogEntryId:candidate.id,replayed:true}
+    }
+    const conflictingMappings=await tx.forceCurveMapping.findMany({where:{masterSwitchId:master.id,state:{in:['AUTO_APPROVED','MANUALLY_APPROVED']},catalogEntryId:{not:candidate.id}}})
+    if(conflictingMappings.some(mapping=>mapping.state==='MANUALLY_APPROVED')) throw new Error('CONFLICTING_APPROVED_MAPPING')
+    const now=new Date()
+    const provenance=JSON.stringify({workflow:'admin-source-attach',reviewIds:unique,actorId:input.actorId,decidedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id})
+    await tx.forceCurveMapping.deleteMany({where:{noMatchKey:master.id}})
+    await tx.forceCurveMapping.updateMany({where:{id:{in:conflictingMappings.filter(mapping=>mapping.state==='AUTO_APPROVED').map(mapping=>mapping.id)}},data:{state:'STALE',reason:'Superseded by exact manual source attachment'}})
+    await tx.forceCurveMapping.upsert({where:{masterSwitchId_catalogEntryId:{masterSwitchId:master.id,catalogEntryId:candidate.id}},create:{masterSwitchId:master.id,catalogEntryId:candidate.id,state:'MANUALLY_APPROVED',confidence:1,provenance,reason:'Exact source group attached by admin',decidedById:input.actorId,decidedAt:now},update:{state:'MANUALLY_APPROVED',confidence:1,provenance,reason:'Exact source group attached by admin',decidedById:input.actorId,decidedAt:now}})
+    for(const row of rows) { const payload=objectPayload(row.payload); const linkAudit=legacyAttached&&payload.linkAudit?payload.linkAudit:{actorId:input.actorId,linkedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id}; await tx.forceCurveReviewCase.update({where:{id:row.id},data:{masterSwitchId:master.id,catalogEntryId:candidate.id,status:'RESOLVED',resolution:'MANUALLY_APPROVED',resolvedById:input.actorId,resolvedAt:now,payload:{...payload,queueWorkflow:legacyAttached?payload.queueWorkflow:{status:'ATTACHED',actorId:input.actorId,at:now.toISOString()},linkAudit} as Prisma.InputJsonValue}}) }
+    return {linked:rows.length,masterSwitchId:master.id,catalogEntryId:candidate.id}
   })
 }
 
@@ -249,8 +265,9 @@ export async function bulkApproveForceCurveReviews(input:{reviewIds:string[];cat
     await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id IN (${Prisma.join(unique)}) FOR UPDATE`
     const rows=await tx.forceCurveReviewCase.findMany({where:{id:{in:unique}},include:{masterSwitch:true}})
     const candidate=await tx.forceCurveCatalogEntry.findUnique({where:{id:input.catalogEntryId}})
-    if(rows.length!==unique.length || !candidate?.exists || candidate.source!==FORCE_CURVE_SOURCE) throw new Error('OPEN_REVIEW_REQUIRED')
+    if(rows.length!==unique.length) throw new Error('OPEN_REVIEW_REQUIRED')
     if(rows.some(isAttachedReview)) throw new Error('ATTACHED_REVIEW_IMMUTABLE')
+    if(!candidate?.exists || candidate.source!==FORCE_CURVE_SOURCE) throw new Error('OPEN_REVIEW_REQUIRED')
     const resolution=candidate?await resolveUniqueCatalogMaster(tx,candidate):null
     const masterIds=new Set(rows.flatMap(r=>r.masterSwitchId?[r.masterSwitchId]:[]))
     if(masterIds.size!==1 || !resolution || rows.some(r=>!SOURCE_REVIEW_KINDS.includes(r.kind as typeof SOURCE_REVIEW_KINDS[number]) || !r.masterSwitch || candidateIds(r.payload).length!==1 || !candidateIds(r.payload).includes(candidate.id) || !resolvedCatalogMasterCompatibility(r.masterSwitch,candidate,resolution).compatible)) throw new Error('UNSAFE_BULK_APPROVAL')
@@ -300,8 +317,9 @@ export async function linkSourceReview(input: { reviewId: string; masterSwitchId
   return db.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id = ${input.reviewId} FOR UPDATE`
     const review = await tx.forceCurveReviewCase.findUnique({ where: { id: input.reviewId } })
-    if (!review || review.status !== 'OPEN' || !SOURCE_REVIEW_KINDS.includes(review.kind as typeof SOURCE_REVIEW_KINDS[number])) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
+    if (!review) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
     if (isAttachedReview(review)) throw new Error('ATTACHED_REVIEW_IMMUTABLE')
+    if (review.status !== 'OPEN' || !SOURCE_REVIEW_KINDS.includes(review.kind as typeof SOURCE_REVIEW_KINDS[number])) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
     if (review.masterSwitchId && review.masterSwitchId !== input.masterSwitchId) throw new Error('REVIEW_ALREADY_LINKED')
     // Distinct review rows can race for the same master/catalog identity. The
     // selected master is their shared serialization point; recheck conflicts
@@ -337,8 +355,9 @@ export async function verifyReviewMetadata(input: { reviewId: string; catalogEnt
     await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id = ${input.reviewId} FOR UPDATE`
     const review = await tx.forceCurveReviewCase.findUnique({ where: { id: input.reviewId }, include: { masterSwitch: true } })
     const entry = await tx.forceCurveCatalogEntry.findUnique({ where: { id: input.catalogEntryId } })
-    if (!review || review.status !== 'OPEN' || !review.masterSwitch || !entry?.exists) throw new Error('OPEN_LINKED_REVIEW_REQUIRED')
+    if (!review) throw new Error('OPEN_LINKED_REVIEW_REQUIRED')
     if (isAttachedReview(review)) throw new Error('ATTACHED_REVIEW_IMMUTABLE')
+    if (review.status !== 'OPEN' || !review.masterSwitch || !entry?.exists) throw new Error('OPEN_LINKED_REVIEW_REQUIRED')
     if (!candidateIds(review.payload).includes(entry.id) || review.catalogEntryId !== entry.id) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const resolution=await resolveUniqueCatalogMaster(tx,{...entry,technology:input.technology})
     if (normalize(input.manufacturer) !== normalize(review.masterSwitch.manufacturer) || input.technology !== review.masterSwitch.technology || !resolvedCatalogMasterCompatibility(review.masterSwitch,{...entry,technology:input.technology},resolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
@@ -353,8 +372,9 @@ export async function resolveForceCurveReview(input: { reviewId: string; resolut
   return db.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id = ${input.reviewId} FOR UPDATE`
     const review = await tx.forceCurveReviewCase.findUnique({ where: { id: input.reviewId }, include: { masterSwitch: true } })
-    if (!review || review.status !== 'OPEN') throw new Error('OPEN_REVIEW_REQUIRED')
+    if (!review) throw new Error('OPEN_REVIEW_REQUIRED')
     if (isAttachedReview(review)) throw new Error('ATTACHED_REVIEW_IMMUTABLE')
+    if (review.status !== 'OPEN') throw new Error('OPEN_REVIEW_REQUIRED')
     if (!review.masterSwitchId || !review.masterSwitch) throw new Error('LINKED_MASTER_REQUIRED')
     const targetId = input.catalogEntryId || review.catalogEntryId || undefined
     const candidate = targetId ? await tx.forceCurveCatalogEntry.findUnique({ where: { id: targetId } }) : null

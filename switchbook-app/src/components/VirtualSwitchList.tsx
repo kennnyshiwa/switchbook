@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { MasterSwitch } from '@/app/switches/browse/page-client'
+import ForceCurvesButton from '@/components/ForceCurvesButton'
 
 interface VirtualSwitchListProps {
   switches: MasterSwitch[]
@@ -82,7 +83,8 @@ export default function VirtualSwitchList({ switches, onSwitchClick, selectedFor
 
         const manufacturerHeight = sw.manufacturer ? 16 : 0 // fixed for 1 line
 
-        const textHeight = nameHeight + manufacturerHeight + TEXT_PADDING
+        const forceCurveHeight = sw.hasForceCurve ? 28 : 0
+        const textHeight = nameHeight + manufacturerHeight + forceCurveHeight + TEXT_PADDING
 
         if (textHeight > maxTextHeight) maxTextHeight = textHeight
       }
@@ -247,6 +249,18 @@ export default function VirtualSwitchList({ switches, onSwitchClick, selectedFor
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {switchItem.manufacturer}
                       </p>
+                    )}
+                    {switchItem.hasForceCurve && (
+                      <div className="mt-1 flex justify-center" onClick={event => event.stopPropagation()}>
+                        <ForceCurvesButton
+                          masterSwitchId={switchItem.id}
+                          switchName={switchItem.name}
+                          manufacturer={switchItem.manufacturer || null}
+                          variant="badge"
+                          forceCurvesCached
+                          isAuthenticated={false}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>

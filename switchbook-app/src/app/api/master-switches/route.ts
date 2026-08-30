@@ -205,6 +205,15 @@ export async function GET(request: Request) {
         images: {
           orderBy: { order: 'asc' },
         },
+        forceCurveMappings: {
+          where: {
+            OR: [
+              { state: 'NO_MATCH' },
+              { state: { in: ['AUTO_APPROVED', 'MANUALLY_APPROVED'] }, catalogEntry: { exists: true } },
+            ]
+          },
+          select: { state: true },
+        },
         _count: {
           select: {
             userSwitches: true
@@ -247,11 +256,12 @@ export async function GET(request: Request) {
     const wishlistSwitchIds = new Set(wishlistItems.map(w => w.masterSwitchId).filter(Boolean))
 
     // Add "inCollection" and "inWishlist" flags to each master switch
-    const enrichedSwitches = masterSwitches.map(ms => ({
+    const enrichedSwitches = masterSwitches.map(({ forceCurveMappings, ...ms }) => ({
       ...ms,
       inCollection: userSwitchIds.has(ms.id),
       inWishlist: wishlistSwitchIds.has(ms.id),
-      userCount: ms._count.userSwitches
+      userCount: ms._count.userSwitches,
+      hasForceCurve: !forceCurveMappings.some(mapping => mapping.state === 'NO_MATCH') && forceCurveMappings.some(mapping => mapping.state === 'AUTO_APPROVED' || mapping.state === 'MANUALLY_APPROVED'),
     }))
 
     return NextResponse.json({
