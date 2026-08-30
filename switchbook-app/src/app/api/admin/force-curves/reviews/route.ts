@@ -6,7 +6,8 @@ import { adminActor, bulkApproveForceCurveReviews, deferForceCurveReviews, isSam
 import { getForceCurveReviewQueuePage, invalidateForceCurveReviewQueue } from '@/lib/admin-force-curve-queue'
 
 const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
-const groupLinkSchema = z.object({ reviewIds:z.array(z.string().cuid()).min(1).max(100),masterSwitchId:z.string().cuid(),catalogEntryId:z.string().cuid()}).strict()
+const compatibilityOverrideSchema=z.object({acknowledged:z.literal(true),reason:z.string().trim().min(3).max(1000)}).strict()
+const groupLinkSchema = z.object({ reviewIds:z.array(z.string().cuid()).min(1).max(100),masterSwitchId:z.string().cuid(),catalogEntryId:z.string().cuid(),compatibilityOverride:compatibilityOverrideSchema.optional()}).strict()
 const verifySchema = z.object({ reviewId: z.string().cuid(), catalogEntryId: z.string().cuid(), manufacturer: z.string().trim().min(1).max(120), technology: z.enum(['MECHANICAL','OPTICAL','MAGNETIC','INDUCTIVE','ELECTRO_CAPACITIVE']) }).strict()
 const resolutionSchema = z.object({ reviewId: z.string().cuid(), resolution: z.enum(['MANUALLY_APPROVED','REJECTED','NO_MATCH']), catalogEntryId: z.string().cuid().optional(), reason: z.string().trim().max(1000).optional() }).strict()
 const queueActionSchema = z.discriminatedUnion('action',[

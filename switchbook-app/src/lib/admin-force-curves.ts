@@ -235,7 +235,9 @@ export async function deferForceCurveReviews(input:{reviewIds:string[];reason?:s
   })
 }
 
-export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwitchId:string;catalogEntryId:string;actorId:string},db:Db) {
+export type ForceCurveCompatibilityOverride = { acknowledged: true; reason: string }
+
+export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwitchId:string;catalogEntryId:string;actorId:string;compatibilityOverride?:ForceCurveCompatibilityOverride},db:Db) {
   const unique=[...new Set(input.reviewIds)];if(!unique.length||unique.length>100) throw new Error('INVALID_REVIEW_SELECTION')
   return db.$transaction(async tx=>{
     await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id IN (${Prisma.join(unique)}) FOR UPDATE`
@@ -252,7 +254,12 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(!replay&&!legacyAttached&&rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
     if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
     const selectedResolution=candidate?await resolveUniqueCatalogMaster(tx,candidate):null
-    if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!selectedResolution||!resolvedCatalogMasterCompatibility(master,candidate,selectedResolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
+    const selectedCompatibility=candidate&&selectedResolution?resolvedCatalogMasterCompatibility(master,candidate,selectedResolution):null
+    const overrideReason=input.compatibilityOverride?.reason.trim()||''
+    const overrideRequested=input.compatibilityOverride?.acknowledged===true
+    if(overrideRequested&&overrideReason.length<3) throw new Error('OVERRIDE_REASON_REQUIRED')
+    if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!selectedResolution) throw new Error('INCOMPATIBLE_IDENTITY')
+    if(!selectedCompatibility?.compatible&&!overrideRequested) throw new Error('INCOMPATIBLE_IDENTITY')
     // MANUFACTURER_CONFLICT is linkable only as part of a proven homogeneous
     // source group. Single-row linking intentionally remains restricted to the
     // ordinary source-review kinds below.
@@ -262,7 +269,8 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     const allCandidates=await tx.forceCurveCatalogEntry.findMany({where:{id:{in:allCandidateIds},source:FORCE_CURVE_SOURCE,exists:true}})
     if(allCandidates.length!==allCandidateIds.length) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allResolutions=await resolveCatalogEntries(tx,allCandidates)
-    if(allCandidates.some((entry,index)=>!resolvedCatalogMasterCompatibility(master,entry,allResolutions[index]).compatible)) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
+    const allCompatibilities=allCandidates.map((entry,index)=>resolvedCatalogMasterCompatibility(master,entry,allResolutions[index]))
+    if(allCompatibilities.some(result=>!result.compatible)&&!overrideRequested) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
     const catalogGroups=new Set(allCandidates.map(entry=>`${normalize(entry.displayName)}|${normalize(entry.repositoryPath.split('/').at(-2))}`))
     if(catalogGroups.size!==1) throw new Error('MIXED_SOURCE_GROUP')
     // Use the exact same loaded catalog evidence as buildReviewQueue. This is
@@ -291,11 +299,13 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     const conflictingMappings=await tx.forceCurveMapping.findMany({where:{masterSwitchId:master.id,state:{in:['AUTO_APPROVED','MANUALLY_APPROVED']},catalogEntryId:{not:candidate.id}}})
     if(conflictingMappings.some(mapping=>mapping.state==='MANUALLY_APPROVED')) throw new Error('CONFLICTING_APPROVED_MAPPING')
     const now=new Date()
-    const provenance=JSON.stringify({workflow:'admin-source-attach',reviewIds:unique,actorId:input.actorId,decidedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id})
+    const compatibilityOverride=overrideRequested?{acknowledged:true,reason:overrideReason,actorId:input.actorId,compatibilityReason:selectedCompatibility?.reason||'Identity compatibility could not be verified',evidence:allCandidates.map((entry,index)=>({catalogEntryId:entry.id,repositoryPath:entry.repositoryPath,revision:entry.revision,contentHash:entry.contentHash,compatible:allCompatibilities[index].compatible,compatibilityReason:allCompatibilities[index].reason}))}:undefined
+    const provenance=JSON.stringify({workflow:'admin-source-attach',reviewIds:unique,actorId:input.actorId,decidedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id,compatibilityOverride})
     await tx.forceCurveMapping.deleteMany({where:{noMatchKey:master.id}})
     await tx.forceCurveMapping.updateMany({where:{id:{in:conflictingMappings.filter(mapping=>mapping.state==='AUTO_APPROVED').map(mapping=>mapping.id)}},data:{state:'STALE',reason:'Superseded by exact manual source attachment'}})
-    await tx.forceCurveMapping.upsert({where:{masterSwitchId_catalogEntryId:{masterSwitchId:master.id,catalogEntryId:candidate.id}},create:{masterSwitchId:master.id,catalogEntryId:candidate.id,state:'MANUALLY_APPROVED',confidence:1,provenance,reason:'Exact source group attached by admin',decidedById:input.actorId,decidedAt:now},update:{state:'MANUALLY_APPROVED',confidence:1,provenance,reason:'Exact source group attached by admin',decidedById:input.actorId,decidedAt:now}})
-    for(const row of rows) { const payload=objectPayload(row.payload); const linkAudit=legacyAttached&&payload.linkAudit?payload.linkAudit:{actorId:input.actorId,linkedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id}; await tx.forceCurveReviewCase.update({where:{id:row.id},data:{masterSwitchId:master.id,catalogEntryId:candidate.id,status:'RESOLVED',resolution:'MANUALLY_APPROVED',resolvedById:input.actorId,resolvedAt:now,payload:{...payload,queueWorkflow:legacyAttached?payload.queueWorkflow:{status:'ATTACHED',actorId:input.actorId,at:now.toISOString()},linkAudit} as Prisma.InputJsonValue}}) }
+    const mappingReason=overrideRequested?'Compatibility warning overridden by admin':'Exact source group attached by admin'
+    await tx.forceCurveMapping.upsert({where:{masterSwitchId_catalogEntryId:{masterSwitchId:master.id,catalogEntryId:candidate.id}},create:{masterSwitchId:master.id,catalogEntryId:candidate.id,state:'MANUALLY_APPROVED',confidence:overrideRequested?0:1,provenance,reason:mappingReason,decidedById:input.actorId,decidedAt:now},update:{state:'MANUALLY_APPROVED',confidence:overrideRequested?0:1,provenance,reason:mappingReason,decidedById:input.actorId,decidedAt:now}})
+    for(const row of rows) { const payload=objectPayload(row.payload); const linkAudit=legacyAttached&&payload.linkAudit?payload.linkAudit:{actorId:input.actorId,linkedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id,compatibilityOverride}; await tx.forceCurveReviewCase.update({where:{id:row.id},data:{masterSwitchId:master.id,catalogEntryId:candidate.id,status:'RESOLVED',resolution:'MANUALLY_APPROVED',resolvedById:input.actorId,resolvedAt:now,payload:{...payload,queueWorkflow:legacyAttached?payload.queueWorkflow:{status:'ATTACHED',actorId:input.actorId,at:now.toISOString()},linkAudit} as Prisma.InputJsonValue}}) }
     return {linked:rows.length,masterSwitchId:master.id,catalogEntryId:candidate.id}
   })
 }

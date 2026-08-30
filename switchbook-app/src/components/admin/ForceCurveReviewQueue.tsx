@@ -21,6 +21,8 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
   const [masterQuery, setMasterQuery] = useState<Record<string, string>>({})
   const [masterResults, setMasterResults] = useState<Record<string, Master[]>>({})
   const [chosenMaster, setChosenMaster] = useState<Record<string, string>>({})
+  const [overrideAcknowledged, setOverrideAcknowledged] = useState<Record<string, boolean>>({})
+  const [overrideReason, setOverrideReason] = useState<Record<string, string>>({})
 
   const initialLoad = useRef(true)
 
@@ -77,7 +79,9 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
   }
 
   async function findMasters(item: Item) {
-    const q = masterQuery[item.sourceKey] || ''
+    const first = item.evidence.find(e => e.status === 'OPEN')!
+    const catalog = first.candidates.find(c => c.id === first.catalogEntryId) || first.candidates[0]
+    const q = masterQuery[item.sourceKey] ?? catalog?.displayName ?? ''
     if (q.trim().length < 2) {
       setError('MasterSwitch search requires at least 2 characters')
       return
@@ -85,8 +89,6 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
     setBusy(item.sourceKey)
     setError('')
     try {
-      const first = item.evidence.find(e => e.status === 'OPEN')!
-      const catalog = first.candidates.find(c => c.id === first.catalogEntryId) || first.candidates[0]
       if (!catalog) throw new Error('Select a catalog candidate before searching for a MasterSwitch')
       const response = await fetch(`/api/admin/force-curves/master-switches?query=${encodeURIComponent(q)}&catalogEntryId=${encodeURIComponent(catalog.id)}`)
       const data = await response.json()
@@ -103,6 +105,8 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
     const first = item.evidence.find(e => e.status === 'OPEN')!
     const catalog = first.candidates.find(c => c.id === first.catalogEntryId) || first.candidates[0]
     const masterSwitchId = chosenMaster[item.sourceKey]
+    const selectedMaster = masterResults[item.sourceKey]?.find(master => master.id === masterSwitchId)
+    const override = selectedMaster?.compatibility?.compatible === false
     const reviewIds = item.evidence.filter(e => e.status === 'OPEN').map(e => e.id)
     if (!catalog || !masterSwitchId) {
       setError('Select a catalog candidate and MasterSwitch')
@@ -111,10 +115,9 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
     setBusy(item.sourceKey)
     setError('')
     try {
-      const response = await fetch('/api/admin/force-curves/reviews', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewIds, masterSwitchId, catalogEntryId: catalog.id }) })
+      const response = await fetch('/api/admin/force-curves/reviews', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewIds, masterSwitchId, catalogEntryId: catalog.id, ...(override ? { compatibilityOverride: { acknowledged: overrideAcknowledged[item.sourceKey] === true, reason: overrideReason[item.sourceKey] || '' } } : {}) }) })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error === 'INCOMPATIBLE_IDENTITY' ? 'That MasterSwitch does not exactly match this catalog switch. Choose a compatible result.' : data.error === 'REVIEW_CANDIDATE_REQUIRED' ? 'The source evidence changed while this page was open. Refresh the queue, search again, and select the exact MasterSwitch.' : data.error || 'Link failed')
-      const selectedMaster = masterResults[item.sourceKey]?.find(master => master.id === masterSwitchId)
       if (selectedMaster) {
         setQueue(current => ({ ...current, items: current.items.map(currentItem => currentItem.sourceKey !== item.sourceKey ? currentItem : {
           ...currentItem,
@@ -165,6 +168,8 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
           const candidate = first.candidates.find(c => c.id === first.catalogEntryId) || first.candidates[0]
           const master = first.masterSwitch
           const openReviewIds = item.evidence.filter(e => e.status === 'OPEN').map(e => e.id)
+          const selectedMaster = masterResults[item.sourceKey]?.find(result => result.id === chosenMaster[item.sourceKey])
+          const requiresOverride = selectedMaster?.compatibility?.compatible === false
           return (
             <article key={item.sourceKey} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <header className="flex flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 dark:border-gray-700">
@@ -182,7 +187,7 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
                 <div className="p-4 sm:p-6">
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Candidate MasterSwitch</h3>
                   {master ? <><p className="font-medium text-gray-900 dark:text-white">{master.manufacturer} {master.name}</p><p className="mt-1 break-words text-sm text-gray-600 dark:text-gray-300">{master.technology || 'Technology unknown'} · ID {master.id}</p></> : <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">No MasterSwitch attached.</p>}
-                  {item.status === 'OPEN' && <div className="mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-900/40"><label className="block text-sm font-medium text-gray-700 dark:text-gray-200" htmlFor={`master-${item.sourceKey}`}>Choose another MasterSwitch</label><div className="flex flex-col gap-2 sm:flex-row"><input id={`master-${item.sourceKey}`} className={`${controlClass} min-w-0 flex-1`} value={masterQuery[item.sourceKey] || candidate?.displayName || ''} onChange={e => setMasterQuery(value => ({ ...value, [item.sourceKey]: e.target.value }))} /><button type="button" disabled={Boolean(busy)} className={secondaryButtonClass} onClick={() => findMasters(item)}>Search</button></div>{(masterResults[item.sourceKey] || []).length > 0 && <><select className={`${controlClass} w-full`} aria-label={`Exact MasterSwitch for ${item.sourceKey}`} value={chosenMaster[item.sourceKey] || ''} onChange={e => setChosenMaster(value => ({ ...value, [item.sourceKey]: e.target.value }))}><option value="">Select exact master</option>{masterResults[item.sourceKey].map(m => <option key={m.id} value={m.id} disabled={!m.compatibility?.compatible}>{m.manufacturer} {m.name} — {m.technology}{m.compatibility?.compatible ? '' : ` — incompatible: ${m.compatibility?.reason || 'identity could not be verified'}`}</option>)}</select>{masterResults[item.sourceKey].some(m => !m.compatibility?.compatible) && <p className="text-xs text-amber-700 dark:text-amber-300">Incompatible search matches are disabled because their exact catalog identity differs.</p>}<button type="button" disabled={Boolean(busy) || !masterResults[item.sourceKey].some(m => m.id === chosenMaster[item.sourceKey] && m.compatibility?.compatible)} className="min-h-11 w-full rounded-md bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus-visible:ring-offset-gray-800" onClick={() => chooseMaster(item)}>Attach selected MasterSwitch</button></>}</div>}
+                  {item.status === 'OPEN' && <div className="mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-900/40"><label className="block text-sm font-medium text-gray-700 dark:text-gray-200" htmlFor={`master-${item.sourceKey}`}>Choose another MasterSwitch</label><form className="flex flex-col gap-2 sm:flex-row" onSubmit={event => { event.preventDefault(); void findMasters(item) }}><input id={`master-${item.sourceKey}`} className={`${controlClass} min-w-0 flex-1`} value={masterQuery[item.sourceKey] ?? candidate?.displayName ?? ''} onChange={e => setMasterQuery(value => ({ ...value, [item.sourceKey]: e.target.value }))} /><button type="submit" disabled={Boolean(busy)} className={secondaryButtonClass}>Search</button></form>{(masterResults[item.sourceKey] || []).length > 0 && <><select className={`${controlClass} w-full`} aria-label={`Exact MasterSwitch for ${item.sourceKey}`} value={chosenMaster[item.sourceKey] || ''} onChange={e => { setChosenMaster(value => ({ ...value, [item.sourceKey]: e.target.value })); setOverrideAcknowledged(value => ({ ...value, [item.sourceKey]: false })); setOverrideReason(value => ({ ...value, [item.sourceKey]: '' })) }}><option value="">Select exact master</option>{masterResults[item.sourceKey].map(m => <option key={m.id} value={m.id}>{m.manufacturer} {m.name} — {m.technology}{m.compatibility?.compatible ? '' : ` — warning: ${m.compatibility?.reason || 'identity could not be verified'}`}</option>)}</select>{requiresOverride && <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"><p><strong>Compatibility warning:</strong> {selectedMaster?.compatibility?.reason || 'The exact identity could not be verified.'}</p><label className="flex items-start gap-2"><input type="checkbox" className="mt-1 h-4 w-4" checked={overrideAcknowledged[item.sourceKey] || false} onChange={e => setOverrideAcknowledged(value => ({ ...value, [item.sourceKey]: e.target.checked }))} /><span>I verified this is the intended MasterSwitch and want to override the warning.</span></label><label className="block font-medium" htmlFor={`override-reason-${item.sourceKey}`}>Audit reason</label><textarea id={`override-reason-${item.sourceKey}`} className={`${controlClass} min-h-20 w-full py-2`} value={overrideReason[item.sourceKey] || ''} onChange={e => setOverrideReason(value => ({ ...value, [item.sourceKey]: e.target.value }))} placeholder="Why this source belongs to this MasterSwitch" /></div>}{masterResults[item.sourceKey].some(m => !m.compatibility?.compatible) && !requiresOverride && <p className="text-xs text-amber-700 dark:text-amber-300">Results with identity warnings remain selectable, but require an acknowledged, audited admin override.</p>}<button type="button" disabled={Boolean(busy) || !selectedMaster || Boolean(requiresOverride && (!overrideAcknowledged[item.sourceKey] || (overrideReason[item.sourceKey] || '').trim().length < 3))} className="min-h-11 w-full rounded-md bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus-visible:ring-offset-gray-800" onClick={() => chooseMaster(item)}>Attach selected MasterSwitch</button></>}</div>}
                 </div>
               </div>
               {item.status === 'OPEN' && <footer className="flex flex-col gap-2 border-t border-gray-200 bg-gray-50 p-4 sm:flex-row sm:flex-wrap sm:px-6 dark:border-gray-700 dark:bg-gray-900/40">{item.actionable && candidate && <button type="button" disabled={Boolean(busy)} className="min-h-11 rounded-md bg-green-700 px-4 text-sm font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-600 dark:hover:bg-green-700 dark:focus-visible:ring-offset-gray-800" onClick={() => openReviewIds.length > 1 ? mutate(item, { action: 'BULK_APPROVE', reviewIds: openReviewIds, catalogEntryId: candidate.id, reason: 'Homogeneous exact source evidence' }) : resolve(item, 'MANUALLY_APPROVED')}>{openReviewIds.length > 1 ? `Approve group (${openReviewIds.length})` : 'Approve suggestion'}</button>}{master && <button type="button" disabled={Boolean(busy)} className="min-h-11 rounded-md border border-red-300 bg-white px-4 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-300 dark:hover:bg-red-950/40 dark:focus-visible:ring-offset-gray-800" onClick={() => mutate(item, { action: 'GROUP_NO_MATCH', reviewIds: openReviewIds, reason: 'Admin source-centric durable no-match decision' })}>Durable NO_MATCH ({openReviewIds.length})</button>}<button type="button" disabled={Boolean(busy)} className={secondaryButtonClass} onClick={() => mutate(item, { action: 'DEFER', reviewIds: openReviewIds, reason: 'Deferred from admin queue' })}>{item.deferred ? 'Deferred' : 'Skip / defer'}</button></footer>}
