@@ -38,4 +38,7 @@ test('force curve UI pages and refreshes a bounded server-side queue', () => {
   assert.match(source, /catalogEntryId=/)
   assert.match(source, /disabled=\{!m\.compatibility\?\.compatible\}/)
   assert.match(source, /That MasterSwitch does not exactly match this catalog switch/)
+  assert.match(source, /MasterSwitch attached successfully, but the queue refresh timed out/)
+  assert.match(source, /window\.setTimeout\(\(\) => timeout\.abort\(\), 15_000\)/)
+  assert.match(source, /The source evidence changed while this page was open/)
 })

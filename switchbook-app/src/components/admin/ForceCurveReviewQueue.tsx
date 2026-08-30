@@ -26,9 +26,18 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
 
   async function refreshQueue(page = queue.pagination.page, signal?: AbortSignal) {
     const params = new URLSearchParams({ page: String(page), pageSize: String(queue.pagination.pageSize), query, bucket, status })
-    const fresh = await fetch(`/api/admin/force-curves/reviews?${params}`, { signal })
-    if (!fresh.ok) throw new Error('Saved, but refresh failed')
-    setQueue(await fresh.json())
+    const timeout = new AbortController()
+    const timer = window.setTimeout(() => timeout.abort(), 15_000)
+    const abort = () => timeout.abort()
+    signal?.addEventListener('abort', abort, { once: true })
+    try {
+      const fresh = await fetch(`/api/admin/force-curves/reviews?${params}`, { signal: timeout.signal })
+      if (!fresh.ok) throw new Error('Saved, but refresh failed')
+      setQueue(await fresh.json())
+    } finally {
+      window.clearTimeout(timer)
+      signal?.removeEventListener('abort', abort)
+    }
   }
 
   useEffect(() => {
@@ -104,8 +113,20 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
     try {
       const response = await fetch('/api/admin/force-curves/reviews', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewIds, masterSwitchId, catalogEntryId: catalog.id }) })
       const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data.error === 'INCOMPATIBLE_IDENTITY' ? 'That MasterSwitch does not exactly match this catalog switch. Choose a compatible result.' : data.error || 'Link failed')
-      await refreshQueue()
+      if (!response.ok) throw new Error(data.error === 'INCOMPATIBLE_IDENTITY' ? 'That MasterSwitch does not exactly match this catalog switch. Choose a compatible result.' : data.error === 'REVIEW_CANDIDATE_REQUIRED' ? 'The source evidence changed while this page was open. Refresh the queue, search again, and select the exact MasterSwitch.' : data.error || 'Link failed')
+      const selectedMaster = masterResults[item.sourceKey]?.find(master => master.id === masterSwitchId)
+      if (selectedMaster) {
+        setQueue(current => ({ ...current, items: current.items.map(currentItem => currentItem.sourceKey !== item.sourceKey ? currentItem : {
+          ...currentItem,
+          evidence: currentItem.evidence.map(evidence => reviewIds.includes(evidence.id) ? { ...evidence, catalogEntryId: catalog.id, masterSwitch: selectedMaster } : evidence),
+        }) }))
+      }
+      setBusy('')
+      try {
+        await refreshQueue()
+      } catch {
+        setError('MasterSwitch attached successfully, but the queue refresh timed out. Reload the page to fetch the latest queue state.')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Link failed')
     } finally {
