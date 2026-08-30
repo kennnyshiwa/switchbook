@@ -1,43 +1,59 @@
 import assert from 'node:assert/strict'
 import { prisma } from '../src/lib/prisma'
-import { FORCE_CURVE_SOURCE } from '../src/lib/force-curves'
-import { linkSourceReviewGroup } from '../src/lib/admin-force-curves'
+import { FORCE_CURVE_SOURCE, getApprovedCurves } from '../src/lib/force-curves'
+import { linkSourceReviewGroup, reviewWorkflow } from '../src/lib/admin-force-curves'
 
 async function main() {
   const suffix = `${Date.now()}`
+  const fixturePrefix = `Override Naevy ${suffix}`
   const actor = await prisma.user.create({ data: { id: `override-actor-${suffix}`, email: `override-${suffix}@example.test`, username: `override-${suffix}`, role: 'ADMIN' } })
   await prisma.manufacturer.upsert({ where: { name: 'AEBoards' }, create: { name: 'AEBoards', aliases: [], verified: true }, update: { verified: true } })
   await prisma.manufacturer.upsert({ where: { name: 'Tecsee' }, create: { name: 'Tecsee', aliases: [], verified: true }, update: { verified: true } })
-  const intended = await prisma.masterSwitch.create({ data: { id: `override-intended-${suffix}`, name: 'Naevy EC', manufacturer: 'Tecsee', technology: 'ELECTRO_CAPACITIVE', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
-  const wrong = await prisma.masterSwitch.create({ data: { id: `override-wrong-${suffix}`, name: 'Naevy EC V2', manufacturer: 'Tecsee', technology: 'MECHANICAL', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
-  const catalog = await prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: 'AEBoards Naevy EC Bottom Out/AEBoards_Naevy_EC_Bottom_Out_HighResolutionRaw.csv', displayName: 'AEBoards Naevy EC Bottom Out', revision: 'override-fixture-revision', contentHash: 'override-fixture-hash', technology: 'ELECTRO_CAPACITIVE', exists: true } })
-  const reviews = await Promise.all([1, 2].map(index => prisma.forceCurveReviewCase.create({ data: { kind: 'SOURCE_UNVERIFIED', reason: `override evidence ${index}`, catalogEntryId: catalog.id, payload: { measurementKey: 'AEBoards Naevy EC Bottom Out/ae boards naevy ec', candidateIds: [catalog.id], paths: [catalog.repositoryPath] } } })))
+  const intended = await prisma.masterSwitch.create({ data: { id: `override-intended-${suffix}`, name: fixturePrefix, manufacturer: 'Tecsee', technology: 'ELECTRO_CAPACITIVE', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
+  const wrong = await prisma.masterSwitch.create({ data: { id: `override-wrong-${suffix}`, name: `${fixturePrefix} V2`, manufacturer: 'Tecsee', technology: 'MECHANICAL', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
+  const qualifiers = ['Bottom Out', 'Top Out', '0.5mm', '1mm', '2mm', '3mm']
+  const groups: { highId: string; rawId: string; reviewId: string; request: Parameters<typeof linkSourceReviewGroup>[0] }[] = []
 
   try {
-    const request = { reviewIds: reviews.map(review => review.id), masterSwitchId: intended.id, catalogEntryId: catalog.id, actorId: actor.id, compatibilityOverride: { acknowledged: true as const, reason: 'Folder suffix is a measurement qualifier for the canonical Naevy EC product.' } }
-    assert.deepEqual(await linkSourceReviewGroup(request, prisma), { linked: 2, masterSwitchId: intended.id, catalogEntryId: catalog.id })
-    const beforeMapping = await prisma.forceCurveMapping.findUniqueOrThrow({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: intended.id, catalogEntryId: catalog.id } } })
-    const beforeReviews = await prisma.forceCurveReviewCase.findMany({ where: { id: { in: reviews.map(review => review.id) } }, orderBy: { id: 'asc' } })
-    const beforeAudit = beforeReviews.map(review => JSON.stringify((review.payload as Record<string, unknown>).linkAudit))
-    assert.match(beforeMapping.provenance, /Folder suffix is a measurement qualifier/)
-    assert.match(beforeMapping.provenance, /override-fixture-hash/)
+    for (const [index, qualifier] of qualifiers.entries()) {
+      const displayName = `AEBoards ${fixturePrefix} ${qualifier}`
+      const folder = displayName
+      const [raw, high] = await Promise.all([
+        prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: `${folder}/${fixturePrefix}_${index}_Raw Data CSV.csv`, displayName, revision: `override-revision-${index}`, contentHash: `override-raw-${index}`, technology: 'ELECTRO_CAPACITIVE', exists: true } }),
+        prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: `${folder}/${fixturePrefix}_${index}_HighResolutionRaw.csv`, displayName, revision: `override-revision-${index}`, contentHash: `override-high-${index}`, technology: 'ELECTRO_CAPACITIVE', exists: true } }),
+      ])
+      const review = await prisma.forceCurveReviewCase.create({ data: { kind: 'SOURCE_UNVERIFIED', reason: `override evidence ${index}`, catalogEntryId: high.id, payload: { measurementKey: `${folder}/${fixturePrefix.toLowerCase()} ${qualifier.toLowerCase()}`, candidateIds: [raw.id, high.id], paths: [raw.repositoryPath, high.repositoryPath] } } })
+      const request = { reviewIds: [review.id], masterSwitchId: intended.id, catalogEntryId: high.id, actorId: actor.id, compatibilityOverride: { acknowledged: true as const, reason: `Measurement qualifier ${qualifier} belongs to the canonical Naevy EC product.` } }
+      groups.push({ highId: high.id, rawId: raw.id, reviewId: review.id, request })
+      assert.deepEqual(await linkSourceReviewGroup(request, prisma), { linked: 1, masterSwitchId: intended.id, catalogEntryId: high.id })
+    }
 
-    assert.equal((await linkSourceReviewGroup(request, prisma)).replayed, true)
-    assert.equal((await linkSourceReviewGroup({ ...request, compatibilityOverride: { acknowledged: true, reason: 'A different retry reason must never replace the original audit.' } }, prisma)).replayed, true)
+    assert.equal(await prisma.forceCurveMapping.count({ where: { masterSwitchId: intended.id, state: 'MANUALLY_APPROVED' } }), 6)
+    assert.equal((await getApprovedCurves(intended.id)).length, 6)
+    const resolved = await prisma.forceCurveReviewCase.findMany({ where: { id: { in: groups.map(group => group.reviewId) } }, orderBy: { id: 'asc' } })
+    assert.ok(resolved.every(review => review.status === 'RESOLVED' && review.resolution === 'MANUALLY_APPROVED' && reviewWorkflow(review.payload).status === 'ATTACHED'))
 
-    const afterMapping = await prisma.forceCurveMapping.findUniqueOrThrow({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: intended.id, catalogEntryId: catalog.id } } })
-    const afterReviews = await prisma.forceCurveReviewCase.findMany({ where: { id: { in: reviews.map(review => review.id) } }, orderBy: { id: 'asc' } })
-    assert.equal(afterMapping.provenance, beforeMapping.provenance)
-    assert.equal(afterMapping.reason, beforeMapping.reason)
-    assert.equal(afterMapping.decidedAt?.toISOString(), beforeMapping.decidedAt?.toISOString())
-    assert.deepEqual(afterReviews.map(review => JSON.stringify((review.payload as Record<string, unknown>).linkAudit)), beforeAudit)
-    assert.deepEqual(afterReviews.map(review => review.resolvedAt?.toISOString()), beforeReviews.map(review => review.resolvedAt?.toISOString()))
+    const first = groups[0]
+    const beforeMapping = await prisma.forceCurveMapping.findUniqueOrThrow({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: intended.id, catalogEntryId: first.highId } } })
+    const beforeReview = await prisma.forceCurveReviewCase.findUniqueOrThrow({ where: { id: first.reviewId } })
+    const beforeAudit = JSON.stringify((beforeReview.payload as Record<string, unknown>).linkAudit)
+    assert.equal((await linkSourceReviewGroup(first.request, prisma)).replayed, true)
+    assert.equal((await linkSourceReviewGroup({ ...first.request, compatibilityOverride: { acknowledged: true, reason: 'Changed retry reason must not replace the original audit.' } }, prisma)).replayed, true)
+    const afterMapping = await prisma.forceCurveMapping.findUniqueOrThrow({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: intended.id, catalogEntryId: first.highId } } })
+    const afterReview = await prisma.forceCurveReviewCase.findUniqueOrThrow({ where: { id: first.reviewId } })
+    assert.deepEqual({ provenance: afterMapping.provenance, reason: afterMapping.reason, decidedAt: afterMapping.decidedAt }, { provenance: beforeMapping.provenance, reason: beforeMapping.reason, decidedAt: beforeMapping.decidedAt })
+    assert.equal(JSON.stringify((afterReview.payload as Record<string, unknown>).linkAudit), beforeAudit)
+    await assert.rejects(linkSourceReviewGroup({ ...first.request, masterSwitchId: wrong.id }, prisma), /REVIEW_ALREADY_LINKED/)
 
-    await assert.rejects(linkSourceReviewGroup({ ...request, masterSwitchId: wrong.id }, prisma), /REVIEW_ALREADY_LINKED/)
+    const mixedReview = await prisma.forceCurveReviewCase.create({ data: { kind: 'SOURCE_UNVERIFIED', reason: 'mixed-source rejection fixture', catalogEntryId: groups[0].highId, payload: { measurementKey: `${fixturePrefix}/mixed`, candidateIds: [groups[0].rawId, groups[1].highId] } } })
+    groups.push({ highId: groups[0].highId, rawId: groups[1].highId, reviewId: mixedReview.id, request: { reviewIds: [mixedReview.id], masterSwitchId: intended.id, catalogEntryId: groups[0].highId, actorId: actor.id, compatibilityOverride: { acknowledged: true, reason: 'Must still fail because evidence spans source groups.' } } })
+    await assert.rejects(linkSourceReviewGroup(groups.at(-1)!.request, prisma), /MIXED_SOURCE_GROUP/)
+    assert.equal((await prisma.forceCurveReviewCase.findUniqueOrThrow({ where: { id: mixedReview.id } })).status, 'OPEN')
+    assert.equal(await prisma.forceCurveMapping.count({ where: { masterSwitchId: intended.id, state: 'MANUALLY_APPROVED' } }), 6)
   } finally {
-    await prisma.forceCurveReviewCase.deleteMany({ where: { id: { in: reviews.map(review => review.id) } } })
-    await prisma.forceCurveMapping.deleteMany({ where: { OR: [{ masterSwitchId: intended.id }, { masterSwitchId: wrong.id }] } })
-    await prisma.forceCurveCatalogEntry.delete({ where: { id: catalog.id } })
+    await prisma.forceCurveReviewCase.deleteMany({ where: { id: { in: groups.map(group => group.reviewId) } } })
+    await prisma.forceCurveMapping.deleteMany({ where: { masterSwitchId: { in: [intended.id, wrong.id] } } })
+    await prisma.forceCurveCatalogEntry.deleteMany({ where: { repositoryPath: { startsWith: `AEBoards ${fixturePrefix}` } } })
     await prisma.masterSwitch.deleteMany({ where: { id: { in: [intended.id, wrong.id] } } })
     await prisma.user.delete({ where: { id: actor.id } })
   }
