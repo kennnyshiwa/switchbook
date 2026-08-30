@@ -45,23 +45,36 @@ const COMPATIBILITY_CANDIDATE_LIMIT = 200
 
 function identityTokens(value: string) { return normalize(value).split(' ').filter(Boolean) }
 
-// ThereminGoat and retailers publish this exact KTT switch as "Retro Orange",
-// while the approved catalog uses its GAME1989 family name. Keep this alias
-// deliberately product-scoped: neighboring 80Retros colors and families must
-// still pass the ordinary ordered-token and manufacturer checks unchanged.
-const RETRO_ORANGE_SOURCE_IDENTITY = '80 retros retro orange'
-const RETRO_ORANGE_MASTER_IDENTITY = '80 retros game 1989 orange'
+// ThereminGoat publishes the KTT GAME1989 color family as "80Retros Retro
+// <variant>" while approved MasterSwitch records use "80Retros GAME1989
+// <variant>". Canonicalize the family shape, but retain the complete variant
+// suffix: Red cannot match Orange, V2, or any other sibling. The compatibility
+// gate below additionally requires the exact canonical name and KTT maker.
+const RETRO_FAMILY_SOURCE_PREFIX = ['80', 'retros', 'retro']
+const RETRO_FAMILY_MASTER_PREFIX = ['80', 'retros', 'game', '1989']
+
+function retroFamilyVariant(value: string, prefix: string[]) {
+  const tokens = identityTokens(value)
+  return prefix.every((token, index) => tokens[index] === token) && tokens.length > prefix.length ? tokens.slice(prefix.length) : null
+}
+
+function retroFamilyCanonicalTokens(value: string) {
+  const sourceVariant = retroFamilyVariant(value, RETRO_FAMILY_SOURCE_PREFIX)
+  if (sourceVariant) return [...RETRO_FAMILY_MASTER_PREFIX, ...sourceVariant]
+  const masterVariant = retroFamilyVariant(value, RETRO_FAMILY_MASTER_PREFIX)
+  return masterVariant ? [...RETRO_FAMILY_MASTER_PREFIX, ...masterVariant] : null
+}
 
 function canonicalProductIdentityTokens(value: string) {
-  const identity = normalize(value)
-  if (identity === RETRO_ORANGE_SOURCE_IDENTITY || identity === RETRO_ORANGE_MASTER_IDENTITY) return identityTokens(RETRO_ORANGE_MASTER_IDENTITY)
-  return identityTokens(value)
+  return retroFamilyCanonicalTokens(value) || identityTokens(value)
 }
 
 export function catalogMasterSearchTerms(query: string, entry: CompatibleEntry) {
   const terms = [query.trim()].filter(Boolean)
-  const normalizedQuery = normalize(query)
-  if (normalize(entry.displayName) === RETRO_ORANGE_SOURCE_IDENTITY && (normalizedQuery === RETRO_ORANGE_SOURCE_IDENTITY || normalizedQuery === 'retro orange')) terms.push('80Retros GAME1989 Orange')
+  const sourceVariant = retroFamilyVariant(entry.displayName, RETRO_FAMILY_SOURCE_PREFIX)
+  const queryVariant = retroFamilyVariant(query, RETRO_FAMILY_SOURCE_PREFIX)
+    || retroFamilyVariant(`80Retros ${query}`, RETRO_FAMILY_SOURCE_PREFIX)
+  if (sourceVariant && queryVariant?.join(' ') === sourceVariant.join(' ')) terms.push(`80Retros GAME1989 ${sourceVariant.map(token => token[0].toUpperCase()+token.slice(1)).join(' ')}`)
   return [...new Set(terms)]
 }
 
@@ -90,7 +103,11 @@ export function catalogMasterCompatibility(master: { name: string; manufacturer:
   const folder = entry.repositoryPath.split('/').at(-2) || ''
   if (normalize(folder) !== normalize(entry.displayName)) return { compatible: false, reason: 'Catalog folder and display identity do not match.' }
   if (entry.technology && master.technology && entry.technology !== master.technology) return { compatible: false, reason: `Technology mismatch: catalog is ${entry.technology}, MasterSwitch is ${master.technology}.` }
-  if (normalize(entry.displayName) === RETRO_ORANGE_SOURCE_IDENTITY && (normalize(master.name) !== RETRO_ORANGE_MASTER_IDENTITY || normalize(master.manufacturer) !== 'ktt')) return { compatible: false, reason: 'Product alias mismatch: 80Retros Retro Orange is verified only for KTT 80Retros GAME1989 Orange.' }
+  const retroVariant = retroFamilyVariant(entry.displayName, RETRO_FAMILY_SOURCE_PREFIX)
+  if (retroVariant) {
+    const expectedMasterIdentity = [...RETRO_FAMILY_MASTER_PREFIX, ...retroVariant].join(' ')
+    if (normalize(master.name) !== expectedMasterIdentity || normalize(master.manufacturer) !== 'ktt') return { compatible: false, reason: `Product alias mismatch: 80Retros Retro ${retroVariant.join(' ')} requires the exact KTT 80Retros GAME1989 ${retroVariant.join(' ')} MasterSwitch.` }
+  }
   const masterIdentity = canonicalProductIdentityTokens(master.name)
   let catalogIdentity = canonicalProductIdentityTokens(entry.displayName)
   const recognizedPrefix = manufacturerPrefixes(knownManufacturers).find(prefix => prefix.tokens.every((token,index) => catalogIdentity[index] === token))
@@ -118,7 +135,11 @@ export type CatalogMasterResolution = { uniqueMasterId: string | null; knownManu
 export async function resolveUniqueCatalogMaster(db: any, entry: CompatibleEntry): Promise<CatalogMasterResolution> {
   const knownManufacturers:KnownManufacturer[]=await db.manufacturer.findMany({where:{verified:true},select:{name:true,aliases:true}})
   const required=catalogProductTokens(entry,knownManufacturers).tokens
-  const anchor=[...required].sort((a,b)=>b.length-a.length||a.localeCompare(b))[0]
+  // Family aliases share broad tokens (80Retros/GAME1989), so use the
+  // preserved variant as the bounded lookup anchor. Exact identity and maker
+  // checks still run after candidate retrieval.
+  const retroVariant=retroFamilyVariant(entry.displayName,RETRO_FAMILY_SOURCE_PREFIX)
+  const anchor=[...(retroVariant||required)].sort((a,b)=>b.length-a.length||a.localeCompare(b))[0]
   if(!anchor) return {uniqueMasterId:null,knownManufacturers,compatibleMasters:[],reason:'Catalog product identity is empty.'}
   const candidates:CompatibleMaster[]=await db.masterSwitch.findMany({where:{status:'APPROVED',name:{contains:anchor,mode:'insensitive'}},select:{id:true,name:true,manufacturer:true,technology:true},orderBy:{id:'asc'},take:COMPATIBILITY_CANDIDATE_LIMIT+1})
   if(candidates.length>COMPATIBILITY_CANDIDATE_LIMIT) return {uniqueMasterId:null,knownManufacturers,compatibleMasters:[],reason:`Product identity is too broad: more than ${COMPATIBILITY_CANDIDATE_LIMIT} approved MasterSwitch records contain anchor [${anchor}]. Refine canonical identity.`}

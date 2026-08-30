@@ -187,7 +187,7 @@ test('80Retros Game1989 accepts the full product identity while blocking sibling
   assert.equal(uniqueCatalogMasterCompatibility({id:'right',...conflicted},entry,[{name:'KTT'},{name:'HMX'}],masters).compatible,true)
   assert.equal(uniqueCatalogMasterCompatibility({id:'a',name:'Generic',manufacturer:'KTT'},{displayName:'Generic',repositoryPath:'Generic/TG.csv'},[],[{id:'a',name:'Generic',manufacturer:'KTT'},{id:'b',name:'Generic',manufacturer:'HMX'}]).compatible,false)
 })
-test('80Retros Retro Orange uses only the proven GAME1989 Orange product alias', async () => {
+test('80Retros Retro family preserves each variant when resolving GAME1989 aliases', async () => {
   const { catalogMasterSearchTerms } = await import('../src/lib/admin-force-curves')
   const entry = { displayName: '80Retros Retro Orange', repositoryPath: '80Retros Retro Orange/80Retros_Retro_Orange_HighResolutionRaw.csv', technology: 'MECHANICAL' as const }
   const right = { id: 'right-orange', name: '80Retros GAME1989 Orange', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
@@ -196,6 +196,16 @@ test('80Retros Retro Orange uses only the proven GAME1989 Orange product alias',
   assert.deepEqual(catalogMasterSearchTerms('80Retros Retro Orange', entry), ['80Retros Retro Orange', '80Retros GAME1989 Orange'])
   assert.deepEqual(catalogMasterSearchTerms('Retro Orange', entry), ['Retro Orange', '80Retros GAME1989 Orange'])
   assert.deepEqual(catalogMasterSearchTerms('HMX', entry), ['HMX'])
+  const redEntry = { displayName: '80Retros Retro Red', repositoryPath: '80Retros Retro Red/80Retros_Retro_Red_HighResolutionRaw.csv', technology: 'MECHANICAL' as const }
+  const red = { id: 'right-red', name: '80Retros GAME1989 Red', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
+  assert.equal(catalogMasterCompatibility(red, redEntry, [{name:'KTT'},{name:'HMX'}]).compatible, true)
+  assert.equal(catalogMasterCompatibility(right, redEntry, [{name:'KTT'},{name:'HMX'}]).compatible, false)
+  assert.deepEqual(catalogMasterSearchTerms('80Retros Retro Red', redEntry), ['80Retros Retro Red', '80Retros GAME1989 Red'])
+  assert.deepEqual(catalogMasterSearchTerms('Retro Red', redEntry), ['Retro Red', '80Retros GAME1989 Red'])
+  const redCalls:any[]=[]
+  const redResolution=await resolveUniqueCatalogMaster({manufacturer:{findMany:async()=>[{name:'KTT',aliases:[]},{name:'HMX',aliases:[]}]},masterSwitch:{findMany:async(args:any)=>{redCalls.push(args);return [red]}}},redEntry)
+  assert.equal(redResolution.uniqueMasterId,red.id)
+  assert.equal(redCalls[0].where.name.contains,'retros')
   for (const wrong of [
     {name:'80Retros GAME1989 Red',manufacturer:'KTT'},
     {name:'80Retros GAME1989 Orange',manufacturer:'HMX'},

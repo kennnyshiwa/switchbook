@@ -37,6 +37,13 @@ async function main() {
     assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:wrong.id}}),0)
     assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviews.map(review=>review.id)},status:'OPEN',masterSwitchId:null}}),3)
   }
+  const redCatalog=await prisma.forceCurveCatalogEntry.create({data:{id:'retro-red-high',source:FORCE_CURVE_SOURCE,repositoryPath:'80Retros Retro Red/80Retros_Retro_Red_HighResolutionRaw.csv',displayName:'80Retros Retro Red',contentHash:'retro-red-high',revision:'retro-family-revision',exists:true}})
+  const redReview=await prisma.forceCurveReviewCase.create({data:{catalogEntryId:redCatalog.id,kind:'SOURCE_UNVERIFIED',reason:'Retro Red family regression',payload:{measurementKey:'80 retros retro red 80 retros retro red',candidateIds:[redCatalog.id]}}})
+  const redResolution=await resolveUniqueCatalogMaster(prisma,redCatalog)
+  assert.equal(redResolution.uniqueMasterId,'retro-orange-red')
+  assert.equal(catalogMasterCompatibility(masters[0],redCatalog,redResolution.knownManufacturers).compatible,false)
+  assert.deepEqual(await linkSourceReviewGroup({reviewIds:[redReview.id],masterSwitchId:'retro-orange-red',catalogEntryId:redCatalog.id,actorId:user.id},prisma),{linked:1,masterSwitchId:'retro-orange-red',catalogEntryId:redCatalog.id})
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:'retro-orange-red',catalogEntryId:redCatalog.id,state:'MANUALLY_APPROVED'}}),1)
   const unrelatedMaster=masters[6]
   const unrelatedCatalog=await prisma.forceCurveCatalogEntry.create({data:{id:'retro-orange-unrelated-catalog',source:FORCE_CURVE_SOURCE,repositoryPath:'Gateron Oil King/TG.csv',displayName:'Gateron Oil King',contentHash:'unrelated-oil-king',revision:'unrelated-revision',technology:'MECHANICAL',exists:true}})
   const unrelatedReview=await prisma.forceCurveReviewCase.create({data:{catalogEntryId:unrelatedCatalog.id,kind:'SOURCE_UNVERIFIED',reason:'Unrelated valid attach control',payload:{measurementKey:'gateron oil king/gateron oil king',candidateIds:[unrelatedCatalog.id]}}})
@@ -52,8 +59,8 @@ async function main() {
   assert.deepEqual(repeated,{linked:3,masterSwitchId:masters[0].id,catalogEntryId:high.id,replayed:true})
   assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviews.map(review=>review.id)},status:'RESOLVED',resolution:'MANUALLY_APPROVED',masterSwitchId:masters[0].id,catalogEntryId:high.id}}),3)
   assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:masters[0].id,catalogEntryId:high.id,state:'MANUALLY_APPROVED'}}),1)
-  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:{in:wrongMasters.map(master=>master.id)}}}),0)
-  console.log(JSON.stringify({exactAlias:true,highOnly:true,rawAndHigh:true,rawOnly:true,wrongCandidatesBlocked:5,negativeReviewMutations:0,unrelatedEnabledAndAttached:true,linked:3,repeatStable:true,rawIncompatibleError:false}))
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:{in:wrongMasters.filter(master=>master.id!=='retro-orange-red').map(master=>master.id)}}}),0)
+  console.log(JSON.stringify({familyAliases:['Orange','Red'],highOnly:true,rawAndHigh:true,rawOnly:true,wrongCandidatesBlocked:5,negativeReviewMutations:0,unrelatedEnabledAndAttached:true,linked:3,repeatStable:true,rawIncompatibleError:false}))
 }
 
 main().finally(()=>prisma.$disconnect())
