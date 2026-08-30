@@ -7,11 +7,13 @@ type Master = { id: string; name: string; manufacturer: string | null; technolog
 type Evidence = { id: string; kind: string; reason: string; status: 'OPEN' | 'RESOLVED'; catalogEntryId: string | null; masterSwitch: Master | null; candidates: Candidate[] }
 type Item = { sourceKey: string; primaryReviewId: string; bucket: string; confidence: number; actionable: boolean; deferred: boolean; status: 'OPEN' | 'RESOLVED'; evidence: Evidence[] }
 type Queue = { items: Item[]; counts: Record<string, number>; rawReviewCount: number; uniqueSourceCount: number; openSourceCount: number; resolvedSourceCount: number; remainingActionable: number; deferredCount: number; filteredSourceCount: number; pagination: { page: number; pageSize: number; pageCount: number; hasPrevious: boolean; hasNext: boolean } }
+type Suggestion = { algorithm: 'rank-v1'; tier: 'EXACT_UNIQUE' | 'BOUNDARY_UNIQUE'; reason: 'NORMALIZED_IDENTITY_EXACT' | 'FULL_IDENTITY_BOUNDARY'; master: Master; warnings: string[] }
+type StagedAction = { sourceKey: string; kind: 'ATTACH_SUGGESTION' | 'DEFER' | 'NO_MATCH' }
 
 const controlClass = 'min-h-11 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/30'
 const secondaryButtonClass = 'min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 dark:focus-visible:ring-offset-gray-800'
 
-export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: Queue }) {
+export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled = false }: { initialQueue: Queue; rankAssistEnabled?: boolean }) {
   const [queue, setQueue] = useState(initialQueue)
   const [query, setQuery] = useState('')
   const [bucket, setBucket] = useState('ALL')
@@ -23,8 +25,69 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
   const [chosenMaster, setChosenMaster] = useState<Record<string, string>>({})
   const [overrideAcknowledged, setOverrideAcknowledged] = useState<Record<string, boolean>>({})
   const [overrideReason, setOverrideReason] = useState<Record<string, string>>({})
+  const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({})
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [staged, setStaged] = useState<StagedAction | null>(null)
 
   const initialLoad = useRef(true)
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({})
+  const activeStartedAt = useRef(Date.now())
+
+  function recordInteraction(event: string, sourceKey: string, details: Record<string, unknown> = {}) {
+    if (!rankAssistEnabled) return
+    try {
+      const key = 'switchbook.forceCurveRankAssist.rank-v1'
+      const current = JSON.parse(window.localStorage.getItem(key) || '[]') as unknown[]
+      current.push({ event, sourceKey, at: new Date().toISOString(), activeMs: Math.max(0, Date.now() - activeStartedAt.current), ...details })
+      window.localStorage.setItem(key, JSON.stringify(current.slice(-500)))
+    } catch { /* Advisory telemetry must never block review work. */ }
+  }
+
+  useEffect(() => {
+    if (!rankAssistEnabled) return
+    const targets = queue.items.slice(activeIndex, activeIndex + 2)
+    for (const item of targets) {
+      if (Object.prototype.hasOwnProperty.call(suggestions, item.sourceKey)) continue
+      const first = item.evidence.find(e => e.id === item.primaryReviewId)
+      const catalog = first?.candidates.find(c => c.id === first.catalogEntryId) || first?.candidates[0]
+      if (!catalog) { setSuggestions(value => ({ ...value, [item.sourceKey]: null })); continue }
+      fetch(`/api/admin/force-curves/suggestions?catalogEntryId=${encodeURIComponent(catalog.id)}`)
+        .then(async response => response.ok ? response.json() : { suggestion: null })
+        .then(data => {
+          setSuggestions(value => ({ ...value, [item.sourceKey]: data.suggestion || null }))
+          if (data.suggestion) recordInteraction('suggestion_shown', item.sourceKey, { tier: data.suggestion.tier, algorithm: data.suggestion.algorithm })
+        }).catch(() => setSuggestions(value => ({ ...value, [item.sourceKey]: null })))
+    }
+  // Suggestions are deliberately lazy: active card plus one-card lookahead only.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, queue.items, rankAssistEnabled])
+
+  useEffect(() => {
+    if (!rankAssistEnabled) return
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const item = queue.items[activeIndex]
+      if (!item) return
+      // Escape must always make a staged decision reversible, including when
+      // focus is inside the confirmation dialog or on either dialog button.
+      if (event.key === 'Escape' && staged) { event.preventDefault(); recordInteraction('staged_cleared', staged.sourceKey); setStaged(null); return }
+      if (target?.closest('input, select, textarea, button, a, [contenteditable="true"], [role="dialog"]')) return
+      if (staged && staged.sourceKey === item.sourceKey && event.key === 'Enter') {
+        event.preventDefault(); void confirmStaged(item); return
+      }
+      if (event.key === 'j' || event.key === 'ArrowDown' || event.key === 'k' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        const delta = event.key === 'j' || event.key === 'ArrowDown' ? 1 : -1
+        const next = Math.max(0, Math.min(queue.items.length - 1, activeIndex + delta))
+        setActiveIndex(next); activeStartedAt.current = Date.now(); cardRefs.current[queue.items[next]?.sourceKey]?.focus(); return
+      }
+      const kind = event.key === 'a' && suggestions[item.sourceKey] ? 'ATTACH_SUGGESTION' : event.key === 'd' ? 'DEFER' : event.key === 'n' && item.evidence.some(e => e.masterSwitch) ? 'NO_MATCH' : null
+      if (kind) { event.preventDefault(); setStaged({ sourceKey: item.sourceKey, kind }); recordInteraction('action_staged', item.sourceKey, { kind }) }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, queue.items, rankAssistEnabled, staged, suggestions])
 
   async function refreshQueue(page = queue.pagination.page, signal?: AbortSignal) {
     const params = new URLSearchParams({ page: String(page), pageSize: String(queue.pagination.pageSize), query, bucket, status })
@@ -137,6 +200,34 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
     }
   }
 
+  async function attachSuggestion(item: Item) {
+    const suggestion = suggestions[item.sourceKey]
+    const first = item.evidence.find(e => e.status === 'OPEN')
+    const catalog = first?.candidates.find(c => c.id === first.catalogEntryId) || first?.candidates[0]
+    const reviewIds = item.evidence.filter(e => e.status === 'OPEN').map(e => e.id)
+    if (!suggestion || !catalog || !reviewIds.length) throw new Error('Suggestion is no longer available')
+    setBusy(item.sourceKey); setError('')
+    try {
+      const response = await fetch('/api/admin/force-curves/reviews', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewIds, masterSwitchId: suggestion.master.id, catalogEntryId: catalog.id }) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'The guarded attachment was rejected')
+      recordInteraction('suggestion_confirmed', item.sourceKey, { tier: suggestion.tier, masterSwitchId: suggestion.master.id })
+      await refreshQueue()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Suggestion attachment failed')
+    } finally { setBusy('') }
+  }
+
+  async function confirmStaged(item: Item) {
+    if (!staged || staged.sourceKey !== item.sourceKey) return
+    const action = staged.kind
+    setStaged(null)
+    const reviewIds = item.evidence.filter(e => e.status === 'OPEN').map(e => e.id)
+    if (action === 'ATTACH_SUGGESTION') return attachSuggestion(item)
+    if (action === 'DEFER') return mutate(item, { action: 'DEFER', reviewIds, reason: 'Deferred from rank-assist review queue' })
+    return mutate(item, { action: 'GROUP_NO_MATCH', reviewIds, reason: 'Admin source-centric durable no-match decision' })
+  }
+
   return (
     <section className="space-y-5" aria-busy={Boolean(busy)}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-label="Queue progress">
@@ -160,7 +251,7 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
 
       {error && <div role="alert" className="flex items-start justify-between gap-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"><span>{error}</span><button type="button" className="min-h-11 min-w-11 rounded-md font-bold hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-red-900/60" onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       {busy && <p className="text-sm font-medium text-blue-700 dark:text-blue-300" role="status">Updating queue…</p>}
-      <p className="text-sm text-gray-600 dark:text-gray-400">Showing {queue.items.length} of {queue.filteredSourceCount} matching source items. Bulk approval appears only for homogeneous, exact, high-confidence repeated evidence.</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">Showing {queue.items.length} of {queue.filteredSourceCount} matching source items. {rankAssistEnabled ? 'Rank assist is advisory: j/k moves, a/d/n stages an action, Enter confirms, and Escape clears. No shortcut writes immediately.' : 'Bulk approval appears only for homogeneous exact repeated evidence.'}</p>
 
       <div className="space-y-4">
         {queue.items.map(item => {
@@ -170,10 +261,12 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
           const openReviewIds = item.evidence.filter(e => e.status === 'OPEN').map(e => e.id)
           const selectedMaster = masterResults[item.sourceKey]?.find(result => result.id === chosenMaster[item.sourceKey])
           const requiresOverride = selectedMaster?.compatibility?.compatible === false
+          const suggestion = suggestions[item.sourceKey]
+          const isActive = activeIndex === queue.items.indexOf(item)
           return (
-            <article key={item.sourceKey} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <article key={item.sourceKey} ref={node => { cardRefs.current[item.sourceKey] = node }} tabIndex={rankAssistEnabled ? 0 : undefined} onFocus={() => { setActiveIndex(queue.items.indexOf(item)); activeStartedAt.current = Date.now() }} className={`overflow-hidden rounded-lg border bg-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-800 ${isActive && rankAssistEnabled ? 'border-blue-400 dark:border-blue-500' : 'border-gray-200 dark:border-gray-700'}`}>
               <header className="flex flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 dark:border-gray-700">
-                <div className="min-w-0"><h2 className="break-words text-base font-semibold text-gray-900 dark:text-white">{item.sourceKey}</h2><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.evidence.length} evidence row{item.evidence.length === 1 ? '' : 's'} · confidence {Math.round(item.confidence * 100)}%</p></div>
+                <div className="min-w-0"><h2 className="break-words text-base font-semibold text-gray-900 dark:text-white">{item.sourceKey}</h2><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{item.evidence.length} evidence row{item.evidence.length === 1 ? '' : 's'} · {rankAssistEnabled ? `deterministic queue class ${item.bucket}` : `confidence ${Math.round(item.confidence * 100)}%`}</p></div>
                 <StatusBadge value={item.deferred ? 'DEFERRED' : item.bucket} />
               </header>
               <div className="grid md:grid-cols-2">
@@ -187,9 +280,11 @@ export default function ForceCurveReviewQueue({ initialQueue }: { initialQueue: 
                 <div className="p-4 sm:p-6">
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Candidate MasterSwitch</h3>
                   {master ? <><p className="font-medium text-gray-900 dark:text-white">{master.manufacturer} {master.name}</p><p className="mt-1 break-words text-sm text-gray-600 dark:text-gray-300">{master.technology || 'Technology unknown'} · ID {master.id}</p></> : <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">No MasterSwitch attached.</p>}
+                  {rankAssistEnabled && suggestion && item.status === 'OPEN' && <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100" data-testid="force-curve-rank-suggestion"><p className="font-semibold">Ranked suggestion: {suggestion.master.manufacturer} {suggestion.master.name}</p><p className="mt-1 text-xs">{suggestion.reason === 'NORMALIZED_IDENTITY_EXACT' ? 'Normalized source identity exactly matches one approved MasterSwitch.' : 'The complete normalized identity occurs at a word boundary in exactly one approved MasterSwitch.'} Algorithm {suggestion.algorithm}; this is not a probability.</p>{suggestion.warnings.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-800 dark:text-amber-200">{suggestion.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>}<button type="button" className={`${secondaryButtonClass} mt-3 w-full`} disabled={Boolean(busy)} onClick={() => { setStaged({ sourceKey: item.sourceKey, kind: 'ATTACH_SUGGESTION' }); recordInteraction('action_staged', item.sourceKey, { kind: 'ATTACH_SUGGESTION' }) }}>Stage suggestion (A)</button></div>}
                   {item.status === 'OPEN' && <div className="mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-900/40"><label className="block text-sm font-medium text-gray-700 dark:text-gray-200" htmlFor={`master-${item.sourceKey}`}>Choose another MasterSwitch</label><form className="flex flex-col gap-2 sm:flex-row" onSubmit={event => { event.preventDefault(); void findMasters(item) }}><input id={`master-${item.sourceKey}`} className={`${controlClass} min-w-0 flex-1`} value={masterQuery[item.sourceKey] ?? candidate?.displayName ?? ''} onChange={e => setMasterQuery(value => ({ ...value, [item.sourceKey]: e.target.value }))} /><button type="submit" disabled={Boolean(busy)} className={secondaryButtonClass}>Search</button></form>{(masterResults[item.sourceKey] || []).length > 0 && <><select className={`${controlClass} w-full`} aria-label={`Exact MasterSwitch for ${item.sourceKey}`} value={chosenMaster[item.sourceKey] || ''} onChange={e => { setChosenMaster(value => ({ ...value, [item.sourceKey]: e.target.value })); setOverrideAcknowledged(value => ({ ...value, [item.sourceKey]: false })); setOverrideReason(value => ({ ...value, [item.sourceKey]: '' })) }}><option value="">Select exact master</option>{masterResults[item.sourceKey].map(m => <option key={m.id} value={m.id}>{m.manufacturer} {m.name} — {m.technology}{m.compatibility?.compatible ? '' : ` — warning: ${m.compatibility?.reason || 'identity could not be verified'}`}</option>)}</select>{requiresOverride && <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"><p><strong>Compatibility warning:</strong> {selectedMaster?.compatibility?.reason || 'The exact identity could not be verified.'}</p><label className="flex items-start gap-2"><input type="checkbox" className="mt-1 h-4 w-4" checked={overrideAcknowledged[item.sourceKey] || false} onChange={e => setOverrideAcknowledged(value => ({ ...value, [item.sourceKey]: e.target.checked }))} /><span>I verified this is the intended MasterSwitch and want to override the warning.</span></label><label className="block font-medium" htmlFor={`override-reason-${item.sourceKey}`}>Audit reason</label><textarea id={`override-reason-${item.sourceKey}`} className={`${controlClass} min-h-20 w-full py-2`} value={overrideReason[item.sourceKey] || ''} onChange={e => setOverrideReason(value => ({ ...value, [item.sourceKey]: e.target.value }))} placeholder="Why this source belongs to this MasterSwitch" /></div>}{masterResults[item.sourceKey].some(m => !m.compatibility?.compatible) && !requiresOverride && <p className="text-xs text-amber-700 dark:text-amber-300">Results with identity warnings remain selectable, but require an acknowledged, audited admin override.</p>}<button type="button" disabled={Boolean(busy) || !selectedMaster || Boolean(requiresOverride && (!overrideAcknowledged[item.sourceKey] || (overrideReason[item.sourceKey] || '').trim().length < 3))} className="min-h-11 w-full rounded-md bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus-visible:ring-offset-gray-800" onClick={() => chooseMaster(item)}>Attach selected MasterSwitch</button></>}</div>}
                 </div>
               </div>
+              {staged?.sourceKey === item.sourceKey && <div role="dialog" aria-label="Confirm staged force curve decision" className="border-t border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-100"><p><strong>Confirm deliberate action:</strong> {staged.kind === 'ATTACH_SUGGESTION' ? `attach ${suggestion?.master.manufacturer || ''} ${suggestion?.master.name || ''}` : staged.kind === 'DEFER' ? 'defer this entire source group' : 'record durable no-match for this source group'}.</p><p className="mt-1 text-xs">Nothing has been written yet. Confirm revalidates the complete group through the existing fail-closed server gate.</p><div className="mt-3 flex gap-2"><button type="button" autoFocus className="min-h-11 rounded-md bg-blue-700 px-4 font-medium text-white" onClick={() => void confirmStaged(item)}>Confirm (Enter)</button><button type="button" className={secondaryButtonClass} onClick={() => { recordInteraction('staged_cleared', item.sourceKey); setStaged(null) }}>Cancel (Escape)</button></div></div>}
               {item.status === 'OPEN' && <footer className="flex flex-col gap-2 border-t border-gray-200 bg-gray-50 p-4 sm:flex-row sm:flex-wrap sm:px-6 dark:border-gray-700 dark:bg-gray-900/40">{item.actionable && candidate && <button type="button" disabled={Boolean(busy)} className="min-h-11 rounded-md bg-green-700 px-4 text-sm font-medium text-white transition-colors hover:bg-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-600 dark:hover:bg-green-700 dark:focus-visible:ring-offset-gray-800" onClick={() => openReviewIds.length > 1 ? mutate(item, { action: 'BULK_APPROVE', reviewIds: openReviewIds, catalogEntryId: candidate.id, reason: 'Homogeneous exact source evidence' }) : resolve(item, 'MANUALLY_APPROVED')}>{openReviewIds.length > 1 ? `Approve group (${openReviewIds.length})` : 'Approve suggestion'}</button>}{master && <button type="button" disabled={Boolean(busy)} className="min-h-11 rounded-md border border-red-300 bg-white px-4 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-700 dark:bg-gray-800 dark:text-red-300 dark:hover:bg-red-950/40 dark:focus-visible:ring-offset-gray-800" onClick={() => mutate(item, { action: 'GROUP_NO_MATCH', reviewIds: openReviewIds, reason: 'Admin source-centric durable no-match decision' })}>Durable NO_MATCH ({openReviewIds.length})</button>}<button type="button" disabled={Boolean(busy)} className={secondaryButtonClass} onClick={() => mutate(item, { action: 'DEFER', reviewIds: openReviewIds, reason: 'Deferred from admin queue' })}>{item.deferred ? 'Deferred' : 'Skip / defer'}</button></footer>}
             </article>
           )

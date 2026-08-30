@@ -9,4 +9,5 @@ import "./master-switch-sort.test";
 import "./switch-filters.test";
 import "./partner-api.test";
 import "./force-curves.test";
+import "./admin-force-curve-suggestions.test";
 import "./virtual-switch-list-geometry.test";

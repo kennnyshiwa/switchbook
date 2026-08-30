@@ -21,7 +21,7 @@ export default async function Page() {
             <p className="mt-2 max-w-3xl text-sm text-gray-600 sm:text-base dark:text-gray-400">Review imported force curve sources, resolve conflicts, and attach exact MasterSwitch records.</p>
           </div>
         </div>
-        <ForceCurveReviewQueue initialQueue={queue} />
+        <ForceCurveReviewQueue initialQueue={queue} rankAssistEnabled={process.env.FORCE_CURVE_RANK_ASSIST_ENABLED === 'true'} />
       </div>
     </main>
   )
