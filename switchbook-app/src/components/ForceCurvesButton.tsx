@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ForceCurveMatch } from '@/utils/forceCurves'
+import { forceCurvePickerPosition } from '@/lib/force-curve-picker'
 
 type CanonicalCurveMatch = ForceCurveMatch & {
   provenance: string
@@ -42,6 +43,15 @@ export default function ForceCurvesButton({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
   const pickerId = `force-curve-picker-${masterSwitchId || switchName}`.replace(/[^a-zA-Z0-9_-]/g, '-')
+
+  const positionPicker = () => {
+    if (!buttonRef.current) return
+    setDropdownStyle(forceCurvePickerPosition(buttonRef.current.getBoundingClientRect(), window.innerWidth, window.innerHeight))
+  }
+
+  const displayMeasurementDate = (value: string | null) => value
+    ? new Intl.DateTimeFormat(undefined, { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(`${value}T00:00:00Z`))
+    : 'Date not recorded'
 
   const canonicalMatch = (curve: { id: string; folderName: string; url: string; provenance?: string; condition?: string; measurementDate?: string | null }): CanonicalCurveMatch => ({
     catalogEntryId: curve.id,
@@ -196,16 +206,7 @@ export default function ForceCurvesButton({
 
     // If saved preference exists and not showing all options, show preference options (authenticated users only)
     if (savedPreference && !showAllOptions && isAuthenticated) {
-      // Calculate position for icon variant to escape table
-      if (variant === 'icon' && buttonRef.current) {
-        const rect = buttonRef.current.getBoundingClientRect()
-        setDropdownStyle({
-          position: 'fixed',
-          top: rect.top - 4, // position just above button (will grow upward with bottom-full)
-          right: window.innerWidth - rect.right, // anchor to right edge of button
-          zIndex: 9999
-        })
-      }
+      positionPicker()
       setIsDropdownOpen(!isDropdownOpen)
       return
     }
@@ -216,17 +217,8 @@ export default function ForceCurvesButton({
       return
     }
 
-    // Otherwise, show dropdown with options
-    // Calculate position for icon variant to escape table
-    if (variant === 'icon' && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      setDropdownStyle({
-        position: 'fixed',
-        top: rect.top - 4, // position just above button (will grow upward with bottom-full)
-        right: window.innerWidth - rect.right, // anchor to right edge of button
-        zIndex: 9999
-      })
-    }
+    // Otherwise, show a viewport-clamped picker for every trigger variant.
+    positionPicker()
     setIsDropdownOpen(!isDropdownOpen)
   }
 
@@ -364,7 +356,7 @@ export default function ForceCurvesButton({
             >
               <div className="font-medium text-gray-900 dark:text-white">{match.folderName}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                {match.provenance} · {match.condition} · {match.measurementDate ? new Date(match.measurementDate).toLocaleDateString() : 'Date not recorded'}
+                {match.provenance} · {match.condition} · {displayMeasurementDate(match.measurementDate)}
               </div>
             </button>
           ))}
@@ -385,25 +377,8 @@ export default function ForceCurvesButton({
   const renderDropdown = () => {
     if (!isDropdownOpen || (matches.length <= 1 && (!savedPreference || !isAuthenticated))) return null
 
-    // For icon variant, use fixed positioning to escape table
-    if (variant === 'icon') {
-      return (
-        <div 
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg w-[calc(100vw-2rem)] max-w-80"
-          style={{
-            ...dropdownStyle,
-            transform: 'translateY(-100%)', // Make it grow upward from the anchor point
-            marginBottom: '4px' // Add small gap like mb-1
-          }}
-        >
-          {renderDropdownContent()}
-        </div>
-      )
-    }
-
-    // For other variants, use normal absolute positioning
     return (
-      <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[9999] w-[calc(100vw-2rem)] max-w-80">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg" style={dropdownStyle}>
         {renderDropdownContent()}
       </div>
     )

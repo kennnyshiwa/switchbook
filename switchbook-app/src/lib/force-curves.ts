@@ -74,8 +74,11 @@ export function deriveMeasurementMetadata(path: string, provenance?: string) {
     : /\b(break in|broken in|breakin|retest|re test)\b/.test(value)
       ? 'Break-in / retest'
       : /\bstock\b/.test(value) ? 'Stock' : 'Measurement'
-  const parsedDate = typeof explicit.date === 'string' ? new Date(explicit.date) : null
-  return { condition, measurementDate: parsedDate && !Number.isNaN(parsedDate.valueOf()) ? parsedDate.toISOString() : null }
+  const date = typeof explicit.date === 'string' ? explicit.date : ''
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const parsedDate = match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : null
+  const validDate = Boolean(parsedDate && parsedDate.getUTCFullYear() === Number(match![1]) && parsedDate.getUTCMonth() === Number(match![2]) - 1 && parsedDate.getUTCDate() === Number(match![3]))
+  return { condition, measurementDate: validDate ? date : null }
 }
 
 function curveProvenance(source?: string) {

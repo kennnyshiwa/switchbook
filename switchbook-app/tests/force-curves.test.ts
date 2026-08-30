@@ -3,6 +3,7 @@ import test from 'node:test'
 import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, deriveMeasurementMetadata, forceCurveSyncRevision, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
 import { adminActor, buildReviewQueue, catalogMasterCompatibility, catalogMasterSearchTerms, exactCatalogMasterIdentity, isSameOriginMutation, resolveUniqueCatalogMaster, uniqueCatalogMasterCompatibility } from '../src/lib/admin-force-curves'
 import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue'
+import { forceCurvePickerPosition } from '../src/lib/force-curve-picker'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('sync run identity deterministically versions upstream content and matching algorithm', () => {
@@ -38,7 +39,7 @@ test('approved read supports multiple curves and excludes stale/deleted rows', (
   assert.deepEqual(approved.map(row=>row.id),['stock','retest'])
   assert.deepEqual(approved.map(row=>row.condition),['Stock','100k actuations'])
   assert.deepEqual(approved.map(row=>row.provenance),['ThereminGoat','Aeboards'])
-  assert.deepEqual(approved.map(row=>row.measurementDate),[null,'2026-08-29T00:00:00.000Z'])
+  assert.deepEqual(approved.map(row=>row.measurementDate),[null,'2026-08-29'])
   assert.equal(approved[1].url,'https://github.com/Aeboards/force-curves/blob/main/KTT%20Peach%20Retest/KTT%20Peach%20Break-in%20Retest%20HighResolutionRaw.csv')
   assert.equal(resolveApprovedCurveRecords([{ state: 'AUTO_APPROVED', catalogEntry: { id:'gone',displayName:'gone',repositoryPath:'gone/TG.csv',exists:false } }]).length, 0)
 })
@@ -46,6 +47,13 @@ test('measurement labels never promote generic timestamps or ambiguous filename 
   assert.deepEqual(deriveMeasurementMetadata('Switch/Switch After New Run.csv', JSON.stringify({decidedAt:'2026-08-30'})), {condition:'Measurement',measurementDate:null})
   assert.deepEqual(deriveMeasurementMetadata('Switch/Switch Retest.csv'), {condition:'Break-in / retest',measurementDate:null})
   assert.deepEqual(deriveMeasurementMetadata('Switch/Switch Stock.csv'), {condition:'Stock',measurementDate:null})
+  assert.deepEqual(deriveMeasurementMetadata('Switch/Switch.csv',JSON.stringify({measurement:{date:'2025-02-29'}})), {condition:'Measurement',measurementDate:null})
+  assert.deepEqual(deriveMeasurementMetadata('Switch/Switch.csv',JSON.stringify({measurement:{date:'2024-02-29'}})), {condition:'Measurement',measurementDate:'2024-02-29'})
+})
+test('force curve picker clamps both edges and chooses an in-viewport vertical placement', () => {
+  assert.deepEqual(forceCurvePickerPosition({left:310,right:330,top:400,bottom:430},320,568), {position:'fixed',left:16,top:108,width:288,maxHeight:288,zIndex:9999})
+  assert.deepEqual(forceCurvePickerPosition({left:-20,right:10,top:10,bottom:40},1024,768), {position:'fixed',left:16,top:44,width:320,maxHeight:288,zIndex:9999})
+  assert.deepEqual(forceCurvePickerPosition({left:900,right:930,top:10,bottom:40},1024,768).left,688)
 })
 test('Peach Blossom behavior: durable NO_MATCH suppresses conflicting approval and yields no TG.csv URL', () => {
   const result = resolveApprovedCurveRecords([{ state: 'NO_MATCH', catalogEntry: null }, { state: 'AUTO_APPROVED', catalogEntry: { id:'bad',displayName:'Cherry Blossom',repositoryPath:'Cherry Blossom/TG.csv',exists:true } }])
