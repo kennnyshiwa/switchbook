@@ -60,4 +60,6 @@ test('force curve compatibility overrides are explicit, validated, and audited s
   assert.match(service, /compatibilityReason:selectedCompatibility\?\.reason/)
   assert.match(service, /actorId:input\.actorId/)
   assert.match(service, /repositoryPath:entry\.repositoryPath,revision:entry\.revision,contentHash:entry\.contentHash/)
+  assert.match(service, /state:'AUTO_APPROVED',catalogEntryId:\{not:candidate\.id\}/)
+  assert.match(service, /Superseded by explicit reviewed source attachment/)
 })

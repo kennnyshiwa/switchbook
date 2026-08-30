@@ -11,6 +11,8 @@ async function main() {
   await prisma.manufacturer.upsert({ where: { name: 'Tecsee' }, create: { name: 'Tecsee', aliases: [], verified: true }, update: { verified: true } })
   const intended = await prisma.masterSwitch.create({ data: { id: `override-intended-${suffix}`, name: fixturePrefix, manufacturer: 'Tecsee', technology: 'ELECTRO_CAPACITIVE', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
   const wrong = await prisma.masterSwitch.create({ data: { id: `override-wrong-${suffix}`, name: `${fixturePrefix} V2`, manufacturer: 'Tecsee', technology: 'MECHANICAL', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
+  const automaticCatalog = await prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: `AEBoards ${fixturePrefix} Automatic Guess/${fixturePrefix}_Automatic_HighResolutionRaw.csv`, displayName: `AEBoards ${fixturePrefix} Automatic Guess`, exists: true } })
+  const automaticMapping = await prisma.forceCurveMapping.create({ data: { masterSwitchId: intended.id, catalogEntryId: automaticCatalog.id, state: 'AUTO_APPROVED', confidence: 0.5, provenance: 'automatic fixture' } })
   const qualifiers = ['Bottom Out', 'Top Out', '0.5mm', '1mm', '2mm', '3mm']
   const groups: { highId: string; rawId: string; reviewId: string; request: Parameters<typeof linkSourceReviewGroup>[0] }[] = []
 
@@ -26,6 +28,7 @@ async function main() {
       const request = { reviewIds: [review.id], masterSwitchId: intended.id, catalogEntryId: high.id, actorId: actor.id, compatibilityOverride: { acknowledged: true as const, reason: `Measurement qualifier ${qualifier} belongs to the canonical Naevy EC product.` } }
       groups.push({ highId: high.id, rawId: raw.id, reviewId: review.id, request })
       assert.deepEqual(await linkSourceReviewGroup(request, prisma), { linked: 1, masterSwitchId: intended.id, catalogEntryId: high.id })
+      if (index === 0) assert.deepEqual(await prisma.forceCurveMapping.findUniqueOrThrow({ where: { id: automaticMapping.id }, select: { state: true, reason: true } }), { state: 'STALE', reason: 'Superseded by explicit reviewed source attachment' })
     }
 
     assert.equal(await prisma.forceCurveMapping.count({ where: { masterSwitchId: intended.id, state: 'MANUALLY_APPROVED' } }), 6)
@@ -45,10 +48,13 @@ async function main() {
     assert.equal(JSON.stringify((afterReview.payload as Record<string, unknown>).linkAudit), beforeAudit)
     await assert.rejects(linkSourceReviewGroup({ ...first.request, masterSwitchId: wrong.id }, prisma), /REVIEW_ALREADY_LINKED/)
 
-    const mixedReview = await prisma.forceCurveReviewCase.create({ data: { kind: 'SOURCE_UNVERIFIED', reason: 'mixed-source rejection fixture', catalogEntryId: groups[0].highId, payload: { measurementKey: `${fixturePrefix}/mixed`, candidateIds: [groups[0].rawId, groups[1].highId] } } })
+    const mixedReview = await prisma.forceCurveReviewCase.create({ data: { kind: 'SOURCE_UNVERIFIED', reason: 'mixed-source rejection fixture', catalogEntryId: groups[0].highId, payload: { measurementKey: `${fixturePrefix}/mixed`, candidateIds: [groups[0].highId, groups[0].rawId, groups[1].highId] } } })
     groups.push({ highId: groups[0].highId, rawId: groups[1].highId, reviewId: mixedReview.id, request: { reviewIds: [mixedReview.id], masterSwitchId: intended.id, catalogEntryId: groups[0].highId, actorId: actor.id, compatibilityOverride: { acknowledged: true, reason: 'Must still fail because evidence spans source groups.' } } })
+    const mappingsBeforeMixed = await prisma.forceCurveMapping.findMany({ where: { masterSwitchId: intended.id }, select: { id: true, state: true, provenance: true, reason: true, updatedAt: true }, orderBy: { id: 'asc' } })
+    const mixedBefore = await prisma.forceCurveReviewCase.findUniqueOrThrow({ where: { id: mixedReview.id } })
     await assert.rejects(linkSourceReviewGroup(groups.at(-1)!.request, prisma), /MIXED_SOURCE_GROUP/)
-    assert.equal((await prisma.forceCurveReviewCase.findUniqueOrThrow({ where: { id: mixedReview.id } })).status, 'OPEN')
+    assert.deepEqual(await prisma.forceCurveReviewCase.findUniqueOrThrow({ where: { id: mixedReview.id } }), mixedBefore)
+    assert.deepEqual(await prisma.forceCurveMapping.findMany({ where: { masterSwitchId: intended.id }, select: { id: true, state: true, provenance: true, reason: true, updatedAt: true }, orderBy: { id: 'asc' } }), mappingsBeforeMixed)
     assert.equal(await prisma.forceCurveMapping.count({ where: { masterSwitchId: intended.id, state: 'MANUALLY_APPROVED' } }), 6)
   } finally {
     await prisma.forceCurveReviewCase.deleteMany({ where: { id: { in: groups.map(group => group.reviewId) } } })

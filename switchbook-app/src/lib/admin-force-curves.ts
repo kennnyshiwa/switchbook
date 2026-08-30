@@ -299,14 +299,19 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(legacyAttached&&(legacySourceRows.length!==unique.length||legacySourceRows.some(row=>!isAttachedReview(row)||row.masterSwitchId!==master.id||row.catalogEntryId!==candidate.id)||legacySourceRows.map(row=>row.id).sort().some((id,index)=>id!==[...unique].sort()[index]))) throw new Error('INCOMPLETE_SOURCE_GROUP')
     const conflicts=await tx.forceCurveReviewCase.findMany({where:{id:{notIn:unique},status:'OPEN',masterSwitchId:master.id,catalogEntryId:{in:allCandidateIds}},select:{payload:true}})
     if(conflicts.some(row=>!isAttachedReview(row))) throw new Error('CONFLICTING_OPEN_REVIEW')
+    // Mapping policy is state-specific. Reviewed manual measurements are
+    // independent durable decisions and coexist. Automatic guesses for this
+    // master are provisional, so an explicit reviewed attachment supersedes
+    // every other AUTO_APPROVED candidate while leaving manual rows untouched.
+    const supersededAutomaticMappings=await tx.forceCurveMapping.findMany({
+      where:{masterSwitchId:master.id,state:'AUTO_APPROVED',catalogEntryId:{not:candidate.id}},
+      select:{id:true},
+    })
     const now=new Date()
     const compatibilityOverride=overrideRequested?{acknowledged:true,reason:overrideReason,actorId:input.actorId,compatibilityReason:selectedCompatibility?.reason||'Identity compatibility could not be verified',evidence:allCandidates.map((entry,index)=>({catalogEntryId:entry.id,repositoryPath:entry.repositoryPath,revision:entry.revision,contentHash:entry.contentHash,compatible:allCompatibilities[index].compatible,compatibilityReason:allCompatibilities[index].reason}))}:undefined
     const provenance=JSON.stringify({workflow:'admin-source-attach',reviewIds:unique,actorId:input.actorId,decidedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id,compatibilityOverride})
     await tx.forceCurveMapping.deleteMany({where:{noMatchKey:master.id}})
-    // A MasterSwitch may legitimately have multiple measurements (for
-    // example sample/actuation positions). Pair uniqueness prevents duplicate
-    // mappings; source-group and attached-review checks above prevent target
-    // replacement. Existing approved measurements must remain intact.
+    await tx.forceCurveMapping.updateMany({where:{id:{in:supersededAutomaticMappings.map(mapping=>mapping.id)}},data:{state:'STALE',reason:'Superseded by explicit reviewed source attachment'}})
     const mappingReason=overrideRequested?'Compatibility warning overridden by admin':'Exact source group attached by admin'
     await tx.forceCurveMapping.upsert({where:{masterSwitchId_catalogEntryId:{masterSwitchId:master.id,catalogEntryId:candidate.id}},create:{masterSwitchId:master.id,catalogEntryId:candidate.id,state:'MANUALLY_APPROVED',confidence:overrideRequested?0:1,provenance,reason:mappingReason,decidedById:input.actorId,decidedAt:now},update:{state:'MANUALLY_APPROVED',confidence:overrideRequested?0:1,provenance,reason:mappingReason,decidedById:input.actorId,decidedAt:now}})
     for(const row of rows) { const payload=objectPayload(row.payload); const linkAudit=legacyAttached&&payload.linkAudit?payload.linkAudit:{actorId:input.actorId,linkedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id,compatibilityOverride}; await tx.forceCurveReviewCase.update({where:{id:row.id},data:{masterSwitchId:master.id,catalogEntryId:candidate.id,status:'RESOLVED',resolution:'MANUALLY_APPROVED',resolvedById:input.actorId,resolvedAt:now,payload:{...payload,queueWorkflow:legacyAttached?payload.queueWorkflow:{status:'ATTACHED',actorId:input.actorId,at:now.toISOString()},linkAudit} as Prisma.InputJsonValue}}) }
