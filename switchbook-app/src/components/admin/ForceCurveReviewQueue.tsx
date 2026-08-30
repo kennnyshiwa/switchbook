@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { findNextRankedIndex } from '@/lib/admin-force-curve-suggestions'
 
 type Candidate = { id: string; displayName: string; repositoryPath: string; revision: string | null; contentHash: string | null; manufacturer: string | null; technology: string | null }
 type Master = { id: string; name: string; manufacturer: string | null; technology: string | null; compatibility?: { compatible: boolean; reason: string } }
@@ -9,6 +10,7 @@ type Item = { sourceKey: string; primaryReviewId: string; bucket: string; confid
 type Queue = { items: Item[]; counts: Record<string, number>; rawReviewCount: number; uniqueSourceCount: number; openSourceCount: number; resolvedSourceCount: number; remainingActionable: number; deferredCount: number; filteredSourceCount: number; pagination: { page: number; pageSize: number; pageCount: number; hasPrevious: boolean; hasNext: boolean } }
 type Suggestion = { algorithm: 'rank-v1'; tier: 'EXACT_UNIQUE' | 'BOUNDARY_UNIQUE'; reason: 'NORMALIZED_IDENTITY_EXACT' | 'FULL_IDENTITY_BOUNDARY'; master: Master; warnings: string[] }
 type StagedAction = { sourceKey: string; kind: 'ATTACH_SUGGESTION' | 'DEFER' | 'NO_MATCH' }
+type SuggestionState = { catalogEntryId: string; status: 'loading' | 'match' | 'none' | 'error'; suggestion: Suggestion | null; exclusion?: string }
 
 const controlClass = 'min-h-11 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400 dark:hover:border-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/30'
 const secondaryButtonClass = 'min-h-11 rounded-md border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 dark:focus-visible:ring-offset-gray-800'
@@ -25,9 +27,10 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
   const [chosenMaster, setChosenMaster] = useState<Record<string, string>>({})
   const [overrideAcknowledged, setOverrideAcknowledged] = useState<Record<string, boolean>>({})
   const [overrideReason, setOverrideReason] = useState<Record<string, string>>({})
-  const [suggestions, setSuggestions] = useState<Record<string, Suggestion | null>>({})
+  const [suggestions, setSuggestions] = useState<Record<string, SuggestionState>>({})
   const [activeIndex, setActiveIndex] = useState(0)
   const [staged, setStaged] = useState<StagedAction | null>(null)
+  const [scanning, setScanning] = useState(false)
 
   const initialLoad = useRef(true)
   const cardRefs = useRef<Record<string, HTMLElement | null>>({})
@@ -43,20 +46,39 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
     } catch { /* Advisory telemetry must never block review work. */ }
   }
 
+  function catalogFor(item: Item) {
+    const first = item.evidence.find(e => e.id === item.primaryReviewId)
+    return first?.candidates.find(c => c.id === first.catalogEntryId) || first?.candidates[0]
+  }
+
+  async function loadSuggestion(item: Item) {
+    const catalog = catalogFor(item)
+    if (!catalog) return null
+    const current = suggestions[item.sourceKey]
+    if (current?.catalogEntryId === catalog.id && current.status !== 'error') return current.suggestion
+    setSuggestions(value => ({ ...value, [item.sourceKey]: { catalogEntryId: catalog.id, status: 'loading', suggestion: null } }))
+    try {
+      const response = await fetch(`/api/admin/force-curves/suggestions?catalogEntryId=${encodeURIComponent(catalog.id)}`)
+      if (!response.ok) throw new Error(`Suggestion request failed (${response.status})`)
+      const data = await response.json()
+      const suggestion = data.suggestion as Suggestion | null
+      setSuggestions(value => ({ ...value, [item.sourceKey]: { catalogEntryId: catalog.id, status: suggestion ? 'match' : 'none', suggestion, exclusion: data.exclusion } }))
+      if (suggestion) recordInteraction('suggestion_shown', item.sourceKey, { tier: suggestion.tier, algorithm: suggestion.algorithm })
+      return suggestion
+    } catch {
+      setSuggestions(value => ({ ...value, [item.sourceKey]: { catalogEntryId: catalog.id, status: 'error', suggestion: null } }))
+      return null
+    }
+  }
+
   useEffect(() => {
     if (!rankAssistEnabled) return
     const targets = queue.items.slice(activeIndex, activeIndex + 2)
     for (const item of targets) {
-      if (Object.prototype.hasOwnProperty.call(suggestions, item.sourceKey)) continue
-      const first = item.evidence.find(e => e.id === item.primaryReviewId)
-      const catalog = first?.candidates.find(c => c.id === first.catalogEntryId) || first?.candidates[0]
-      if (!catalog) { setSuggestions(value => ({ ...value, [item.sourceKey]: null })); continue }
-      fetch(`/api/admin/force-curves/suggestions?catalogEntryId=${encodeURIComponent(catalog.id)}`)
-        .then(async response => response.ok ? response.json() : { suggestion: null })
-        .then(data => {
-          setSuggestions(value => ({ ...value, [item.sourceKey]: data.suggestion || null }))
-          if (data.suggestion) recordInteraction('suggestion_shown', item.sourceKey, { tier: data.suggestion.tier, algorithm: data.suggestion.algorithm })
-        }).catch(() => setSuggestions(value => ({ ...value, [item.sourceKey]: null })))
+      const catalog = catalogFor(item)
+      const cached = suggestions[item.sourceKey]
+      if (!catalog || cached?.catalogEntryId === catalog.id && cached.status !== 'error') continue
+      void loadSuggestion(item)
     }
   // Suggestions are deliberately lazy: active card plus one-card lookahead only.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,13 +103,29 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
         const next = Math.max(0, Math.min(queue.items.length - 1, activeIndex + delta))
         setActiveIndex(next); activeStartedAt.current = Date.now(); cardRefs.current[queue.items[next]?.sourceKey]?.focus(); return
       }
-      const kind = event.key === 'a' && suggestions[item.sourceKey] ? 'ATTACH_SUGGESTION' : event.key === 'd' ? 'DEFER' : event.key === 'n' && item.evidence.some(e => e.masterSwitch) ? 'NO_MATCH' : null
+      const kind = event.key === 'a' && suggestions[item.sourceKey]?.suggestion ? 'ATTACH_SUGGESTION' : event.key === 'd' ? 'DEFER' : event.key === 'n' && item.evidence.some(e => e.masterSwitch) ? 'NO_MATCH' : null
       if (kind) { event.preventDefault(); setStaged({ sourceKey: item.sourceKey, kind }); recordInteraction('action_staged', item.sourceKey, { kind }) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex, queue.items, rankAssistEnabled, staged, suggestions])
+
+  async function findNextSuggestion() {
+    setScanning(true)
+    setError('')
+    try {
+      const index = await findNextRankedIndex(queue.items, activeIndex, loadSuggestion)
+      if (index !== null) {
+        setActiveIndex(index)
+        window.requestAnimationFrame(() => cardRefs.current[queue.items[index].sourceKey]?.focus())
+        return
+      }
+      setError('No deterministic ranked suggestion was found on this page. Manual search remains available.')
+    } finally {
+      setScanning(false)
+    }
+  }
 
   async function refreshQueue(page = queue.pagination.page, signal?: AbortSignal) {
     const params = new URLSearchParams({ page: String(page), pageSize: String(queue.pagination.pageSize), query, bucket, status })
@@ -201,11 +239,12 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
   }
 
   async function attachSuggestion(item: Item) {
-    const suggestion = suggestions[item.sourceKey]
+    const suggestionState = suggestions[item.sourceKey]
+    const suggestion = suggestionState?.suggestion
     const first = item.evidence.find(e => e.status === 'OPEN')
     const catalog = first?.candidates.find(c => c.id === first.catalogEntryId) || first?.candidates[0]
     const reviewIds = item.evidence.filter(e => e.status === 'OPEN').map(e => e.id)
-    if (!suggestion || !catalog || !reviewIds.length) throw new Error('Suggestion is no longer available')
+    if (!suggestion || !catalog || suggestionState.catalogEntryId !== catalog.id || !reviewIds.length) throw new Error('Suggestion is no longer available')
     setBusy(item.sourceKey); setError('')
     try {
       const response = await fetch('/api/admin/force-curves/reviews', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewIds, masterSwitchId: suggestion.master.id, catalogEntryId: catalog.id }) })
@@ -252,6 +291,7 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
       {error && <div role="alert" className="flex items-start justify-between gap-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"><span>{error}</span><button type="button" className="min-h-11 min-w-11 rounded-md font-bold hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:hover:bg-red-900/60" onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       {busy && <p className="text-sm font-medium text-blue-700 dark:text-blue-300" role="status">Updating queue…</p>}
       <p className="text-sm text-gray-600 dark:text-gray-400">Showing {queue.items.length} of {queue.filteredSourceCount} matching source items. {rankAssistEnabled ? 'Rank assist is advisory: j/k moves, a/d/n stages an action, Enter confirms, and Escape clears. No shortcut writes immediately.' : 'Bulk approval appears only for homogeneous exact repeated evidence.'}</p>
+      {rankAssistEnabled && <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 sm:flex-row sm:items-center sm:justify-between dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100" data-testid="force-curve-rank-status"><div><p className="font-semibold">Rank assist enabled</p><p className="mt-1 text-xs">{Object.values(suggestions).filter(value => value.status !== 'loading').length} of {queue.items.length} groups checked on this page · {Object.values(suggestions).filter(value => value.status === 'match').length} deterministic suggestion(s) found.</p></div><button type="button" className={secondaryButtonClass} disabled={Boolean(busy) || scanning} onClick={() => void findNextSuggestion()}>{scanning ? 'Finding suggestion…' : 'Find next suggestion'}</button></div>}
 
       <div className="space-y-4">
         {queue.items.map(item => {
@@ -261,7 +301,8 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
           const openReviewIds = item.evidence.filter(e => e.status === 'OPEN').map(e => e.id)
           const selectedMaster = masterResults[item.sourceKey]?.find(result => result.id === chosenMaster[item.sourceKey])
           const requiresOverride = selectedMaster?.compatibility?.compatible === false
-          const suggestion = suggestions[item.sourceKey]
+          const suggestionState = suggestions[item.sourceKey]
+          const suggestion = suggestionState?.suggestion
           const isActive = activeIndex === queue.items.indexOf(item)
           return (
             <article key={item.sourceKey} ref={node => { cardRefs.current[item.sourceKey] = node }} tabIndex={rankAssistEnabled ? 0 : undefined} onFocus={() => { setActiveIndex(queue.items.indexOf(item)); activeStartedAt.current = Date.now() }} className={`overflow-hidden rounded-lg border bg-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-800 ${isActive && rankAssistEnabled ? 'border-blue-400 dark:border-blue-500' : 'border-gray-200 dark:border-gray-700'}`}>
@@ -281,6 +322,9 @@ export default function ForceCurveReviewQueue({ initialQueue, rankAssistEnabled 
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Candidate MasterSwitch</h3>
                   {master ? <><p className="font-medium text-gray-900 dark:text-white">{master.manufacturer} {master.name}</p><p className="mt-1 break-words text-sm text-gray-600 dark:text-gray-300">{master.technology || 'Technology unknown'} · ID {master.id}</p></> : <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">No MasterSwitch attached.</p>}
                   {rankAssistEnabled && suggestion && item.status === 'OPEN' && <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100" data-testid="force-curve-rank-suggestion"><p className="font-semibold">Ranked suggestion: {suggestion.master.manufacturer} {suggestion.master.name}</p><p className="mt-1 text-xs">{suggestion.reason === 'NORMALIZED_IDENTITY_EXACT' ? 'Normalized source identity exactly matches one approved MasterSwitch.' : 'The complete normalized identity occurs at a word boundary in exactly one approved MasterSwitch.'} Algorithm {suggestion.algorithm}; this is not a probability.</p>{suggestion.warnings.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-800 dark:text-amber-200">{suggestion.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>}<button type="button" className={`${secondaryButtonClass} mt-3 w-full`} disabled={Boolean(busy)} onClick={() => { setStaged({ sourceKey: item.sourceKey, kind: 'ATTACH_SUGGESTION' }); recordInteraction('action_staged', item.sourceKey, { kind: 'ATTACH_SUGGESTION' }) }}>Stage suggestion (A)</button></div>}
+                  {rankAssistEnabled && isActive && suggestionState?.status === 'loading' && <p className="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">Checking for a deterministic suggestion…</p>}
+                  {rankAssistEnabled && isActive && suggestionState?.status === 'none' && <p className="mt-4 rounded-md bg-gray-100 p-3 text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-200">No deterministic suggestion for this group. Manual search remains available.</p>}
+                  {rankAssistEnabled && isActive && suggestionState?.status === 'error' && <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"><p>Rank assist could not check this group.</p><button type="button" className={`${secondaryButtonClass} mt-2`} onClick={() => void loadSuggestion(item)}>Retry</button></div>}
                   {item.status === 'OPEN' && <div className="mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-900/40"><label className="block text-sm font-medium text-gray-700 dark:text-gray-200" htmlFor={`master-${item.sourceKey}`}>Choose another MasterSwitch</label><form className="flex flex-col gap-2 sm:flex-row" onSubmit={event => { event.preventDefault(); void findMasters(item) }}><input id={`master-${item.sourceKey}`} className={`${controlClass} min-w-0 flex-1`} value={masterQuery[item.sourceKey] ?? candidate?.displayName ?? ''} onChange={e => setMasterQuery(value => ({ ...value, [item.sourceKey]: e.target.value }))} /><button type="submit" disabled={Boolean(busy)} className={secondaryButtonClass}>Search</button></form>{(masterResults[item.sourceKey] || []).length > 0 && <><select className={`${controlClass} w-full`} aria-label={`Exact MasterSwitch for ${item.sourceKey}`} value={chosenMaster[item.sourceKey] || ''} onChange={e => { setChosenMaster(value => ({ ...value, [item.sourceKey]: e.target.value })); setOverrideAcknowledged(value => ({ ...value, [item.sourceKey]: false })); setOverrideReason(value => ({ ...value, [item.sourceKey]: '' })) }}><option value="">Select exact master</option>{masterResults[item.sourceKey].map(m => <option key={m.id} value={m.id}>{m.manufacturer} {m.name} — {m.technology}{m.compatibility?.compatible ? '' : ` — warning: ${m.compatibility?.reason || 'identity could not be verified'}`}</option>)}</select>{requiresOverride && <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"><p><strong>Compatibility warning:</strong> {selectedMaster?.compatibility?.reason || 'The exact identity could not be verified.'}</p><label className="flex items-start gap-2"><input type="checkbox" className="mt-1 h-4 w-4" checked={overrideAcknowledged[item.sourceKey] || false} onChange={e => setOverrideAcknowledged(value => ({ ...value, [item.sourceKey]: e.target.checked }))} /><span>I verified this is the intended MasterSwitch and want to override the warning.</span></label><label className="block font-medium" htmlFor={`override-reason-${item.sourceKey}`}>Audit reason</label><textarea id={`override-reason-${item.sourceKey}`} className={`${controlClass} min-h-20 w-full py-2`} value={overrideReason[item.sourceKey] || ''} onChange={e => setOverrideReason(value => ({ ...value, [item.sourceKey]: e.target.value }))} placeholder="Why this source belongs to this MasterSwitch" /></div>}{masterResults[item.sourceKey].some(m => !m.compatibility?.compatible) && !requiresOverride && <p className="text-xs text-amber-700 dark:text-amber-300">Results with identity warnings remain selectable, but require an acknowledged, audited admin override.</p>}<button type="button" disabled={Boolean(busy) || !selectedMaster || Boolean(requiresOverride && (!overrideAcknowledged[item.sourceKey] || (overrideReason[item.sourceKey] || '').trim().length < 3))} className="min-h-11 w-full rounded-md bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus-visible:ring-offset-gray-800" onClick={() => chooseMaster(item)}>Attach selected MasterSwitch</button></>}</div>}
                 </div>
               </div>

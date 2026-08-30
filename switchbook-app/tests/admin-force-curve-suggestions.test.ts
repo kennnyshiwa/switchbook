@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { rankForceCurveSuggestion } from '../src/lib/admin-force-curve-suggestions'
+import { findNextRankedIndex, rankForceCurveSuggestion } from '../src/lib/admin-force-curve-suggestions'
 
 const catalog = { id: 'c1', displayName: 'Acer Yellow', repositoryPath: 'Acer Yellow/TG.csv', manufacturer: null, technology: null }
 const master = (id: string, name: string, manufacturer: string | null = 'Acer', technology: string | null = 'MECHANICAL') => ({ id, name, manufacturer, technology })
@@ -47,4 +47,46 @@ test('keyboard staging writes nothing, Escape always clears, and Enter confirms 
 test('flag-off retains the original confidence label while flag-on avoids probability language', () => {
   const component = readFileSync(new URL('../src/components/admin/ForceCurveReviewQueue.tsx', import.meta.url), 'utf8')
   assert.match(component, /rankAssistEnabled \? `deterministic queue class \$\{item\.bucket\}` : `confidence \$\{Math\.round\(item\.confidence \* 100\)\}%`/)
+})
+
+test('enabled rank assist is discoverable when initial groups have no suggestion', () => {
+  const component = readFileSync(new URL('../src/components/admin/ForceCurveReviewQueue.tsx', import.meta.url), 'utf8')
+  assert.match(component, /data-testid="force-curve-rank-status"/)
+  assert.match(component, /Rank assist enabled/)
+  assert.match(component, /Find next suggestion/)
+  assert.match(component, /No deterministic suggestion for this group\. Manual search remains available\./)
+  assert.match(component, /Rank assist could not check this group\./)
+})
+
+test('find-next is bounded to the loaded page and suggestion cache follows catalog identity', () => {
+  const component = readFileSync(new URL('../src/components/admin/ForceCurveReviewQueue.tsx', import.meta.url), 'utf8')
+  assert.match(component, /findNextRankedIndex\(queue\.items, activeIndex, loadSuggestion\)/)
+  assert.match(component, /const current = suggestions\[item\.sourceKey\][\s\S]*current\?\.catalogEntryId === catalog\.id/)
+  assert.match(component, /status: 'error'[\s\S]*Retry/)
+  const findNext = component.slice(component.indexOf('async function findNextSuggestion'), component.indexOf('async function refreshQueue'))
+  assert.doesNotMatch(findNext, /method:\s*['"](POST|PUT|PATCH|DELETE)['"]/)
+})
+
+test('find-next discovers the first eligible group later on the loaded page', async () => {
+  const visited: string[] = []
+  const index = await findNextRankedIndex(['none-1', 'none-2', 'eligible', 'later'], 0, async item => {
+    visited.push(item)
+    return item === 'eligible' ? rankForceCurveSuggestion(catalog, [master('m1', 'Acer Yellow')]) : null
+  })
+  assert.equal(index, 2)
+  assert.deepEqual(visited, ['none-1', 'none-2', 'eligible'])
+})
+
+test('find-next reports no suggestion after checking the bounded loaded page', async () => {
+  const visited: number[] = []
+  const index = await findNextRankedIndex([0, 1, 2], 1, async item => { visited.push(item); return null })
+  assert.equal(index, null)
+  assert.deepEqual(visited, [1, 2])
+})
+
+test('discoverability preserves keyboard focus and mobile-safe responsive layout', () => {
+  const component = readFileSync(new URL('../src/components/admin/ForceCurveReviewQueue.tsx', import.meta.url), 'utf8')
+  assert.match(component, /requestAnimationFrame\(\(\) => cardRefs\.current\[queue\.items\[index\]\.sourceKey\]\?\.focus\(\)\)/)
+  assert.match(component, /flex flex-col gap-3[\s\S]*sm:flex-row sm:items-center sm:justify-between/)
+  assert.match(component, /disabled=\{Boolean\(busy\) \|\| scanning\}/)
 })

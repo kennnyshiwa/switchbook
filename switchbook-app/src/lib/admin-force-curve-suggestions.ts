@@ -58,3 +58,10 @@ export function rankForceCurveSuggestion(catalog: RankCatalog, masters: RankMast
     warnings,
   }
 }
+
+/** Deterministic, bounded traversal used by the read-only discoverability control. */
+export async function findNextRankedIndex<T>(items: T[], startIndex: number, load: (item: T) => Promise<RankSuggestion | null>) {
+  const start = Math.max(0, Math.min(items.length, startIndex))
+  for (let index = start; index < items.length; index++) if (await load(items[index])) return index
+  return null
+}
