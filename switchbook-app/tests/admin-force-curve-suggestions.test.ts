@@ -107,7 +107,7 @@ test('rejected manual attachment stays actionable and persistent on its exact mo
   assert.doesNotMatch(component, /setChosenMaster\([^\n]+catch/)
   assert.doesNotMatch(component, /setOverrideAcknowledged\([^\n]+catch/)
   assert.doesNotMatch(component, /setOverrideReason\([^\n]+catch/)
-  assert.equal(forceCurveAttachErrorMessage('APPROVED_MASTER_REQUIRED'), 'This MasterSwitch cannot be attached yet because its approved record is missing manufacturer or technology. Complete the MasterSwitch metadata, then retry.')
+  assert.equal(forceCurveAttachErrorMessage('APPROVED_MASTER_REQUIRED'), 'This MasterSwitch cannot be attached yet. Select an approved MasterSwitch with a manufacturer, then retry.')
 })
 
 test('manual attachment rejection preserves authorization and does not refresh or change skip/defer behavior', () => {
@@ -124,4 +124,6 @@ test('manual attachment rejection preserves authorization and does not refresh o
   assert.match(component, /Skip \/ defer/)
   const route = readFileSync(new URL('../src/app/api/admin/force-curves/reviews/route.ts', import.meta.url), 'utf8')
   assert.match(route, /mutationAccess\(request\)/)
+  const service = readFileSync(new URL('../src/lib/admin-force-curves.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(service, /!master\.manufacturer\s*\|\|\s*!master\.technology/)
 })

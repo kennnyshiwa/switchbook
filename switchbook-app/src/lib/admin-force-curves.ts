@@ -273,7 +273,7 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     const legacyAttached=rows.every(row=>row.status==='OPEN'&&isAttachedReview(row)&&row.masterSwitchId===input.masterSwitchId&&row.catalogEntryId===input.catalogEntryId)
     if(rows.some(isAttachedReview)&&!replay&&!legacyAttached) throw new Error('REVIEW_ALREADY_LINKED')
     if(!replay&&!legacyAttached&&rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
-    if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
+    if(!master||master.status!=='APPROVED'||!master.manufacturer) throw new Error('APPROVED_MASTER_REQUIRED')
     // A completed same-target retry is a read-only validation. Return before
     // compatibility resolution, timestamps, upserts, or audit construction so
     // even a changed retry reason cannot rewrite the original decision record.
@@ -412,7 +412,7 @@ export async function linkSourceReview(input: { reviewId: string; masterSwitchId
       tx.masterSwitch.findUnique({ where: { id: input.masterSwitchId }, select: { id: true, name: true, manufacturer: true, technology: true, status: true } }),
       tx.forceCurveCatalogEntry.findMany({ where: { id: { in: candidateIds(review.payload) }, source: FORCE_CURVE_SOURCE, exists: true } }),
     ])
-    if (!master || master.status !== 'APPROVED' || !master.manufacturer || !master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
+    if (!master || master.status !== 'APPROVED' || !master.manufacturer) throw new Error('APPROVED_MASTER_REQUIRED')
     const selected = entries.find(entry => entry.id === input.catalogEntryId)
     if (!selected) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const resolutions=await resolveCatalogEntries(tx,entries)

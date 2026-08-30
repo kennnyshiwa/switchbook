@@ -9,7 +9,7 @@ async function main() {
   const actor = await prisma.user.create({ data: { id: `override-actor-${suffix}`, email: `override-${suffix}@example.test`, username: `override-${suffix}`, role: 'ADMIN' } })
   await prisma.manufacturer.upsert({ where: { name: 'AEBoards' }, create: { name: 'AEBoards', aliases: [], verified: true }, update: { verified: true } })
   await prisma.manufacturer.upsert({ where: { name: 'Tecsee' }, create: { name: 'Tecsee', aliases: [], verified: true }, update: { verified: true } })
-  const intended = await prisma.masterSwitch.create({ data: { id: `override-intended-${suffix}`, name: fixturePrefix, manufacturer: 'Tecsee', technology: 'ELECTRO_CAPACITIVE', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
+  const intended = await prisma.masterSwitch.create({ data: { id: `override-intended-${suffix}`, name: fixturePrefix, manufacturer: 'Tecsee', technology: null, type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
   const wrong = await prisma.masterSwitch.create({ data: { id: `override-wrong-${suffix}`, name: `${fixturePrefix} V2`, manufacturer: 'Tecsee', technology: 'MECHANICAL', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
   const automaticCatalog = await prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: `AEBoards ${fixturePrefix} Automatic Guess/${fixturePrefix}_Automatic_HighResolutionRaw.csv`, displayName: `AEBoards ${fixturePrefix} Automatic Guess`, exists: true } })
   const automaticMapping = await prisma.forceCurveMapping.create({ data: { masterSwitchId: intended.id, catalogEntryId: automaticCatalog.id, state: 'AUTO_APPROVED', confidence: 0.5, provenance: JSON.stringify({ measurementKey: `AEBoards ${fixturePrefix} Automatic Guess/${fixturePrefix.toLowerCase()} automatic guess` }) } })
@@ -40,6 +40,17 @@ async function main() {
     assert.equal((await getApprovedCurves(intended.id)).length, 7)
     const resolved = await prisma.forceCurveReviewCase.findMany({ where: { id: { in: groups.map(group => group.reviewId) } }, orderBy: { id: 'asc' } })
     assert.ok(resolved.every(review => review.status === 'RESOLVED' && review.resolution === 'MANUALLY_APPROVED' && reviewWorkflow(review.payload).status === 'ATTACHED'))
+    assert.ok(resolved.every(review => review.resolvedById === actor.id && review.masterSwitchId === intended.id))
+    assert.equal(await prisma.forceCurveMapping.count({ where: { masterSwitchId: wrong.id } }), 0)
+    assert.equal(await prisma.forceCurveMapping.count({ where: { catalogEntryId: { in: groups.map(group => group.rawId) } } }), 0)
+
+    const auditedMapping = await prisma.forceCurveMapping.findUniqueOrThrow({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: intended.id, catalogEntryId: groups[0].highId } } })
+    const auditedProvenance = JSON.parse(auditedMapping.provenance) as { compatibilityOverride?: { acknowledged?: boolean; reason?: string; actorId?: string } }
+    const firstOverrideReason = groups[0].request.compatibilityOverride!.reason
+    assert.deepEqual(auditedProvenance.compatibilityOverride && { acknowledged: auditedProvenance.compatibilityOverride.acknowledged, reason: auditedProvenance.compatibilityOverride.reason, actorId: auditedProvenance.compatibilityOverride.actorId }, { acknowledged: true, reason: firstOverrideReason, actorId: actor.id })
+    const auditedReview = resolved.find(review => review.id === groups[0].reviewId)!
+    const linkAudit = (auditedReview.payload as Record<string, any>).linkAudit
+    assert.deepEqual({ masterSwitchId: linkAudit.masterSwitchId, catalogEntryId: linkAudit.catalogEntryId, actorId: linkAudit.actorId, reason: linkAudit.compatibilityOverride.reason }, { masterSwitchId: intended.id, catalogEntryId: groups[0].highId, actorId: actor.id, reason: firstOverrideReason })
 
     const first = groups[0]
     const beforeMapping = await prisma.forceCurveMapping.findUniqueOrThrow({ where: { masterSwitchId_catalogEntryId: { masterSwitchId: intended.id, catalogEntryId: first.highId } } })
