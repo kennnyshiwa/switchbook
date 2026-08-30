@@ -187,6 +187,15 @@ function candidateIds(payload: Prisma.JsonValue | null) {
   return Array.isArray(value) && value.every(id => typeof id === 'string') ? value as string[] : []
 }
 
+function mappingSourceIdentity(mapping: { provenance: string; catalogEntry: { repositoryPath: string } | null }) {
+  try {
+    const provenance = JSON.parse(mapping.provenance) as { measurementKey?: unknown }
+    if (typeof provenance.measurementKey === 'string' && provenance.measurementKey.trim()) return `measurement:${normalize(provenance.measurementKey)}`
+  } catch { /* Legacy provenance may be plain text. */ }
+  const folder = mapping.catalogEntry?.repositoryPath.split('/')[0]
+  return folder ? normalize(folder) : null
+}
+
 export function reviewWorkflow(payload: Prisma.JsonValue | null) {
   const workflow = objectPayload(payload).queueWorkflow
   return typeof workflow === 'object' && workflow && !Array.isArray(workflow) ? workflow as Record<string, Prisma.JsonValue> : {}
@@ -311,14 +320,15 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(legacyAttached&&(legacySourceRows.length!==unique.length||legacySourceRows.some(row=>!isAttachedReview(row)||row.masterSwitchId!==master.id||row.catalogEntryId!==candidate.id)||legacySourceRows.map(row=>row.id).sort().some((id,index)=>id!==[...unique].sort()[index]))) throw new Error('INCOMPLETE_SOURCE_GROUP')
     const conflicts=await tx.forceCurveReviewCase.findMany({where:{id:{notIn:unique},status:'OPEN',masterSwitchId:master.id,catalogEntryId:{in:allCandidateIds}},select:{payload:true}})
     if(conflicts.some(row=>!isAttachedReview(row))) throw new Error('CONFLICTING_OPEN_REVIEW')
-    // Mapping policy is state-specific. Reviewed manual measurements are
-    // independent durable decisions and coexist. Automatic guesses for this
-    // master are provisional, so an explicit reviewed attachment supersedes
-    // every other AUTO_APPROVED candidate while leaving manual rows untouched.
-    const supersededAutomaticMappings=await tx.forceCurveMapping.findMany({
+    // Reviewed and automatic mappings for distinct measurements coexist. An
+    // explicit attachment supersedes only an automatic candidate proven to be
+    // the same source measurement; missing identity fails closed by preserving
+    // the sibling rather than deleting legitimate data.
+    const automaticMappings=await tx.forceCurveMapping.findMany({
       where:{masterSwitchId:master.id,state:'AUTO_APPROVED',catalogEntryId:{not:candidate.id}},
-      select:{id:true},
+      select:{id:true,provenance:true,catalogEntry:{select:{repositoryPath:true}}},
     })
+    const supersededAutomaticMappings=automaticMappings.filter(mapping=>mappingSourceIdentity(mapping)===sourceKey)
     const now=new Date()
     const compatibilityOverride=overrideRequested?{acknowledged:true,reason:overrideReason,actorId:input.actorId,compatibilityReason:selectedCompatibility?.reason||'Identity compatibility could not be verified',evidence:allCandidates.map((entry,index)=>({catalogEntryId:entry.id,repositoryPath:entry.repositoryPath,revision:entry.revision,contentHash:entry.contentHash,compatible:allCompatibilities[index].compatible,compatibilityReason:allCompatibilities[index].reason}))}:undefined
     const provenance=JSON.stringify({workflow:'admin-source-attach',reviewIds:unique,actorId:input.actorId,decidedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,revision:candidate.revision,contentHash:candidate.contentHash,masterSwitchId:master.id,catalogEntryId:candidate.id,compatibilityOverride})

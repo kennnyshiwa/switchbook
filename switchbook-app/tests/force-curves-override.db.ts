@@ -12,7 +12,7 @@ async function main() {
   const intended = await prisma.masterSwitch.create({ data: { id: `override-intended-${suffix}`, name: fixturePrefix, manufacturer: 'Tecsee', technology: 'ELECTRO_CAPACITIVE', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
   const wrong = await prisma.masterSwitch.create({ data: { id: `override-wrong-${suffix}`, name: `${fixturePrefix} V2`, manufacturer: 'Tecsee', technology: 'MECHANICAL', type: 'TACTILE', submittedById: actor.id, status: 'APPROVED' } })
   const automaticCatalog = await prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: `AEBoards ${fixturePrefix} Automatic Guess/${fixturePrefix}_Automatic_HighResolutionRaw.csv`, displayName: `AEBoards ${fixturePrefix} Automatic Guess`, exists: true } })
-  const automaticMapping = await prisma.forceCurveMapping.create({ data: { masterSwitchId: intended.id, catalogEntryId: automaticCatalog.id, state: 'AUTO_APPROVED', confidence: 0.5, provenance: 'automatic fixture' } })
+  const automaticMapping = await prisma.forceCurveMapping.create({ data: { masterSwitchId: intended.id, catalogEntryId: automaticCatalog.id, state: 'AUTO_APPROVED', confidence: 0.5, provenance: JSON.stringify({ measurementKey: `AEBoards ${fixturePrefix} Automatic Guess/${fixturePrefix.toLowerCase()} automatic guess` }) } })
   const qualifiers = ['Bottom Out', 'Top Out', '0.5mm', '1mm', '2mm', '3mm']
   const groups: { highId: string; rawId: string; reviewId: string; request: Parameters<typeof linkSourceReviewGroup>[0] }[] = []
 
@@ -25,14 +25,19 @@ async function main() {
         prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: `${folder}/${fixturePrefix}_${index}_HighResolutionRaw.csv`, displayName, revision: `override-revision-${index}`, contentHash: `override-high-${index}`, technology: 'ELECTRO_CAPACITIVE', exists: true } }),
       ])
       const review = await prisma.forceCurveReviewCase.create({ data: { kind: 'SOURCE_UNVERIFIED', reason: `override evidence ${index}`, catalogEntryId: high.id, payload: { measurementKey: `${folder}/${fixturePrefix.toLowerCase()} ${qualifier.toLowerCase()}`, candidateIds: [raw.id, high.id], paths: [raw.repositoryPath, high.repositoryPath] } } })
+      const sameMeasurementCatalog = index === 0 ? await prisma.forceCurveCatalogEntry.create({ data: { source: FORCE_CURVE_SOURCE, repositoryPath: `${folder}/${fixturePrefix}_${index}_legacy.csv`, displayName, revision: 'override-legacy', contentHash: 'override-legacy', technology: 'ELECTRO_CAPACITIVE', exists: true } }) : null
+      const sameMeasurementMapping = sameMeasurementCatalog ? await prisma.forceCurveMapping.create({ data: { masterSwitchId: intended.id, catalogEntryId: sameMeasurementCatalog.id, state: 'AUTO_APPROVED', confidence: 1, provenance: JSON.stringify({ measurementKey: `${folder}/${fixturePrefix.toLowerCase()} ${qualifier.toLowerCase()}` }) } }) : null
       const request = { reviewIds: [review.id], masterSwitchId: intended.id, catalogEntryId: high.id, actorId: actor.id, compatibilityOverride: { acknowledged: true as const, reason: `Measurement qualifier ${qualifier} belongs to the canonical Naevy EC product.` } }
       groups.push({ highId: high.id, rawId: raw.id, reviewId: review.id, request })
       assert.deepEqual(await linkSourceReviewGroup(request, prisma), { linked: 1, masterSwitchId: intended.id, catalogEntryId: high.id })
-      if (index === 0) assert.deepEqual(await prisma.forceCurveMapping.findUniqueOrThrow({ where: { id: automaticMapping.id }, select: { state: true, reason: true } }), { state: 'STALE', reason: 'Superseded by explicit reviewed source attachment' })
+      if (index === 0) {
+        assert.deepEqual(await prisma.forceCurveMapping.findUniqueOrThrow({ where: { id: automaticMapping.id }, select: { state: true, reason: true } }), { state: 'AUTO_APPROVED', reason: null })
+        assert.deepEqual(await prisma.forceCurveMapping.findUniqueOrThrow({ where: { id: sameMeasurementMapping!.id }, select: { state: true, reason: true } }), { state: 'STALE', reason: 'Superseded by explicit reviewed source attachment' })
+      }
     }
 
     assert.equal(await prisma.forceCurveMapping.count({ where: { masterSwitchId: intended.id, state: 'MANUALLY_APPROVED' } }), 6)
-    assert.equal((await getApprovedCurves(intended.id)).length, 6)
+    assert.equal((await getApprovedCurves(intended.id)).length, 7)
     const resolved = await prisma.forceCurveReviewCase.findMany({ where: { id: { in: groups.map(group => group.reviewId) } }, orderBy: { id: 'asc' } })
     assert.ok(resolved.every(review => review.status === 'RESOLVED' && review.resolution === 'MANUALLY_APPROVED' && reviewWorkflow(review.payload).status === 'ATTACHED'))
 
