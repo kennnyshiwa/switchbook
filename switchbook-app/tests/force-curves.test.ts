@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, forceCurveSyncRevision, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
-import { adminActor, buildReviewQueue, catalogMasterCompatibility, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
+import { adminActor, buildReviewQueue, catalogMasterCompatibility, exactCatalogMasterIdentity, isSameOriginMutation, resolveUniqueCatalogMaster, uniqueCatalogMasterCompatibility } from '../src/lib/admin-force-curves'
 import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
@@ -153,7 +153,7 @@ test('production-cardinality queue cache preserves truth and bounds warm latency
   await getForceCurveReviewQueuePage({status:'OPEN'},db)
   assert.equal(reviewLoads,2);assert.equal(candidateLoads,2)
 })
-test('manual source linking uses exact manufacturer/name folder identity and rejects fuzzy paths', () => {
+test('manual source linking uses ordered product identity and rejects variant or malformed folder paths', () => {
   const production = [
     ['Gateron Oil King','Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv'],
     ['Gateron Smoothie','Gateron Smoothie/Gateron_Smoothie_HighResolutionRaw.csv'],
@@ -161,18 +161,40 @@ test('manual source linking uses exact manufacturer/name folder identity and rej
     ['Gateron G Pro 3.0 Yellow','Gateron G Pro 3.0 Yellow/Gateron_G_Pro_3.0_Yellow_HighResolutionRaw.csv'],
   ]
   for (const [name,repositoryPath] of production) assert.equal(exactCatalogMasterIdentity({name,manufacturer:'Gateron'},{displayName:name,repositoryPath}),true)
-  assert.equal(exactCatalogMasterIdentity({name:'Oil King',manufacturer:'Gateron'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv'}),true)
+  assert.equal(catalogMasterCompatibility({name:'Oil King',manufacturer:'Gateron'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/Gateron_Oil_King_HighResolutionRaw.csv'},[{name:'Gateron'}]).compatible,true)
   assert.equal(exactCatalogMasterIdentity({name:'Gateron Oil King',manufacturer:'Gateron'},{displayName:'Gateron Oil King V2',repositoryPath:'Gateron Oil King V2/TG.csv'}),false)
-  assert.equal(exactCatalogMasterIdentity({name:'Gateron Oil King',manufacturer:'KTT'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/TG.csv'}),false)
-  assert.equal(exactCatalogMasterIdentity({name:'GateronX Oil King',manufacturer:'Gateron'},{displayName:'GateronX Oil King',repositoryPath:'GateronX Oil King/TG.csv'}),false)
+  const known=[{name:'Gateron'},{name:'KTT'},{name:'BSUN'},{name:'Aflion'},{name:'HMX'}]
+  assert.equal(catalogMasterCompatibility({name:'Gateron Oil King',manufacturer:'KTT'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/TG.csv'},known).compatible,false)
+  assert.equal(catalogMasterCompatibility({name:'Raw Tactile',manufacturer:'Aflion'},{displayName:'BSUN Raw Tactile',repositoryPath:'BSUN Raw Tactile/TG.csv'},known).compatible,false)
+  assert.equal(catalogMasterCompatibility({name:'Oil King',manufacturer:'Gateron'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/TG.csv'},known).compatible,true)
   assert.equal(exactCatalogMasterIdentity({name:'Peach Blossom',manufacturer:'KTT'},{displayName:'Cherry Blossom',repositoryPath:'Cherry Blossom/TG.csv'}),false)
+  assert.equal(catalogMasterCompatibility({name:'Xinhai 37g',manufacturer:'HMX'},{displayName:'HMX Xinhai 37 g',repositoryPath:'HMX Xinhai 37-g/TG.csv'},known).compatible,true)
+  assert.equal(exactCatalogMasterIdentity({name:'Greetech GT-01',manufacturer:null},{displayName:'Greetech GT01',repositoryPath:'Greetech GT01/TG.csv'}),true)
 })
-test('80Retros Game1989 identity conflict fails closed without a verified scoped alias', () => {
+test('80Retros Game1989 accepts the full product identity while blocking siblings and shortened names', () => {
   const conflicted = { name: '80Retros KTT Game1989 Retro Blue', manufacturer: 'KTT' }
   const entry = { displayName: '80Retros 1989 Retro Blue', repositoryPath: '80Retros 1989 Retro Blue/80Retros_1989_Retro_Blue_HighResolutionRaw.csv' }
-  assert.deepEqual(catalogMasterCompatibility(conflicted, entry), { compatible: false, reason: 'MasterSwitch name and catalog switch identity do not exactly match.' })
-  assert.equal(exactCatalogMasterIdentity(conflicted, entry), false)
+  assert.equal(catalogMasterCompatibility(conflicted, entry).compatible, true)
+  assert.match(catalogMasterCompatibility(conflicted, entry).reason, /80, retros, 1989, retro, blue/)
+  assert.equal(exactCatalogMasterIdentity(conflicted, entry), true)
   assert.equal(exactCatalogMasterIdentity({ name: '80Retros KTT 1989 Retro Blue', manufacturer: 'KTT' }, entry), true)
   assert.equal(exactCatalogMasterIdentity({ name: 'KTT Retro Blue', manufacturer: 'KTT' }, entry), false)
+  assert.equal(exactCatalogMasterIdentity({ name: 'HMX 80Retros GAME1989', manufacturer: 'HMX' }, entry), false)
+  for (const color of ['Orange','Red','White','Silver']) assert.equal(exactCatalogMasterIdentity({ name: `80Retros KTT Game1989 Retro ${color}`, manufacturer: 'KTT' }, entry), false)
   assert.equal(exactCatalogMasterIdentity(conflicted, { ...entry, displayName: '80Retros 1989 Retro Red', repositoryPath: '80Retros 1989 Retro Red/TG.csv' }), false)
+  const masters=[{id:'right',...conflicted},{id:'hmx',name:'HMX 80Retros GAME1989',manufacturer:'HMX'}]
+  assert.equal(uniqueCatalogMasterCompatibility({id:'right',...conflicted},entry,[{name:'KTT'},{name:'HMX'}],masters).compatible,true)
+  assert.equal(uniqueCatalogMasterCompatibility({id:'a',name:'Generic',manufacturer:'KTT'},{displayName:'Generic',repositoryPath:'Generic/TG.csv'},[],[{id:'a',name:'Generic',manufacturer:'KTT'},{id:'b',name:'Generic',manufacturer:'HMX'}]).compatible,false)
+})
+test('authoritative compatibility resolver uses a bounded mandatory-anchor query and fails closed at its cap', async () => {
+  const calls:any[]=[]
+  const db={manufacturer:{findMany:async()=>[{name:'KTT',aliases:[]},{name:'HMX',aliases:[]}]},masterSwitch:{findMany:async(args:any)=>{calls.push(args);return [{id:'right',name:'80Retros KTT Game1989 Retro Blue',manufacturer:'KTT',technology:'MECHANICAL'}]}}}
+  const entry={displayName:'80Retros 1989 Retro Blue',repositoryPath:'80Retros 1989 Retro Blue/TG.csv',technology:'MECHANICAL' as const}
+  assert.equal((await resolveUniqueCatalogMaster(db,entry)).uniqueMasterId,'right')
+  assert.deepEqual(calls[0].where,{status:'APPROVED',name:{contains:'retros',mode:'insensitive'}})
+  assert.equal(calls[0].take,201)
+  const overflow={...db,masterSwitch:{findMany:async()=>Array.from({length:201},(_,i)=>({id:`m${i}`,name:`80Retros ${i} 1989 Retro Blue`,manufacturer:'KTT',technology:'MECHANICAL'}))}}
+  const resolution=await resolveUniqueCatalogMaster(overflow,entry)
+  assert.equal(resolution.uniqueMasterId,null)
+  assert.match(resolution.reason,/more than 200/)
 })

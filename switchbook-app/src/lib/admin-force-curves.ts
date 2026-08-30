@@ -1,5 +1,5 @@
 import { ForceCurveMappingState, Prisma, PrismaClient, SwitchTechnology } from '@prisma/client'
-import { FORCE_CURVE_SOURCE, selectAutomaticCandidates } from '@/lib/force-curves'
+import { FORCE_CURVE_SOURCE } from '@/lib/force-curves'
 
 type Db = PrismaClient
 type AdminSession = { user?: { id?: string; role?: string } } | null | undefined
@@ -14,7 +14,7 @@ export type QueueReview = {
 
 const SOURCE_REVIEW_KINDS = ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] as const
 const TECHNOLOGIES: SwitchTechnology[] = ['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']
-const normalize = (value?: string | null) => (value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+const normalize = (value?: string | null) => (value || '').toLowerCase().replace(/([a-z])([0-9])/g, '$1 $2').replace(/([0-9])([a-z])/g, '$1 $2').replace(/[^a-z0-9]+/g, ' ').trim()
 
 export function adminActor(session: AdminSession) {
   return session?.user?.role === 'ADMIN' && session.user.id ? session.user.id : null
@@ -37,30 +37,91 @@ export function isSameOriginMutation(request: { headers: { get(name: string): st
 }
 
 export type CatalogMasterCompatibility = { compatible: boolean; reason: string }
+export type KnownManufacturer = { name: string; aliases?: string[] }
+type CompatibleMaster = { id: string; name: string; manufacturer: string | null; technology?: SwitchTechnology | null }
+type CompatibleEntry = { displayName: string; repositoryPath: string; technology?: SwitchTechnology | null }
+const COMPATIBILITY_CANDIDATE_LIMIT = 200
 
-function identityTokens(value: string, manufacturer: string) {
-  const manufacturerTokens = new Set(normalize(manufacturer).split(' ').filter(Boolean))
-  return normalize(value).split(' ').filter(token => token && !manufacturerTokens.has(token))
+function identityTokens(value: string) { return normalize(value).split(' ').filter(Boolean) }
+
+function orderedTokenMatch(required: string[], available: string[]) {
+  let cursor = 0
+  for (const token of available) if (token === required[cursor]) cursor++
+  return { matched: required.slice(0, cursor), missing: required.slice(cursor), complete: cursor === required.length }
 }
 
-export function catalogMasterCompatibility(master: { name: string; manufacturer: string | null }, entry: { displayName: string; repositoryPath: string }): CatalogMasterCompatibility {
-  if (!master.manufacturer) return { compatible: false, reason: 'MasterSwitch manufacturer is missing.' }
+function manufacturerPrefixes(known: KnownManufacturer[]) {
+  return known.flatMap(m => [m.name, ...(m.aliases || [])].map(alias => ({ canonical: normalize(m.name), tokens: identityTokens(alias) }))).filter(p => p.tokens.length).sort((a,b) => b.tokens.length-a.tokens.length)
+}
+
+function canonicalManufacturer(value: string | null, known: KnownManufacturer[]) {
+  const normalized=normalize(value)
+  return manufacturerPrefixes(known).find(prefix=>normalize(prefix.tokens.join(' '))===normalized)?.canonical || normalized
+}
+
+function catalogProductTokens(entry: CompatibleEntry, known: KnownManufacturer[]) {
+  const tokens=identityTokens(entry.displayName)
+  const prefix=manufacturerPrefixes(known).find(candidate=>candidate.tokens.every((token,index)=>tokens[index]===token))
+  return {tokens:prefix?tokens.slice(prefix.tokens.length):tokens,prefix}
+}
+
+export function catalogMasterCompatibility(master: { name: string; manufacturer: string | null; technology?: SwitchTechnology | null }, entry: { displayName: string; repositoryPath: string; technology?: SwitchTechnology | null }, knownManufacturers: KnownManufacturer[] = []): CatalogMasterCompatibility {
   const folder = entry.repositoryPath.split('/').at(-2) || ''
   if (normalize(folder) !== normalize(entry.displayName)) return { compatible: false, reason: 'Catalog folder and display identity do not match.' }
-  const manufacturer = normalize(master.manufacturer)
-  const manufacturerNamed = [normalize(master.name), normalize(entry.displayName)].some(value => value === manufacturer || value.startsWith(`${manufacturer} `) || value.endsWith(` ${manufacturer}`) || value.includes(` ${manufacturer} `))
-  if (!manufacturerNamed) return { compatible: false, reason: 'Catalog and MasterSwitch identities do not include the declared manufacturer.' }
-  const masterIdentity = identityTokens(master.name, master.manufacturer)
-  const catalogIdentity = identityTokens(entry.displayName, master.manufacturer)
-  if (!masterIdentity.length || masterIdentity.join(' ') !== catalogIdentity.join(' ')) {
-    return { compatible: false, reason: 'MasterSwitch name and catalog switch identity do not exactly match.' }
+  if (entry.technology && master.technology && entry.technology !== master.technology) return { compatible: false, reason: `Technology mismatch: catalog is ${entry.technology}, MasterSwitch is ${master.technology}.` }
+  const masterIdentity = identityTokens(master.name)
+  let catalogIdentity = identityTokens(entry.displayName)
+  const recognizedPrefix = manufacturerPrefixes(knownManufacturers).find(prefix => prefix.tokens.every((token,index) => catalogIdentity[index] === token))
+  if (recognizedPrefix) {
+    if (recognizedPrefix.canonical !== canonicalManufacturer(master.manufacturer,knownManufacturers)) return { compatible: false, reason: `Manufacturer mismatch: catalog prefix identifies ${recognizedPrefix.canonical}; selected MasterSwitch manufacturer is ${normalize(master.manufacturer) || 'missing'}.` }
+    catalogIdentity = catalogIdentity.slice(recognizedPrefix.tokens.length)
   }
-  return { compatible: true, reason: 'Exact manufacturer-aware catalog identity match.' }
+  if (!masterIdentity.length || !catalogIdentity.length) return { compatible: false, reason: 'Catalog or MasterSwitch product identity is empty.' }
+  const result = orderedTokenMatch(catalogIdentity, masterIdentity)
+  if (!result.complete) return { compatible: false, reason: `Product identity mismatch: matched [${result.matched.join(', ')}]; missing [${result.missing.join(', ')}] in MasterSwitch name.` }
+  return { compatible: true, reason: `Verified ordered product identity: [${catalogIdentity.join(', ')}]; extra MasterSwitch qualifiers are allowed.` }
+}
+
+export function uniqueCatalogMasterCompatibility(master: CompatibleMaster, entry: CompatibleEntry, knownManufacturers: KnownManufacturer[], approvedMasters: CompatibleMaster[]): CatalogMasterCompatibility {
+  const result = catalogMasterCompatibility(master, entry, knownManufacturers)
+  if (!result.compatible) return result
+  const compatibleIds = approvedMasters.filter(candidate => catalogMasterCompatibility(candidate, entry, knownManufacturers).compatible).map(candidate => candidate.id)
+  if (compatibleIds.length !== 1 || compatibleIds[0] !== master.id) return { compatible: false, reason: `Ambiguous product identity: ${compatibleIds.length} approved MasterSwitch records match; refine canonical identity before attaching.` }
+  return result
+}
+
+export type CatalogMasterResolution = { uniqueMasterId: string | null; knownManufacturers: KnownManufacturer[]; compatibleMasters: CompatibleMaster[]; reason: string }
+
+/** Bounded authoritative resolver used by UI annotation and every mutation. */
+export async function resolveUniqueCatalogMaster(db: any, entry: CompatibleEntry): Promise<CatalogMasterResolution> {
+  const knownManufacturers:KnownManufacturer[]=await db.manufacturer.findMany({where:{verified:true},select:{name:true,aliases:true}})
+  const required=catalogProductTokens(entry,knownManufacturers).tokens
+  const anchor=[...required].sort((a,b)=>b.length-a.length||a.localeCompare(b))[0]
+  if(!anchor) return {uniqueMasterId:null,knownManufacturers,compatibleMasters:[],reason:'Catalog product identity is empty.'}
+  const candidates:CompatibleMaster[]=await db.masterSwitch.findMany({where:{status:'APPROVED',name:{contains:anchor,mode:'insensitive'}},select:{id:true,name:true,manufacturer:true,technology:true},orderBy:{id:'asc'},take:COMPATIBILITY_CANDIDATE_LIMIT+1})
+  if(candidates.length>COMPATIBILITY_CANDIDATE_LIMIT) return {uniqueMasterId:null,knownManufacturers,compatibleMasters:[],reason:`Product identity is too broad: more than ${COMPATIBILITY_CANDIDATE_LIMIT} approved MasterSwitch records contain anchor [${anchor}]. Refine canonical identity.`}
+  const compatibleMasters=candidates.filter(master=>catalogMasterCompatibility(master,entry,knownManufacturers).compatible)
+  const uniqueMasterId=compatibleMasters.length===1?compatibleMasters[0].id:null
+  return {uniqueMasterId,knownManufacturers,compatibleMasters,reason:uniqueMasterId?'Unique approved MasterSwitch identity verified.':`Ambiguous product identity: ${compatibleMasters.length} approved MasterSwitch records match; refine canonical identity before attaching.`}
+}
+
+export function resolvedCatalogMasterCompatibility(master:CompatibleMaster,entry:CompatibleEntry,resolution:CatalogMasterResolution):CatalogMasterCompatibility {
+  const base=catalogMasterCompatibility(master,entry,resolution.knownManufacturers)
+  if(!base.compatible)return base
+  return resolution.uniqueMasterId===master.id?base:{compatible:false,reason:resolution.reason}
+}
+
+async function resolveCatalogEntries(db:any,entries:(CompatibleEntry&{id:string})[]){
+  const cache=new Map<string,Promise<CatalogMasterResolution>>()
+  return Promise.all(entries.map(entry=>{const key=`${normalize(entry.displayName)}|${normalize(entry.repositoryPath.split('/').at(-2))}|${entry.technology||''}`;if(!cache.has(key))cache.set(key,resolveUniqueCatalogMaster(db,entry));return cache.get(key)!}))
 }
 
 export function exactCatalogMasterIdentity(master: { name: string; manufacturer: string | null }, entry: { displayName: string; repositoryPath: string }) {
-  return catalogMasterCompatibility(master, entry).compatible
+  // Conservative synchronous projection used only to order/label the queue.
+  // The authoritative async resolver gates every write.
+  return catalogMasterCompatibility(master, entry, master.manufacturer?[{name:master.manufacturer}]:[]).compatible
 }
+
 
 function objectPayload(payload: Prisma.JsonValue | null) {
   return typeof payload === 'object' && payload && !Array.isArray(payload) ? payload as Record<string, Prisma.JsonValue> : {}
@@ -137,11 +198,13 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     ])
     if(rows.length!==unique.length||rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
     if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
-    if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!exactCatalogMasterIdentity(master,candidate)) throw new Error('INCOMPATIBLE_IDENTITY')
+    const selectedResolution=candidate?await resolveUniqueCatalogMaster(tx,candidate):null
+    if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!selectedResolution||!resolvedCatalogMasterCompatibility(master,candidate,selectedResolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
     if(rows.some(r=>!SOURCE_REVIEW_KINDS.includes(r.kind as typeof SOURCE_REVIEW_KINDS[number])||!candidateIds(r.payload).includes(candidate.id))) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allCandidateIds=[...new Set(rows.flatMap(r=>candidateIds(r.payload)))]
     const allCandidates=await tx.forceCurveCatalogEntry.findMany({where:{id:{in:allCandidateIds},source:FORCE_CURVE_SOURCE,exists:true}})
-    if(allCandidates.some(entry=>!exactCatalogMasterIdentity(master,entry))) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
+    const allResolutions=await resolveCatalogEntries(tx,allCandidates)
+    if(allCandidates.some((entry,index)=>!resolvedCatalogMasterCompatibility(master,entry,allResolutions[index]).compatible)) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
     // Use the exact same loaded catalog evidence as buildReviewQueue. This is
     // essential for legacy rows whose payload contains only candidateIds.
     const shaped=rows.map(r=>({...r,candidates:allCandidates.filter(entry=>candidateIds(r.payload).includes(entry.id))})) as QueueReview[]
@@ -161,9 +224,10 @@ export async function bulkApproveForceCurveReviews(input:{reviewIds:string[];cat
     await tx.$queryRaw`SELECT id FROM "ForceCurveReviewCase" WHERE id IN (${Prisma.join(unique)}) FOR UPDATE`
     const rows=await tx.forceCurveReviewCase.findMany({where:{id:{in:unique}},include:{masterSwitch:true}})
     const candidate=await tx.forceCurveCatalogEntry.findUnique({where:{id:input.catalogEntryId}})
-    if(rows.length!==unique.length || !candidate?.exists) throw new Error('OPEN_REVIEW_REQUIRED')
+    if(rows.length!==unique.length || !candidate?.exists || candidate.source!==FORCE_CURVE_SOURCE) throw new Error('OPEN_REVIEW_REQUIRED')
+    const resolution=candidate?await resolveUniqueCatalogMaster(tx,candidate):null
     const masterIds=new Set(rows.flatMap(r=>r.masterSwitchId?[r.masterSwitchId]:[]))
-    if(masterIds.size!==1 || rows.some(r=>!r.masterSwitch || candidateIds(r.payload).length!==1 || !candidateIds(r.payload).includes(candidate.id) || !exactCatalogMasterIdentity(r.masterSwitch,candidate) || selectAutomaticCandidates(r.masterSwitch,[candidate]).length!==1)) throw new Error('UNSAFE_BULK_APPROVAL')
+    if(masterIds.size!==1 || !resolution || rows.some(r=>!SOURCE_REVIEW_KINDS.includes(r.kind as typeof SOURCE_REVIEW_KINDS[number]) || !r.masterSwitch || candidateIds(r.payload).length!==1 || !candidateIds(r.payload).includes(candidate.id) || !resolvedCatalogMasterCompatibility(r.masterSwitch,candidate,resolution).compatible)) throw new Error('UNSAFE_BULK_APPROVAL')
     if(rows.every(r=>r.status==='RESOLVED'&&r.resolution==='MANUALLY_APPROVED')) {
       const masterSwitchId=rows[0].masterSwitchId!
       const mapping=await tx.forceCurveMapping.findUnique({where:{masterSwitchId_catalogEntryId:{masterSwitchId,catalogEntryId:candidate.id}}})
@@ -172,9 +236,11 @@ export async function bulkApproveForceCurveReviews(input:{reviewIds:string[];cat
     }
     if(rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_REVIEW_REQUIRED')
     if(rows[0].masterSwitch && normalize(rows[0].masterSwitch.name)==='peach blossom' && !candidate.metadataVerifiedAt) throw new Error('PEACH_BLOSSOM_AUTHORITATIVE_EVIDENCE_REQUIRED')
-    // Bulk is restricted to repeated evidence for one source identity and one exact candidate.
+    // The authoritative resolver above has already established the sole approved
+    // master. Bulk adds only explicit source/candidate homogeneity invariants; it
+    // must never fall back to the weaker synchronous queue classifier.
     const queueRows=rows.map(r=>({...r,candidates:[candidate]})) as QueueReview[]
-    if(new Set(queueRows.map(sourceIdentity)).size!==1 || !classifyReviewGroup(queueRows).actionable) throw new Error('UNSAFE_BULK_APPROVAL')
+    if(new Set(queueRows.map(sourceIdentity)).size!==1 || new Set(rows.map(r=>r.catalogEntryId)).size!==1 || rows[0].catalogEntryId!==candidate.id) throw new Error('UNSAFE_BULK_APPROVAL')
     const masterSwitchId=rows[0].masterSwitchId!
     const now=new Date(); const provenance=JSON.stringify({workflow:'admin-review-bulk',reviewIds:unique,actorId:input.actorId,decidedAt:now.toISOString(),source:candidate.source,repositoryPath:candidate.repositoryPath,masterSwitchId,catalogEntryId:candidate.id})
     await tx.forceCurveMapping.deleteMany({where:{noMatchKey:masterSwitchId}})
@@ -220,8 +286,10 @@ export async function linkSourceReview(input: { reviewId: string; masterSwitchId
     if (!master || master.status !== 'APPROVED' || !master.manufacturer || !master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
     const selected = entries.find(entry => entry.id === input.catalogEntryId)
     if (!selected) throw new Error('REVIEW_CANDIDATE_REQUIRED')
-    if (!exactCatalogMasterIdentity(master, selected)) throw new Error('INCOMPATIBLE_IDENTITY')
-    if (entries.some(entry => !exactCatalogMasterIdentity(master, entry))) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
+    const resolutions=await resolveCatalogEntries(tx,entries)
+    const selectedResolution=resolutions[entries.indexOf(selected)]
+    if (!resolvedCatalogMasterCompatibility(master, selected, selectedResolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
+    if (entries.some((entry,index) => !resolvedCatalogMasterCompatibility(master, entry, resolutions[index]).compatible)) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
 
     const conflictingReview = await tx.forceCurveReviewCase.findFirst({ where: { id: { not: review.id }, status: 'OPEN', masterSwitchId: master.id, catalogEntryId: { in: entries.map(entry => entry.id) } } })
     if (conflictingReview) throw new Error('CONFLICTING_OPEN_REVIEW')
@@ -243,7 +311,8 @@ export async function verifyReviewMetadata(input: { reviewId: string; catalogEnt
     const entry = await tx.forceCurveCatalogEntry.findUnique({ where: { id: input.catalogEntryId } })
     if (!review || review.status !== 'OPEN' || !review.masterSwitch || !entry?.exists) throw new Error('OPEN_LINKED_REVIEW_REQUIRED')
     if (!candidateIds(review.payload).includes(entry.id) || review.catalogEntryId !== entry.id) throw new Error('REVIEW_CANDIDATE_REQUIRED')
-    if (normalize(input.manufacturer) !== normalize(review.masterSwitch.manufacturer) || input.technology !== review.masterSwitch.technology || !exactCatalogMasterIdentity(review.masterSwitch, entry)) throw new Error('INCOMPATIBLE_IDENTITY')
+    const resolution=await resolveUniqueCatalogMaster(tx,{...entry,technology:input.technology})
+    if (normalize(input.manufacturer) !== normalize(review.masterSwitch.manufacturer) || input.technology !== review.masterSwitch.technology || !resolvedCatalogMasterCompatibility(review.masterSwitch,{...entry,technology:input.technology},resolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
     const payload = objectPayload(review.payload)
     const now = new Date()
     await tx.forceCurveCatalogEntry.update({ where: { id: entry.id }, data: { manufacturer: input.manufacturer.trim(), technology: input.technology, metadataVerifiedAt: now, metadataVerifiedById: input.actorId } })
@@ -261,8 +330,8 @@ export async function resolveForceCurveReview(input: { reviewId: string; resolut
     const candidate = targetId ? await tx.forceCurveCatalogEntry.findUnique({ where: { id: targetId } }) : null
     if (input.resolution !== 'NO_MATCH') {
       if (!candidate || !candidate.exists || !candidateIds(review.payload).includes(candidate.id)) throw new Error('REVIEW_CANDIDATE_REQUIRED')
-      if (!exactCatalogMasterIdentity(review.masterSwitch, candidate)) throw new Error('INCOMPATIBLE_IDENTITY')
-      if (input.resolution === 'MANUALLY_APPROVED' && !selectAutomaticCandidates(review.masterSwitch, [candidate]).length) throw new Error('INCOMPATIBLE_IDENTITY')
+      const resolution=await resolveUniqueCatalogMaster(tx,candidate)
+      if (!resolvedCatalogMasterCompatibility(review.masterSwitch,candidate,resolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
       if (input.resolution === 'MANUALLY_APPROVED' && normalize(review.masterSwitch.name) === 'peach blossom' && !candidate.metadataVerifiedAt) throw new Error('PEACH_BLOSSOM_AUTHORITATIVE_EVIDENCE_REQUIRED')
     }
     const now = new Date()
