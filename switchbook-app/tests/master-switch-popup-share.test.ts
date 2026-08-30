@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import MasterSwitchDetailsPopup from '../src/components/MasterSwitchDetailsPopup'
 import MasterSwitchShareButton, { getMasterSwitchShareUrl } from '../src/components/MasterSwitchShareButton'
 import SwitchShareButton, { SHARE_ICON_PATH } from '../src/components/SwitchShareButton'
+import { readFileSync } from 'node:fs'
 
 const noop = () => {}
 
@@ -17,6 +18,7 @@ function renderPopup(shareableId?: string | null) {
       inCollection: true,
       inWishlist: false,
       userCount: 2,
+      hasForceCurve: false,
       submittedBy: { id: 'user-1', username: 'maker' },
     },
     onClose: noop,
@@ -69,4 +71,14 @@ test('share button is omitted gracefully when a master switch has no shareable I
     React.createElement(MasterSwitchShareButton, { shareableId: undefined })
   )
   assert.equal(buttonMarkup, '')
+})
+
+test('popup exposes the canonical force-curve action only for enriched master switches with curves', () => {
+  const source = readFileSync(new URL('../src/components/MasterSwitchDetailsPopup.tsx', import.meta.url), 'utf8')
+
+  assert.match(source, /switchItem\.hasForceCurve\s*&&/)
+  assert.match(source, /masterSwitchId=\{switchItem\.id\}/)
+  assert.match(source, /forceCurvesCached=\{true\}/)
+  assert.match(source, /data-testid="master-switch-popup-force-curve"[\s\S]*onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}[\s\S]*onClick=\{\(event\) => event\.stopPropagation\(\)\}/)
+  assert.doesNotMatch(renderPopup('share-123'), /master-switch-popup-force-curve/)
 })

@@ -7,6 +7,7 @@ import { linkify } from '@/utils/linkify'
 import { getImageUrl } from '@/utils/imageHelpers'
 import ImageCarousel from './ImageCarousel'
 import MasterSwitchShareButton from './MasterSwitchShareButton'
+import ForceCurvesButton from './ForceCurvesButton'
 
 interface SwitchImage {
   id: string
@@ -57,6 +58,7 @@ interface MasterSwitch {
   inCollection: boolean
   inWishlist: boolean
   userCount: number
+  hasForceCurve: boolean
   submittedBy: {
     id: string
     username: string
@@ -459,6 +461,22 @@ export default function MasterSwitchDetailsPopup({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {switchItem.hasForceCurve && (
+              <div
+                data-testid="master-switch-popup-force-curve"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <ForceCurvesButton
+                  masterSwitchId={switchItem.id}
+                  switchName={switchItem.name}
+                  manufacturer={switchItem.manufacturer || null}
+                  forceCurvesCached={true}
+                  variant="button"
+                />
+              </div>
+            )}
+
             <Link
               href={`/switches/${switchItem.id}`}
               className="px-4 py-2 text-sm text-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"

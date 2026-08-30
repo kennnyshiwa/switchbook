@@ -399,8 +399,10 @@ export default function ForceCurvesButton({
     return (
       <div className="relative" ref={dropdownRef}>
         <button
+          type="button"
           ref={buttonRef}
           onClick={() => handleClick()}
+          aria-label={`View force curves for ${switchName}`}
           className={`text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors ${className}`}
           title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
         >
@@ -424,7 +426,9 @@ export default function ForceCurvesButton({
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => handleClick()}
+        aria-label={`View force curves for ${switchName}`}
         className={`inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-100 border border-purple-300 rounded-md hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700 dark:hover:bg-purple-800 transition-colors ${className}`}
         title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
       >
