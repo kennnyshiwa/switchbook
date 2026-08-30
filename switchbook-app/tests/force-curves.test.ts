@@ -41,12 +41,18 @@ test('admin review source links preserve trusted GitHub publisher capitalization
     href: 'https://github.com/AEBoards/force-curves/blob/main/AEBoards%20Naevy%20EC/TG%20%231.csv',
     exactFile: true,
   })
+  assert.deepEqual(forceCurveReviewSourceLink('github:Aeboards/FORCE-CURVES', 'AEBoards Naevy EC/TG.csv'), {
+    publisher: 'AEBoards',
+    href: 'https://github.com/AEBoards/force-curves/blob/main/AEBoards%20Naevy%20EC/TG.csv',
+    exactFile: true,
+  })
 })
 test('admin review source links fail safely to a deterministic trusted repository', () => {
   const fallback = {publisher:'ThereminGoat',href:'https://github.com/ThereminGoat/force-curves',exactFile:false}
   assert.deepEqual(forceCurveReviewSourceLink(undefined, undefined), fallback)
   assert.deepEqual(forceCurveReviewSourceLink('javascript:alert(1)', '../escape.csv'), fallback)
   assert.deepEqual(forceCurveReviewSourceLink('github:evil.example/repo', 'Switch/TG.csv'), fallback)
+  assert.deepEqual(forceCurveReviewSourceLink('github:attacker/repository', 'Switch/TG.csv'), fallback)
   assert.equal(forceCurveReviewSourceLink('github:AEBoards/force-curves', 'Switch/data:text.csv').href.startsWith('https://github.com/'), true)
 })
 test('approved read supports multiple curves and excludes stale/deleted rows', () => {

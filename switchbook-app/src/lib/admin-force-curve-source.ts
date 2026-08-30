@@ -1,11 +1,14 @@
 import { FORCE_CURVE_SOURCE } from '@/lib/force-curves'
 
 const GITHUB_ORIGIN = 'https://github.com'
-const REPOSITORY = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9._-]+$/
+const TRUSTED_REPOSITORIES = new Map([
+  ['theremingoat/force-curves', 'ThereminGoat/force-curves'],
+  ['aeboards/force-curves', 'AEBoards/force-curves'],
+])
 
 function repositoryFromSource(source?: string | null) {
   const repository = source?.match(/^github:(.+)$/)?.[1]
-  return repository && REPOSITORY.test(repository) ? repository : null
+  return repository ? TRUSTED_REPOSITORIES.get(repository.toLowerCase()) || null : null
 }
 
 function safeRepositoryPath(repositoryPath?: string | null) {

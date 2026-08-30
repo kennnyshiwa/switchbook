@@ -13,3 +13,8 @@
 - Full unit suite: `npm test` — PASS, 109/109.
 - Lint: `npm run lint` — PASS with pre-existing unrelated warnings only.
 - Production build: `npm run build` — PASS.
+
+## QA security rework
+
+- Replaced the generic GitHub owner/repository syntax check with an explicit, case-insensitive allowlist for `ThereminGoat/force-curves` and the catalog's `AEBoards`/`Aeboards` variants.
+- Trusted variants always emit canonical repository casing; `github:attacker/repository` and every other unknown source fall back to the canonical ThereminGoat repository with `exactFile: false`.
