@@ -253,6 +253,14 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(rows.some(isAttachedReview)&&!replay&&!legacyAttached) throw new Error('REVIEW_ALREADY_LINKED')
     if(!replay&&!legacyAttached&&rows.some(r=>r.status!=='OPEN')) throw new Error('OPEN_SOURCE_REVIEW_REQUIRED')
     if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
+    // A completed same-target retry is a read-only validation. Return before
+    // compatibility resolution, timestamps, upserts, or audit construction so
+    // even a changed retry reason cannot rewrite the original decision record.
+    if(replay) {
+      const mapping=await tx.forceCurveMapping.findUnique({where:{masterSwitchId_catalogEntryId:{masterSwitchId:master.id,catalogEntryId:input.catalogEntryId}}})
+      if(mapping?.state!=='MANUALLY_APPROVED'||rows.some(row=>!objectPayload(row.payload).linkAudit)) throw new Error('ATTACH_REPLAY_MISMATCH')
+      return {linked:rows.length,masterSwitchId:master.id,catalogEntryId:input.catalogEntryId,replayed:true}
+    }
     const selectedResolution=candidate?await resolveUniqueCatalogMaster(tx,candidate):null
     const selectedCompatibility=candidate&&selectedResolution?resolvedCatalogMasterCompatibility(master,candidate,selectedResolution):null
     const overrideReason=input.compatibilityOverride?.reason.trim()||''
@@ -291,11 +299,6 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(legacyAttached&&(legacySourceRows.length!==unique.length||legacySourceRows.some(row=>!isAttachedReview(row)||row.masterSwitchId!==master.id||row.catalogEntryId!==candidate.id)||legacySourceRows.map(row=>row.id).sort().some((id,index)=>id!==[...unique].sort()[index]))) throw new Error('INCOMPLETE_SOURCE_GROUP')
     const conflicts=await tx.forceCurveReviewCase.findMany({where:{id:{notIn:unique},status:'OPEN',masterSwitchId:master.id,catalogEntryId:{in:allCandidateIds}},select:{payload:true}})
     if(conflicts.some(row=>!isAttachedReview(row))) throw new Error('CONFLICTING_OPEN_REVIEW')
-    if(replay) {
-      const mapping=await tx.forceCurveMapping.findUnique({where:{masterSwitchId_catalogEntryId:{masterSwitchId:master.id,catalogEntryId:candidate.id}}})
-      if(mapping?.state!=='MANUALLY_APPROVED') throw new Error('ATTACH_REPLAY_MISMATCH')
-      return {linked:rows.length,masterSwitchId:master.id,catalogEntryId:candidate.id,replayed:true}
-    }
     const conflictingMappings=await tx.forceCurveMapping.findMany({where:{masterSwitchId:master.id,state:{in:['AUTO_APPROVED','MANUALLY_APPROVED']},catalogEntryId:{not:candidate.id}}})
     if(conflictingMappings.some(mapping=>mapping.state==='MANUALLY_APPROVED')) throw new Error('CONFLICTING_APPROVED_MAPPING')
     const now=new Date()
