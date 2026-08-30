@@ -134,3 +134,9 @@ Verification:
 - `git diff --check` — PASS.
 
 Repository status: base/working HEAD remains `1912367222e0b9a565591db29e4905c7f6a2aeb4`; correction is intentionally **uncommitted**. No commit SHA was created, no push or deploy occurred, and unrelated dirty-worktree changes were not touched.
+
+## Production QA rework
+
+Authenticated production QA of deployed `8edb6f2` at 390×844 found the status heading at y=809 but its actual `Find next suggestion` control at y=877, below the fold; the first card began at y=958. The status strip was therefore still not accepted as an above-fold action.
+
+The minimal rework moves the entire enabled status/action strip before queue stats and sticky filters. Existing stats, filters, instructions, cards, ranking, scan behavior, and server gates are unchanged. The focused test now asserts source render order: rank status/action before queue progress, and queue progress before sticky filters, in addition to the existing stacked-mobile and focus assertions.

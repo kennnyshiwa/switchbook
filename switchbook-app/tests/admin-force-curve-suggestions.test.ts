@@ -89,4 +89,8 @@ test('discoverability preserves keyboard focus and mobile-safe responsive layout
   assert.match(component, /requestAnimationFrame\(\(\) => cardRefs\.current\[queue\.items\[index\]\.sourceKey\]\?\.focus\(\)\)/)
   assert.match(component, /flex flex-col gap-3[\s\S]*sm:flex-row sm:items-center sm:justify-between/)
   assert.match(component, /disabled=\{Boolean\(busy\) \|\| scanning\}/)
+  const rankStatus = component.indexOf('data-testid="force-curve-rank-status"')
+  const queueProgress = component.indexOf('aria-label="Queue progress"')
+  const stickyFilters = component.indexOf('sticky top-0')
+  assert.ok(rankStatus > 0 && rankStatus < queueProgress && queueProgress < stickyFilters, 'mobile rank heading and action must render before stats and filters')
 })
