@@ -199,3 +199,68 @@ Dedicated terminal result: `{"migrations":34,"exactReviews":2,"exactMappings":1,
 ### Cleanup and scope
 
 The disposable PostgreSQL server stopped cleanly. QA validated the explicit `/tmp/switchbook-r2-pg.*` target before removing it and confirmed it no longer exists. No Docker, production database, deployment, commit, or push was used. The dirty worktree was preserved. Authenticated production browser verification remains the required post-release gate.
+
+---
+
+## Corrective iteration 3 PostgreSQL verification
+
+Verdict: **FAIL — RELEASE BLOCKED**
+
+Fresh PostgreSQL 17.8 verification applied all 34 migrations. The entire existing `npm run test:force-curves-db` suite passed with 14 runs, 5,386 catalog entries, and 5,503 reviews.
+
+The mandatory production-shaped split-candidate transaction failed on a second clean migrated database:
+
+- `SOURCE_UNVERIFIED` row: high-resolution candidate only.
+- `MANUFACTURER_CONFLICT` row: raw and high-resolution candidates.
+- `SOURCE_UNVERIFIED` row: raw candidate only.
+- All three share the exact `80Retros 1989 Retro Blue` measurement identity.
+- Selected target: `cmqo2gr3403wqnu3voig85fi9`.
+- Selected evidence: high-resolution `cmtbuy2gk0004uq2nageylhc4`.
+
+`linkSourceReviewGroup` throws `REVIEW_CANDIDATE_REQUIRED` at `src/lib/admin-force-curves.ts:207`. Although `MANUFACTURER_CONFLICT` is now an allowed group kind, the implementation still requires every individual review payload to contain the selected catalog file. That cannot represent a source group whose durable rows split raw and high-resolution evidence.
+
+The newly added implementation fixture misses this production boundary: it uses high-only / raw+high / high-only, so every row contains the selected high-resolution ID. The mandatory fixture is high-only / combined / raw-only.
+
+Required correction: validate that the selected catalog belongs to the homogeneous source group's combined candidate set, then prove every individual row belongs to that same canonical source identity. Do not require the chosen raw/high file ID in each row. Mixed source identities, wrong candidates outside the group union, cross-maker targets, unsupported conflict kinds, and ambiguity must remain rejected atomically.
+
+Static gates were not repeated after this first mandatory database failure. The temporary PostgreSQL server was stopped cleanly and its exact validated `/tmp/switchbook-r2-pg.*` directory removed. No production mutation or deployment occurred.
+
+---
+
+## Corrective iteration 4 independent verification
+
+Verdict: **PASS_VERIFIED**
+
+### Fresh PostgreSQL proof
+
+- PostgreSQL: Homebrew `postgresql@17` 17.8, fresh loopback-only cluster in an explicit `mktemp -d /tmp/switchbook-r2-pg.*` path on port 56494.
+- Databases: two clean temporary databases, `switchbook_r2_qa` and `switchbook_r2_exact`.
+- Migrations: 34/34 applied successfully to both databases.
+- Entire `npm run test:force-curves-db` suite passed on `switchbook_r2_qa` with terminal counts: 14 sync runs, 5,388 catalog entries, 5,504 review rows, and zero Peach Blossom approved URLs.
+
+### Exact production-shaped group transaction proof
+
+Dedicated independent regression: `tests/force-curves-r2.db.ts` on the separately recreated `switchbook_r2_exact` database.
+
+- Exact target: `cmqo2gr3403wqnu3voig85fi9` (`80Retros KTT Game1989 Retro Blue`).
+- Exact high-resolution catalog evidence: `cmtbuy2gk0004uq2nageylhc4`; raw evidence: `cmtbuy2gc0003uq2n00sp53z2`.
+- The source group used the mandatory production split: one SOURCE_UNVERIFIED high-only row, one MANUFACTURER_CONFLICT raw+high row, and one SOURCE_UNVERIFIED raw-only row.
+- Selecting the high-resolution evidence linked all three rows to the exact target successfully and atomically.
+- Repeating the group link was stable: all three reviews remained OPEN, linked to the same exact master/catalog, with zero published mappings.
+- Missing, stale, and wrong-source union catalog IDs were rejected by the full DB suite.
+- Three wrong variants, two cross-maker identities, mixed source identities, unrelated TECHNOLOGY_CONFLICT rows, an ambiguous duplicate exact master, and the 201-candidate fail-closed cap were rejected without unintended mappings.
+
+Dedicated terminal result: `{"migrations":34,"exactReviews":3,"exactMappings":0,"negativeVariants":3,"crossMaker":2,"ambiguousRejected":1,"capCandidates":201,"repeatStable":true}`.
+
+### Static gates
+
+- Focused force-curve unit tests: 27/27 pass.
+- Full unit suite: 81/81 pass.
+- Typecheck: pass.
+- Lint: pass with existing warnings only.
+- Production build: pass; 83 static pages generated.
+- `git diff --check`: pass.
+
+### Cleanup and scope
+
+The disposable PostgreSQL server was stopped cleanly. QA validated the explicit `/tmp/switchbook-r2-pg.PuA9Bm` target before removal and confirmed it no longer exists. No production data, Docker deployment, commit, or push was touched. The dirty worktree was preserved. Authenticated production browser verification of Kenneth's exact screen remains the mandatory post-deployment gate.

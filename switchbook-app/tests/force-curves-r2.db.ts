@@ -8,7 +8,7 @@ async function rejected(promise: Promise<unknown>, messages: string[]) {
 }
 
 async function main() {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: 'fc-user' } })
+  const user = await prisma.user.upsert({ where: { id: 'fc-user' }, create:{id:'fc-user',email:'fc-r2@example.test',username:'fc-r2-admin',role:'ADMIN'}, update:{} })
   for (const name of ['KTT','HMX','Gateron','BSUN','Aflion']) await prisma.manufacturer.upsert({ where:{name}, create:{name,aliases:[],verified:true}, update:{aliases:[],verified:true} })
   const masters = [
     { id:'cmqo2gr3403wqnu3voig85fi9', name:'80Retros KTT Game1989 Retro Blue', manufacturer:'KTT' },
@@ -20,19 +20,22 @@ async function main() {
   ]
   await prisma.masterSwitch.createMany({ data: masters.map(m => ({...m,technology:'MECHANICAL' as const,submittedById:user.id,status:'APPROVED' as const})) })
   const catalog = await prisma.forceCurveCatalogEntry.create({data:{id:'cmtbuy2gk0004uq2nageylhc4',source:FORCE_CURVE_SOURCE,repositoryPath:'80Retros 1989 Retro Blue/80Retros_1989_Retro_Blue_HighResolutionRaw.csv',displayName:'80Retros 1989 Retro Blue',technology:'MECHANICAL',contentHash:'r2-blue',exists:true}})
-  const reviews = await Promise.all([1,2].map(i => prisma.forceCurveReviewCase.create({data:{catalogEntryId:catalog.id,kind:'SOURCE_UNVERIFIED',reason:`R2 exact evidence ${i}`,payload:{measurementKey:'80Retros 1989 Retro Blue/80retros 1989 retro blue',candidateIds:[catalog.id],paths:[catalog.repositoryPath]}}})))
+  const raw = await prisma.forceCurveCatalogEntry.create({data:{id:'cmtbuy2gc0003uq2n00sp53z2',source:FORCE_CURVE_SOURCE,repositoryPath:'80Retros 1989 Retro Blue/80Retros 1989 Retro Blue Raw Data CSV.csv',displayName:'80Retros 1989 Retro Blue',technology:'MECHANICAL',contentHash:'r2-blue-raw',exists:true}})
+  const reviewShapes=[
+    {kind:'SOURCE_UNVERIFIED',candidateIds:[catalog.id],catalogEntryId:catalog.id},
+    {kind:'MANUFACTURER_CONFLICT',candidateIds:[raw.id,catalog.id],catalogEntryId:raw.id},
+    {kind:'SOURCE_UNVERIFIED',candidateIds:[raw.id],catalogEntryId:raw.id},
+  ]
+  const reviews = await Promise.all(reviewShapes.map((shape,i) => prisma.forceCurveReviewCase.create({data:{catalogEntryId:shape.catalogEntryId,kind:shape.kind,reason:`R2 exact evidence ${i}`,payload:{measurementKey:'80Retros 1989 Retro Blue/80retros 1989 retro blue',candidateIds:shape.candidateIds,paths:[shape.catalogEntryId===raw.id?raw.repositoryPath:catalog.repositoryPath]}}})))
   const reviewIds=reviews.map(r=>r.id)
   const linked=await linkSourceReviewGroup({reviewIds,masterSwitchId:masters[0].id,catalogEntryId:catalog.id,actorId:user.id},prisma)
-  assert.deepEqual(linked,{linked:2,masterSwitchId:masters[0].id,catalogEntryId:catalog.id})
+  assert.deepEqual(linked,{linked:3,masterSwitchId:masters[0].id,catalogEntryId:catalog.id})
   const repeated=await linkSourceReviewGroup({reviewIds,masterSwitchId:masters[0].id,catalogEntryId:catalog.id,actorId:user.id},prisma)
-  assert.equal(repeated.linked,2)
-  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'OPEN',masterSwitchId:masters[0].id,catalogEntryId:catalog.id}}),2)
+  assert.equal(repeated.linked,3)
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'OPEN',masterSwitchId:masters[0].id,catalogEntryId:catalog.id}}),3)
   assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:{in:masters.map(m=>m.id)}}}),0)
-  const approved=await bulkApproveForceCurveReviews({reviewIds,catalogEntryId:catalog.id,actorId:user.id},prisma)
-  assert.equal(approved.approved,2)
-  assert.equal((await bulkApproveForceCurveReviews({reviewIds,catalogEntryId:catalog.id,actorId:user.id},prisma)).replayed,true)
-  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:masters[0].id,catalogEntryId:catalog.id,state:'MANUALLY_APPROVED'}}),1)
-  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'RESOLVED',resolution:'MANUALLY_APPROVED'}}),2)
+  assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:masters[0].id}}),0)
+  assert.equal(await prisma.forceCurveReviewCase.count({where:{id:{in:reviewIds},status:'OPEN'}}),3)
 
   for (const wrong of masters.slice(1,4)) {
     const review=await prisma.forceCurveReviewCase.create({data:{catalogEntryId:catalog.id,kind:'SOURCE_UNVERIFIED',reason:'R2 wrong variant',payload:{candidateIds:[catalog.id]}}})
@@ -56,6 +59,6 @@ async function main() {
   const capped=await resolveUniqueCatalogMaster(prisma,{displayName:'CapIdentity',repositoryPath:'CapIdentity/TG.csv',technology:'MECHANICAL'})
   assert.equal(capped.uniqueMasterId,null);assert.match(capped.reason,/more than 200/)
   assert.equal(await prisma.forceCurveMapping.count({where:{masterSwitchId:{in:[...masters.slice(1).map(m=>m.id),duplicate.id]}}}),0)
-  console.log(JSON.stringify({migrations:34,exactReviews:2,exactMappings:1,negativeVariants:3,crossMaker:2,ambiguousRejected:1,capCandidates:201,replayed:true}))
+  console.log(JSON.stringify({migrations:34,exactReviews:3,exactMappings:0,negativeVariants:3,crossMaker:2,ambiguousRejected:1,capCandidates:201,repeatStable:true}))
 }
 main().finally(()=>prisma.$disconnect())

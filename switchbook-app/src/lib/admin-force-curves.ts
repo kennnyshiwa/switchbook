@@ -13,6 +13,7 @@ export type QueueReview = {
 }
 
 const SOURCE_REVIEW_KINDS = ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] as const
+const GROUP_LINKABLE_REVIEW_KINDS = [...SOURCE_REVIEW_KINDS, 'MANUFACTURER_CONFLICT'] as const
 const TECHNOLOGIES: SwitchTechnology[] = ['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']
 const normalize = (value?: string | null) => (value || '').toLowerCase().replace(/([a-z])([0-9])/g, '$1 $2').replace(/([0-9])([a-z])/g, '$1 $2').replace(/[^a-z0-9]+/g, ' ').trim()
 
@@ -200,11 +201,18 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(!master||master.status!=='APPROVED'||!master.manufacturer||!master.technology) throw new Error('APPROVED_MASTER_REQUIRED')
     const selectedResolution=candidate?await resolveUniqueCatalogMaster(tx,candidate):null
     if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!selectedResolution||!resolvedCatalogMasterCompatibility(master,candidate,selectedResolution).compatible) throw new Error('INCOMPATIBLE_IDENTITY')
-    if(rows.some(r=>!SOURCE_REVIEW_KINDS.includes(r.kind as typeof SOURCE_REVIEW_KINDS[number])||!candidateIds(r.payload).includes(candidate.id))) throw new Error('REVIEW_CANDIDATE_REQUIRED')
+    // MANUFACTURER_CONFLICT is linkable only as part of a proven homogeneous
+    // source group. Single-row linking intentionally remains restricted to the
+    // ordinary source-review kinds below.
+    if(rows.some(r=>!GROUP_LINKABLE_REVIEW_KINDS.includes(r.kind as typeof GROUP_LINKABLE_REVIEW_KINDS[number])||!candidateIds(r.payload).length)) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allCandidateIds=[...new Set(rows.flatMap(r=>candidateIds(r.payload)))]
+    if(!allCandidateIds.includes(candidate.id)) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allCandidates=await tx.forceCurveCatalogEntry.findMany({where:{id:{in:allCandidateIds},source:FORCE_CURVE_SOURCE,exists:true}})
+    if(allCandidates.length!==allCandidateIds.length) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allResolutions=await resolveCatalogEntries(tx,allCandidates)
     if(allCandidates.some((entry,index)=>!resolvedCatalogMasterCompatibility(master,entry,allResolutions[index]).compatible)) throw new Error('AMBIGUOUS_REVIEW_IDENTITY')
+    const catalogGroups=new Set(allCandidates.map(entry=>`${normalize(entry.displayName)}|${normalize(entry.repositoryPath.split('/').at(-2))}`))
+    if(catalogGroups.size!==1) throw new Error('MIXED_SOURCE_GROUP')
     // Use the exact same loaded catalog evidence as buildReviewQueue. This is
     // essential for legacy rows whose payload contains only candidateIds.
     const shaped=rows.map(r=>({...r,candidates:allCandidates.filter(entry=>candidateIds(r.payload).includes(entry.id))})) as QueueReview[]

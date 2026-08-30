@@ -14,6 +14,8 @@ Assignment ID: `671e3864-b382-4bbe-9cae-66937a63856d`
 - The resolver chooses a mandatory normalized product anchor, queries only approved MasterSwitch names containing it, projects minimal identity fields, and reads at most 201 rows. More than 200 candidates fails closed with an actionable broad-identity reason.
 - Repeated catalog representations of the same normalized folder/display identity reuse one resolution within grouped linking.
 - PG17 correction: bulk approval no longer invokes the context-free queue classifier after authoritative resolution. It independently enforces source kind, one candidate ID, one catalog entry, one master ID, and one source identity before writing.
+- Production correction 3: grouped linking admits `MANUFACTURER_CONFLICT` evidence only alongside the existing linkable source kinds and only after the same canonical source, extant candidate membership, authoritative unique target, mixed-source, and conflict locks all pass. Single-row linking remains restricted and unrelated conflict kinds remain rejected.
+- Production correction 4: grouped candidate membership is validated as a union, supporting the exact high-only / raw+high conflict / raw-only evidence partition. Every row must contribute a nonempty candidate set; the selected ID must occur in the union; every union ID must load as extant from the canonical source; all entries must share one normalized display/folder measurement identity and authoritatively resolve to the selected master.
 - Synchronous queue classification strips the selected master manufacturer only for conservative UI labelling; it remains non-authoritative and cannot authorize a mutation.
 - Compatibility reasons report the verified token sequence or the matched/missing token evidence.
 - Legacy exact/automatic matching no longer gates any write path; it remains only in non-mutating queue classification. There is no client-only bypass.
@@ -35,6 +37,8 @@ Assignment ID: `671e3864-b382-4bbe-9cae-66937a63856d`
 - Production build: `npm run build` — passed (83 static pages generated).
 - DB link/idempotency command: `npm run test:force-curves-db` — not runnable in this builder shell because `DATABASE_URL` is absent; it failed during Prisma initialization before any DB mutation. Independent QA/CI must run this gate with the isolated test database configured.
 - PG17 QA is expected to rerun the fresh-migration DB suite; the reported valid KTT Queue split-brain path is removed in code.
+- Added a fresh-DB production-shaped regression with three same-source rows (`SOURCE_UNVERIFIED`, `MANUFACTURER_CONFLICT`, `SOURCE_UNVERIFIED`), split/combined raw and high-resolution candidate IDs, three-row attach, stable repeat, and unrelated conflict rejection. Local execution still requires the isolated `DATABASE_URL`; QA must run it on PG17.
+- The DB regression now uses the exact high-only / both / raw-only candidate partition and rejects a union containing a missing ID, a stale canonical entry, and a wrong-source entry.
 
 ## Scope and safety
 
