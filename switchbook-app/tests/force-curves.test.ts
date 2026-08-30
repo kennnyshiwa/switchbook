@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { catalogUrl, classifyCatalogTree, collapseAutomaticCandidates, forceCurveSyncRevision, measurementDisplayName, resolveApprovedCurveRecords, selectAutomaticCandidates } from '../src/lib/force-curves'
-import { adminActor, buildReviewQueue, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
+import { adminActor, buildReviewQueue, catalogMasterCompatibility, exactCatalogMasterIdentity, isSameOriginMutation } from '../src/lib/admin-force-curves'
 import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
@@ -166,4 +166,13 @@ test('manual source linking uses exact manufacturer/name folder identity and rej
   assert.equal(exactCatalogMasterIdentity({name:'Gateron Oil King',manufacturer:'KTT'},{displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/TG.csv'}),false)
   assert.equal(exactCatalogMasterIdentity({name:'GateronX Oil King',manufacturer:'Gateron'},{displayName:'GateronX Oil King',repositoryPath:'GateronX Oil King/TG.csv'}),false)
   assert.equal(exactCatalogMasterIdentity({name:'Peach Blossom',manufacturer:'KTT'},{displayName:'Cherry Blossom',repositoryPath:'Cherry Blossom/TG.csv'}),false)
+})
+test('80Retros Game1989 identity conflict fails closed without a verified scoped alias', () => {
+  const conflicted = { name: '80Retros KTT Game1989 Retro Blue', manufacturer: 'KTT' }
+  const entry = { displayName: '80Retros 1989 Retro Blue', repositoryPath: '80Retros 1989 Retro Blue/80Retros_1989_Retro_Blue_HighResolutionRaw.csv' }
+  assert.deepEqual(catalogMasterCompatibility(conflicted, entry), { compatible: false, reason: 'MasterSwitch name and catalog switch identity do not exactly match.' })
+  assert.equal(exactCatalogMasterIdentity(conflicted, entry), false)
+  assert.equal(exactCatalogMasterIdentity({ name: '80Retros KTT 1989 Retro Blue', manufacturer: 'KTT' }, entry), true)
+  assert.equal(exactCatalogMasterIdentity({ name: 'KTT Retro Blue', manufacturer: 'KTT' }, entry), false)
+  assert.equal(exactCatalogMasterIdentity(conflicted, { ...entry, displayName: '80Retros 1989 Retro Red', repositoryPath: '80Retros 1989 Retro Red/TG.csv' }), false)
 })

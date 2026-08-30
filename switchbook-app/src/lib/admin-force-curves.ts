@@ -36,14 +36,30 @@ export function isSameOriginMutation(request: { headers: { get(name: string): st
   } catch { return false }
 }
 
-export function exactCatalogMasterIdentity(master: { name: string; manufacturer: string | null }, entry: { displayName: string; repositoryPath: string }) {
-  if (!master.manufacturer) return false
-  const manufacturer = normalize(master.manufacturer)
-  const name = normalize(master.name)
-  const expected = name === manufacturer || name.startsWith(`${manufacturer} `) ? name : `${manufacturer} ${name}`
-  if (normalize(entry.displayName) !== expected) return false
+export type CatalogMasterCompatibility = { compatible: boolean; reason: string }
+
+function identityTokens(value: string, manufacturer: string) {
+  const manufacturerTokens = new Set(normalize(manufacturer).split(' ').filter(Boolean))
+  return normalize(value).split(' ').filter(token => token && !manufacturerTokens.has(token))
+}
+
+export function catalogMasterCompatibility(master: { name: string; manufacturer: string | null }, entry: { displayName: string; repositoryPath: string }): CatalogMasterCompatibility {
+  if (!master.manufacturer) return { compatible: false, reason: 'MasterSwitch manufacturer is missing.' }
   const folder = entry.repositoryPath.split('/').at(-2) || ''
-  return normalize(folder) === normalize(entry.displayName)
+  if (normalize(folder) !== normalize(entry.displayName)) return { compatible: false, reason: 'Catalog folder and display identity do not match.' }
+  const manufacturer = normalize(master.manufacturer)
+  const manufacturerNamed = [normalize(master.name), normalize(entry.displayName)].some(value => value === manufacturer || value.startsWith(`${manufacturer} `) || value.endsWith(` ${manufacturer}`) || value.includes(` ${manufacturer} `))
+  if (!manufacturerNamed) return { compatible: false, reason: 'Catalog and MasterSwitch identities do not include the declared manufacturer.' }
+  const masterIdentity = identityTokens(master.name, master.manufacturer)
+  const catalogIdentity = identityTokens(entry.displayName, master.manufacturer)
+  if (!masterIdentity.length || masterIdentity.join(' ') !== catalogIdentity.join(' ')) {
+    return { compatible: false, reason: 'MasterSwitch name and catalog switch identity do not exactly match.' }
+  }
+  return { compatible: true, reason: 'Exact manufacturer-aware catalog identity match.' }
+}
+
+export function exactCatalogMasterIdentity(master: { name: string; manufacturer: string | null }, entry: { displayName: string; repositoryPath: string }) {
+  return catalogMasterCompatibility(master, entry).compatible
 }
 
 function objectPayload(payload: Prisma.JsonValue | null) {

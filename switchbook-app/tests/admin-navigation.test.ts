@@ -35,4 +35,7 @@ test('force curve UI pages and refreshes a bounded server-side queue', () => {
   assert.match(source, /queue\.pagination\.hasNext/)
   assert.match(source, /refreshQueue\(queue\.pagination\.page/)
   assert.doesNotMatch(source, /visibleLimit/)
+  assert.match(source, /catalogEntryId=/)
+  assert.match(source, /disabled=\{!m\.compatibility\?\.compatible\}/)
+  assert.match(source, /That MasterSwitch does not exactly match this catalog switch/)
 })
