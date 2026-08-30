@@ -187,6 +187,28 @@ test('80Retros Game1989 accepts the full product identity while blocking sibling
   assert.equal(uniqueCatalogMasterCompatibility({id:'right',...conflicted},entry,[{name:'KTT'},{name:'HMX'}],masters).compatible,true)
   assert.equal(uniqueCatalogMasterCompatibility({id:'a',name:'Generic',manufacturer:'KTT'},{displayName:'Generic',repositoryPath:'Generic/TG.csv'},[],[{id:'a',name:'Generic',manufacturer:'KTT'},{id:'b',name:'Generic',manufacturer:'HMX'}]).compatible,false)
 })
+test('80Retros Retro Orange uses only the proven GAME1989 Orange product alias', async () => {
+  const { catalogMasterSearchTerms } = await import('../src/lib/admin-force-curves')
+  const entry = { displayName: '80Retros Retro Orange', repositoryPath: '80Retros Retro Orange/80Retros_Retro_Orange_HighResolutionRaw.csv', technology: 'MECHANICAL' as const }
+  const right = { id: 'right-orange', name: '80Retros GAME1989 Orange', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
+  assert.equal(catalogMasterCompatibility(right, entry, [{name:'KTT'},{name:'HMX'}]).compatible, true)
+  assert.equal(uniqueCatalogMasterCompatibility(right, entry, [{name:'KTT'},{name:'HMX'}], [right]).compatible, true)
+  assert.deepEqual(catalogMasterSearchTerms('80Retros Retro Orange', entry), ['80Retros Retro Orange', '80Retros GAME1989 Orange'])
+  assert.deepEqual(catalogMasterSearchTerms('Retro Orange', entry), ['Retro Orange', '80Retros GAME1989 Orange'])
+  assert.deepEqual(catalogMasterSearchTerms('HMX', entry), ['HMX'])
+  for (const wrong of [
+    {name:'80Retros GAME1989 Red',manufacturer:'KTT'},
+    {name:'80Retros GAME1989 Orange',manufacturer:'HMX'},
+    {name:'80Retros Retro Orange V2',manufacturer:'KTT'},
+    {name:'80Retros GAME1989 White',manufacturer:'KTT'},
+  ]) assert.equal(catalogMasterCompatibility(wrong, entry, [{name:'KTT'},{name:'HMX'}]).compatible, false)
+  const unrelatedEntry={displayName:'Gateron Oil King',repositoryPath:'Gateron Oil King/TG.csv',technology:'MECHANICAL' as const}
+  assert.equal(catalogMasterCompatibility({name:'Oil King',manufacturer:'Gateron',technology:'MECHANICAL'},unrelatedEntry,[{name:'Gateron'}]).compatible,true)
+  const calls:any[]=[]
+  const resolution=await resolveUniqueCatalogMaster({manufacturer:{findMany:async()=>[{name:'KTT',aliases:[]},{name:'HMX',aliases:[]}]},masterSwitch:{findMany:async(args:any)=>{calls.push(args);return [right]}}},entry)
+  assert.equal(resolution.uniqueMasterId,right.id)
+  assert.equal(calls[0].where.name.contains,'orange')
+})
 test('authoritative compatibility resolver uses a bounded mandatory-anchor query and fails closed at its cap', async () => {
   const calls:any[]=[]
   const db={manufacturer:{findMany:async()=>[{name:'KTT',aliases:[]},{name:'HMX',aliases:[]}]},masterSwitch:{findMany:async(args:any)=>{calls.push(args);return [{id:'right',name:'80Retros KTT Game1989 Retro Blue',manufacturer:'KTT',technology:'MECHANICAL'}]}}}

@@ -45,6 +45,26 @@ const COMPATIBILITY_CANDIDATE_LIMIT = 200
 
 function identityTokens(value: string) { return normalize(value).split(' ').filter(Boolean) }
 
+// ThereminGoat and retailers publish this exact KTT switch as "Retro Orange",
+// while the approved catalog uses its GAME1989 family name. Keep this alias
+// deliberately product-scoped: neighboring 80Retros colors and families must
+// still pass the ordinary ordered-token and manufacturer checks unchanged.
+const RETRO_ORANGE_SOURCE_IDENTITY = '80 retros retro orange'
+const RETRO_ORANGE_MASTER_IDENTITY = '80 retros game 1989 orange'
+
+function canonicalProductIdentityTokens(value: string) {
+  const identity = normalize(value)
+  if (identity === RETRO_ORANGE_SOURCE_IDENTITY || identity === RETRO_ORANGE_MASTER_IDENTITY) return identityTokens(RETRO_ORANGE_MASTER_IDENTITY)
+  return identityTokens(value)
+}
+
+export function catalogMasterSearchTerms(query: string, entry: CompatibleEntry) {
+  const terms = [query.trim()].filter(Boolean)
+  const normalizedQuery = normalize(query)
+  if (normalize(entry.displayName) === RETRO_ORANGE_SOURCE_IDENTITY && (normalizedQuery === RETRO_ORANGE_SOURCE_IDENTITY || normalizedQuery === 'retro orange')) terms.push('80Retros GAME1989 Orange')
+  return [...new Set(terms)]
+}
+
 function orderedTokenMatch(required: string[], available: string[]) {
   let cursor = 0
   for (const token of available) if (token === required[cursor]) cursor++
@@ -61,7 +81,7 @@ function canonicalManufacturer(value: string | null, known: KnownManufacturer[])
 }
 
 function catalogProductTokens(entry: CompatibleEntry, known: KnownManufacturer[]) {
-  const tokens=identityTokens(entry.displayName)
+  const tokens=canonicalProductIdentityTokens(entry.displayName)
   const prefix=manufacturerPrefixes(known).find(candidate=>candidate.tokens.every((token,index)=>tokens[index]===token))
   return {tokens:prefix?tokens.slice(prefix.tokens.length):tokens,prefix}
 }
@@ -70,8 +90,9 @@ export function catalogMasterCompatibility(master: { name: string; manufacturer:
   const folder = entry.repositoryPath.split('/').at(-2) || ''
   if (normalize(folder) !== normalize(entry.displayName)) return { compatible: false, reason: 'Catalog folder and display identity do not match.' }
   if (entry.technology && master.technology && entry.technology !== master.technology) return { compatible: false, reason: `Technology mismatch: catalog is ${entry.technology}, MasterSwitch is ${master.technology}.` }
-  const masterIdentity = identityTokens(master.name)
-  let catalogIdentity = identityTokens(entry.displayName)
+  if (normalize(entry.displayName) === RETRO_ORANGE_SOURCE_IDENTITY && (normalize(master.name) !== RETRO_ORANGE_MASTER_IDENTITY || normalize(master.manufacturer) !== 'ktt')) return { compatible: false, reason: 'Product alias mismatch: 80Retros Retro Orange is verified only for KTT 80Retros GAME1989 Orange.' }
+  const masterIdentity = canonicalProductIdentityTokens(master.name)
+  let catalogIdentity = canonicalProductIdentityTokens(entry.displayName)
   const recognizedPrefix = manufacturerPrefixes(knownManufacturers).find(prefix => prefix.tokens.every((token,index) => catalogIdentity[index] === token))
   if (recognizedPrefix) {
     if (recognizedPrefix.canonical !== canonicalManufacturer(master.manufacturer,knownManufacturers)) return { compatible: false, reason: `Manufacturer mismatch: catalog prefix identifies ${recognizedPrefix.canonical}; selected MasterSwitch manufacturer is ${normalize(master.manufacturer) || 'missing'}.` }
