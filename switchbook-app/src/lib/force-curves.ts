@@ -52,24 +52,30 @@ function sourceCatalogUrl(source: string | undefined, path: string) {
 
 type ReadMapping = {
   state: ForceCurveMappingState
-  decidedAt?: Date | null
-  createdAt?: Date
   provenance?: string
   catalogEntry: {
     id: string
     source?: string
     displayName: string
     repositoryPath: string
-    firstSeenAt?: Date
     exists: boolean
   } | null
 }
 
-function curveCondition(path: string) {
+export function deriveMeasurementMetadata(path: string, provenance?: string) {
   const value = normalize(path)
-  if (/\b(break in|broken in|breakin|retest|re test|after)\b/.test(value)) return 'Break-in / retest'
-  if (/\b(stock|new|before)\b/.test(value)) return 'Stock'
-  return 'Condition not specified'
+  let explicit: { condition?: unknown; date?: unknown } = {}
+  try {
+    const parsed = JSON.parse(provenance || '') as { measurement?: unknown }
+    if (parsed.measurement && typeof parsed.measurement === 'object') explicit = parsed.measurement as typeof explicit
+  } catch { /* legacy provenance is intentionally treated as having no measurement metadata */ }
+  const condition = typeof explicit.condition === 'string' && explicit.condition.trim()
+    ? explicit.condition.trim()
+    : /\b(break in|broken in|breakin|retest|re test)\b/.test(value)
+      ? 'Break-in / retest'
+      : /\bstock\b/.test(value) ? 'Stock' : 'Measurement'
+  const parsedDate = typeof explicit.date === 'string' ? new Date(explicit.date) : null
+  return { condition, measurementDate: parsedDate && !Number.isNaN(parsedDate.valueOf()) ? parsedDate.toISOString() : null }
 }
 
 function curveProvenance(source?: string) {
@@ -87,8 +93,7 @@ export function resolveApprovedCurveRecords(mappings: ReadMapping[]) {
     url: sourceCatalogUrl(m.catalogEntry.source, m.catalogEntry.repositoryPath),
     state: m.state,
     provenance: curveProvenance(m.catalogEntry.source),
-    condition: curveCondition(m.catalogEntry.repositoryPath),
-    measurementDate: (m.decidedAt || m.catalogEntry.firstSeenAt || m.createdAt)?.toISOString() || null,
+    ...deriveMeasurementMetadata(m.catalogEntry.repositoryPath, m.provenance),
   }] : [])
 }
 

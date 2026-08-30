@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ForceCurveMatch } from '@/utils/forceCurves'
 
 type CanonicalCurveMatch = ForceCurveMatch & {
@@ -40,6 +40,7 @@ export default function ForceCurvesButton({
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const pickerRef = useRef<HTMLDivElement>(null)
   const pickerId = `force-curve-picker-${masterSwitchId || switchName}`.replace(/[^a-zA-Z0-9_-]/g, '-')
 
   const canonicalMatch = (curve: { id: string; folderName: string; url: string; provenance?: string; condition?: string; measurementDate?: string | null }): CanonicalCurveMatch => ({
@@ -101,6 +102,25 @@ export default function ForceCurvesButton({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const closePicker = useCallback((restoreFocus = true) => {
+    setIsDropdownOpen(false)
+    if (restoreFocus) requestAnimationFrame(() => buttonRef.current?.focus())
+  }, [])
+
+  useEffect(() => {
+    if (!isDropdownOpen) return
+    pickerRef.current?.querySelector<HTMLButtonElement>('button[data-curve-option], button')?.focus()
+  }, [isDropdownOpen])
+
+  useEffect(() => {
+    if (!isDropdownOpen) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); closePicker() }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isDropdownOpen, closePicker])
+
   if (isLoading) {
     return null // Don't show anything while loading
   }
@@ -116,14 +136,6 @@ export default function ForceCurvesButton({
   }
 
   const savePreference = async (folderName: string, url: string) => {
-    // Only allow saving preferences for authenticated users
-    if (!isAuthenticated) {
-      // For unauthenticated users, just open the URL
-      window.open(url, '_blank', 'noopener,noreferrer')
-      setIsDropdownOpen(false)
-      return
-    }
-    
     try {
       const response = await fetch('/api/force-curve-preferences', {
         method: 'POST',
@@ -142,11 +154,16 @@ export default function ForceCurvesButton({
       }
       
       setSavedPreference({ folder: folderName, url })
-      setIsDropdownOpen(false)
       setShowAllOptions(false)
     } catch (error) {
       // Failed to save preference, but don't interrupt user flow
     }
+  }
+
+  const selectCurve = (folderName: string, url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer')
+    closePicker()
+    if (isAuthenticated) void savePreference(folderName, url)
   }
 
   const loadMatchesOnDemand = async () => {
@@ -290,7 +307,7 @@ export default function ForceCurvesButton({
 
   // Render dropdown content (shared between positioning methods)
   const renderDropdownContent = () => (
-    <div id={pickerId} role="dialog" aria-label={`Choose a force curve for ${switchName}`} className="max-h-64 overflow-y-auto">
+    <div ref={pickerRef} id={pickerId} role="dialog" aria-modal="false" aria-label={`Choose a force curve for ${switchName}`} className="max-h-64 overflow-y-auto">
       {feedbackSubmitted ? (
         <div className="px-3 py-4 text-center">
           <div className="text-green-600 dark:text-green-400 text-sm font-medium">✓ Thank you for your feedback!</div>
@@ -341,7 +358,8 @@ export default function ForceCurvesButton({
           {matches.map((match, index) => (
             <button
               key={index}
-              onClick={() => savePreference(match.folderName, match.url)}
+              data-curve-option
+              onClick={() => selectCurve(match.folderName, match.url)}
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 block"
             >
               <div className="font-medium text-gray-900 dark:text-white">{match.folderName}</div>
@@ -371,7 +389,7 @@ export default function ForceCurvesButton({
     if (variant === 'icon') {
       return (
         <div 
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg w-80"
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg w-[calc(100vw-2rem)] max-w-80"
           style={{
             ...dropdownStyle,
             transform: 'translateY(-100%)', // Make it grow upward from the anchor point
@@ -385,7 +403,7 @@ export default function ForceCurvesButton({
 
     // For other variants, use normal absolute positioning
     return (
-      <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[9999] w-80">
+      <div className="absolute bottom-full mb-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-[9999] w-[calc(100vw-2rem)] max-w-80">
         {renderDropdownContent()}
       </div>
     )
@@ -396,6 +414,7 @@ export default function ForceCurvesButton({
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
+          ref={buttonRef}
           onClick={() => handleClick()}
           aria-expanded={isDropdownOpen}
           aria-controls={matches.length > 1 ? pickerId : undefined}
@@ -453,6 +472,7 @@ export default function ForceCurvesButton({
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
+        ref={buttonRef}
         onClick={() => handleClick()}
         aria-expanded={isDropdownOpen}
         aria-controls={matches.length > 1 ? pickerId : undefined}
