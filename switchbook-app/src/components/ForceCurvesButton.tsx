@@ -3,6 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import type { ForceCurveMatch } from '@/utils/forceCurves'
 
+type CanonicalCurveMatch = ForceCurveMatch & {
+  provenance: string
+  condition: string
+  measurementDate: string | null
+}
+
 interface ForceCurvesButtonProps {
   switchName: string
   masterSwitchId?: string | null
@@ -24,7 +30,7 @@ export default function ForceCurvesButton({
   forceCurvesCached,
   savedPreference: savedPreferenceProp
 }: ForceCurvesButtonProps) {
-  const [matches, setMatches] = useState<ForceCurveMatch[]>([])
+  const [matches, setMatches] = useState<CanonicalCurveMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
@@ -34,18 +40,29 @@ export default function ForceCurvesButton({
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const pickerId = `force-curve-picker-${masterSwitchId || switchName}`.replace(/[^a-zA-Z0-9_-]/g, '-')
+
+  const canonicalMatch = (curve: { id: string; folderName: string; url: string; provenance?: string; condition?: string; measurementDate?: string | null }): CanonicalCurveMatch => ({
+    catalogEntryId: curve.id,
+    folderName: curve.folderName,
+    url: curve.url,
+    matchType: 'exact',
+    provenance: curve.provenance || 'Source not specified',
+    condition: curve.condition || 'Condition not specified',
+    measurementDate: curve.measurementDate || null,
+  })
 
   useEffect(() => {
     let isMounted = true
 
     async function loadForceCurveData() {
       try {
-        let foundMatches: ForceCurveMatch[] = []
+        let foundMatches: CanonicalCurveMatch[] = []
         if (!masterSwitchId) { if (isMounted) { setMatches([]); setIsLoading(false) }; return }
         const response = await fetch(`/api/force-curves/${encodeURIComponent(masterSwitchId)}`)
         if (response.ok) {
           const data = await response.json()
-          foundMatches = data.curves.map((curve: { id: string; folderName: string; url: string }) => ({ catalogEntryId: curve.id, folderName: curve.folderName, url: curve.url, matchType: 'exact' as const }))
+          foundMatches = data.curves.map(canonicalMatch)
         }
         
         if (isMounted) {
@@ -138,7 +155,7 @@ export default function ForceCurvesButton({
       try {
         const response = masterSwitchId ? await fetch(`/api/force-curves/${encodeURIComponent(masterSwitchId)}`) : null
         const data = response?.ok ? await response.json() : { curves: [] }
-        const canonicalMatches = data.curves.map((curve: { id: string; folderName: string; url: string }) => ({ catalogEntryId: curve.id, folderName: curve.folderName, url: curve.url, matchType: 'exact' as const }))
+        const canonicalMatches = data.curves.map(canonicalMatch)
         setMatches(canonicalMatches)
         return canonicalMatches
       } catch (error) {
@@ -273,7 +290,7 @@ export default function ForceCurvesButton({
 
   // Render dropdown content (shared between positioning methods)
   const renderDropdownContent = () => (
-    <div className="max-h-64 overflow-y-auto">
+    <div id={pickerId} role="dialog" aria-label={`Choose a force curve for ${switchName}`} className="max-h-64 overflow-y-auto">
       {feedbackSubmitted ? (
         <div className="px-3 py-4 text-center">
           <div className="text-green-600 dark:text-green-400 text-sm font-medium">✓ Thank you for your feedback!</div>
@@ -327,8 +344,10 @@ export default function ForceCurvesButton({
               onClick={() => savePreference(match.folderName, match.url)}
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 block"
             >
-              <div className="font-medium text-gray-900 dark:text-white truncate">{match.folderName}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">{getMatchTypeLabel(match.matchType)}</div>
+              <div className="font-medium text-gray-900 dark:text-white">{match.folderName}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {match.provenance} · {match.condition} · {match.measurementDate ? new Date(match.measurementDate).toLocaleDateString() : 'Date not recorded'}
+              </div>
             </button>
           ))}
           {matches.length > 0 && isAuthenticated && (
@@ -375,8 +394,12 @@ export default function ForceCurvesButton({
   if (variant === 'badge') {
     return (
       <div className="relative" ref={dropdownRef}>
-        <span 
+        <button
+          type="button"
           onClick={() => handleClick()}
+          aria-expanded={isDropdownOpen}
+          aria-controls={matches.length > 1 ? pickerId : undefined}
+          aria-haspopup={matches.length > 1 ? 'dialog' : undefined}
           className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors ${className}`}
           title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
         >
@@ -389,7 +412,7 @@ export default function ForceCurvesButton({
               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           )}
-        </span>
+        </button>
         {renderDropdown()}
       </div>
     )
@@ -402,6 +425,9 @@ export default function ForceCurvesButton({
           type="button"
           ref={buttonRef}
           onClick={() => handleClick()}
+          aria-expanded={isDropdownOpen}
+          aria-controls={matches.length > 1 ? pickerId : undefined}
+          aria-haspopup={matches.length > 1 ? 'dialog' : undefined}
           aria-label={`View force curves for ${switchName}`}
           className={`text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 transition-colors ${className}`}
           title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}
@@ -428,6 +454,9 @@ export default function ForceCurvesButton({
       <button
         type="button"
         onClick={() => handleClick()}
+        aria-expanded={isDropdownOpen}
+        aria-controls={matches.length > 1 ? pickerId : undefined}
+        aria-haspopup={matches.length > 1 ? 'dialog' : undefined}
         aria-label={`View force curves for ${switchName}`}
         className={`inline-flex items-center px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-100 border border-purple-300 rounded-md hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700 dark:hover:bg-purple-800 transition-colors ${className}`}
         title={matches.length === 1 ? "View detailed force curve analysis" : `${matches.length} force curve options available`}

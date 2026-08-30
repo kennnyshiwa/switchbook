@@ -43,10 +43,53 @@ export function catalogUrl(path: string) {
   return `https://github.com/ThereminGoat/force-curves/blob/main/${path.split('/').map(encodeURIComponent).join('/')}`
 }
 
-type ReadMapping = { state: ForceCurveMappingState; catalogEntry: { id: string; displayName: string; repositoryPath: string; exists: boolean } | null }
+function sourceCatalogUrl(source: string | undefined, path: string) {
+  const repository = source?.match(/^github:([^/]+\/[^/]+)$/)?.[1]
+  return repository
+    ? `https://github.com/${repository}/blob/main/${path.split('/').map(encodeURIComponent).join('/')}`
+    : catalogUrl(path)
+}
+
+type ReadMapping = {
+  state: ForceCurveMappingState
+  decidedAt?: Date | null
+  createdAt?: Date
+  provenance?: string
+  catalogEntry: {
+    id: string
+    source?: string
+    displayName: string
+    repositoryPath: string
+    firstSeenAt?: Date
+    exists: boolean
+  } | null
+}
+
+function curveCondition(path: string) {
+  const value = normalize(path)
+  if (/\b(break in|broken in|breakin|retest|re test|after)\b/.test(value)) return 'Break-in / retest'
+  if (/\b(stock|new|before)\b/.test(value)) return 'Stock'
+  return 'Condition not specified'
+}
+
+function curveProvenance(source?: string) {
+  if (source === FORCE_CURVE_SOURCE) return 'ThereminGoat'
+  if (!source) return 'Source not specified'
+  return source.replace(/^github:/, '').split('/')[0] || source
+}
+
 export function resolveApprovedCurveRecords(mappings: ReadMapping[]) {
   if (mappings.some(m => m.state === 'NO_MATCH')) return []
-  return mappings.filter(m => APPROVED_STATES.includes(m.state) && m.catalogEntry?.exists).flatMap(m => m.catalogEntry ? [{ id: m.catalogEntry.id, folderName: m.catalogEntry.displayName.replace(/\/TG\.csv$/i, ''), path: m.catalogEntry.repositoryPath, url: catalogUrl(m.catalogEntry.repositoryPath), state: m.state }] : [])
+  return mappings.filter(m => APPROVED_STATES.includes(m.state) && m.catalogEntry?.exists).flatMap(m => m.catalogEntry ? [{
+    id: m.catalogEntry.id,
+    folderName: m.catalogEntry.displayName.replace(/\/TG\.csv$/i, ''),
+    path: m.catalogEntry.repositoryPath,
+    url: sourceCatalogUrl(m.catalogEntry.source, m.catalogEntry.repositoryPath),
+    state: m.state,
+    provenance: curveProvenance(m.catalogEntry.source),
+    condition: curveCondition(m.catalogEntry.repositoryPath),
+    measurementDate: (m.decidedAt || m.catalogEntry.firstSeenAt || m.createdAt)?.toISOString() || null,
+  }] : [])
 }
 
 export async function getApprovedCurves(masterSwitchId: string) {

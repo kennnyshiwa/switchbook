@@ -29,8 +29,17 @@ test('missing path evidence and manufacturer/technology conflicts fail closed wh
 })
 test('exact TG.csv file identity is encoded segment-by-segment', () => assert.equal(catalogUrl('KTT Peach/TG.csv'), 'https://github.com/ThereminGoat/force-curves/blob/main/KTT%20Peach/TG.csv'))
 test('approved read supports multiple curves and excludes stale/deleted rows', () => {
-  const rows = ['c1','c2'].map(id => ({ state: 'MANUALLY_APPROVED' as const, catalogEntry: { id, displayName: id, repositoryPath: `${id}/TG.csv`, exists: true } }))
-  assert.equal(resolveApprovedCurveRecords([...rows, { state: 'STALE', catalogEntry: { id:'c3',displayName:'c3',repositoryPath:'c3/TG.csv',exists:true } }]).length, 2)
+  const rows = [
+    { state: 'MANUALLY_APPROVED' as const, decidedAt:new Date('2026-08-30T00:00:00Z'), catalogEntry: { id:'stock',source:'github:ThereminGoat/force-curves',displayName:'KTT Peach',repositoryPath:'KTT Peach/KTT Peach Stock HighResolutionRaw.csv',exists:true } },
+    { state: 'MANUALLY_APPROVED' as const, decidedAt:new Date('2026-08-31T00:00:00Z'), catalogEntry: { id:'retest',source:'github:Aeboards/force-curves',displayName:'KTT Peach Retest',repositoryPath:'KTT Peach Retest/KTT Peach Break-in Retest HighResolutionRaw.csv',exists:true } },
+  ]
+  const approved=resolveApprovedCurveRecords([...rows, { state: 'STALE', catalogEntry: { id:'c3',displayName:'c3',repositoryPath:'c3/TG.csv',exists:true } }])
+  assert.equal(approved.length, 2)
+  assert.deepEqual(approved.map(row=>row.id),['stock','retest'])
+  assert.deepEqual(approved.map(row=>row.condition),['Stock','Break-in / retest'])
+  assert.deepEqual(approved.map(row=>row.provenance),['ThereminGoat','Aeboards'])
+  assert.deepEqual(approved.map(row=>row.measurementDate),['2026-08-30T00:00:00.000Z','2026-08-31T00:00:00.000Z'])
+  assert.equal(approved[1].url,'https://github.com/Aeboards/force-curves/blob/main/KTT%20Peach%20Retest/KTT%20Peach%20Break-in%20Retest%20HighResolutionRaw.csv')
   assert.equal(resolveApprovedCurveRecords([{ state: 'AUTO_APPROVED', catalogEntry: { id:'gone',displayName:'gone',repositoryPath:'gone/TG.csv',exists:false } }]).length, 0)
 })
 test('Peach Blossom behavior: durable NO_MATCH suppresses conflicting approval and yields no TG.csv URL', () => {
