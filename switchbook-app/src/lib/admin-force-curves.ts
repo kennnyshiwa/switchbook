@@ -14,6 +14,7 @@ export type QueueReview = {
 
 const SOURCE_REVIEW_KINDS = ['SOURCE_UNVERIFIED', 'SOURCE_NONSTANDARD'] as const
 const GROUP_LINKABLE_REVIEW_KINDS = [...SOURCE_REVIEW_KINDS, 'MANUFACTURER_CONFLICT'] as const
+const GROUP_EVIDENCE_REVIEW_KINDS = [...GROUP_LINKABLE_REVIEW_KINDS, 'AMBIGUOUS'] as const
 const TECHNOLOGIES: SwitchTechnology[] = ['MECHANICAL', 'OPTICAL', 'MAGNETIC', 'INDUCTIVE', 'ELECTRO_CAPACITIVE']
 const normalize = (value?: string | null) => (value || '').toLowerCase().replace(/([a-z])([0-9])/g, '$1 $2').replace(/([0-9])([a-z])/g, '$1 $2').replace(/[^a-z0-9]+/g, ' ').trim()
 
@@ -111,10 +112,25 @@ function catalogProductTokens(entry: CompatibleEntry, known: KnownManufacturer[]
   return {tokens:prefix?tokens.slice(prefix.tokens.length):tokens,prefix}
 }
 
+function bsunAgarwoodMeasurementSuffix(entry: CompatibleEntry) {
+  const folder = normalize(entry.repositoryPath.split('/').at(-2))
+  const display = normalize(entry.displayName)
+  if (folder !== 'bsun agarwood' || !display.startsWith(`${folder} `)) return null
+  const suffix = display.slice(folder.length + 1)
+  return /^\d+$/.test(suffix) || /^\d+(?: k)? actuations$/.test(suffix) ? suffix : null
+}
+
 export function catalogMasterCompatibility(master: { name: string; manufacturer: string | null; technology?: SwitchTechnology | null }, entry: { displayName: string; repositoryPath: string; technology?: SwitchTechnology | null }, knownManufacturers: KnownManufacturer[] = []): CatalogMasterCompatibility {
   const folder = entry.repositoryPath.split('/').at(-2) || ''
-  if (normalize(folder) !== normalize(entry.displayName)) return { compatible: false, reason: 'Catalog folder and display identity do not match.' }
   if (entry.technology && master.technology && entry.technology !== master.technology) return { compatible: false, reason: `Technology mismatch: catalog is ${entry.technology}, MasterSwitch is ${master.technology}.` }
+  const normalizedFolder = normalize(folder)
+  const normalizedDisplay = normalize(entry.displayName)
+  const parentMeasurementSuffix = bsunAgarwoodMeasurementSuffix(entry)
+  const bsunParentMeasurement = parentMeasurementSuffix !== null
+    && normalize(master.name) === normalizedFolder
+    && canonicalManufacturer(master.manufacturer, knownManufacturers) === 'bsun'
+  if (normalizedFolder !== normalizedDisplay && !bsunParentMeasurement) return { compatible: false, reason: 'Catalog folder and display identity do not match.' }
+  if (bsunParentMeasurement) return { compatible: true, reason: `Verified BSUN Agarwood parent measurement identity: [${parentMeasurementSuffix}].` }
   const retroVariant = retroFamilyVariant(entry.displayName, RETRO_FAMILY_SOURCE_PREFIX)
   if (retroVariant) {
     const expectedMasterIdentity = [...RETRO_FAMILY_MASTER_PREFIX, ...retroVariant].join(' ')
@@ -151,7 +167,7 @@ export async function resolveUniqueCatalogMaster(db: any, entry: CompatibleEntry
   // preserved variant as the bounded lookup anchor. Exact identity and maker
   // checks still run after candidate retrieval.
   const retroVariant=retroFamilyVariant(entry.displayName,RETRO_FAMILY_SOURCE_PREFIX)
-  const anchor=[...(retroVariant||required)].sort((a,b)=>b.length-a.length||a.localeCompare(b))[0]
+  const anchor=bsunAgarwoodMeasurementSuffix(entry) ? 'agarwood' : [...(retroVariant||required)].sort((a,b)=>b.length-a.length||a.localeCompare(b))[0]
   if(!anchor) return {uniqueMasterId:null,knownManufacturers,compatibleMasters:[],reason:'Catalog product identity is empty.'}
   const candidates:CompatibleMaster[]=await db.masterSwitch.findMany({where:{status:'APPROVED',name:{contains:anchor,mode:'insensitive'}},select:{id:true,name:true,manufacturer:true,technology:true},orderBy:{id:'asc'},take:COMPATIBILITY_CANDIDATE_LIMIT+1})
   if(candidates.length>COMPATIBILITY_CANDIDATE_LIMIT) return {uniqueMasterId:null,knownManufacturers,compatibleMasters:[],reason:`Product identity is too broad: more than ${COMPATIBILITY_CANDIDATE_LIMIT} approved MasterSwitch records contain anchor [${anchor}]. Refine canonical identity.`}
@@ -289,10 +305,10 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     if(overrideRequested&&overrideReason.length<3) throw new Error('OVERRIDE_REASON_REQUIRED')
     if(!candidate?.exists||candidate.source!==FORCE_CURVE_SOURCE||!selectedResolution) throw new Error('INCOMPATIBLE_IDENTITY')
     if(!selectedCompatibility?.compatible&&!overrideRequested) throw new Error('INCOMPATIBLE_IDENTITY')
-    // MANUFACTURER_CONFLICT is linkable only as part of a proven homogeneous
-    // source group. Single-row linking intentionally remains restricted to the
-    // ordinary source-review kinds below.
-    if(rows.some(r=>!GROUP_LINKABLE_REVIEW_KINDS.includes(r.kind as typeof GROUP_LINKABLE_REVIEW_KINDS[number])||!candidateIds(r.payload).length)) throw new Error('REVIEW_CANDIDATE_REQUIRED')
+    // Conflict and ambiguity evidence is linkable only beside an ordinary
+    // source-review row in the same complete homogeneous measurement group.
+    const hasSourceReview=rows.some(r=>SOURCE_REVIEW_KINDS.includes(r.kind as typeof SOURCE_REVIEW_KINDS[number]))
+    if(!hasSourceReview||rows.some(r=>!GROUP_EVIDENCE_REVIEW_KINDS.includes(r.kind as typeof GROUP_EVIDENCE_REVIEW_KINDS[number])||!candidateIds(r.payload).length)) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allCandidateIds=[...new Set(rows.flatMap(r=>candidateIds(r.payload)))]
     if(!allCandidateIds.includes(candidate.id)) throw new Error('REVIEW_CANDIDATE_REQUIRED')
     const allCandidates=await tx.forceCurveCatalogEntry.findMany({where:{id:{in:allCandidateIds},source:FORCE_CURVE_SOURCE,exists:true}})
@@ -313,7 +329,7 @@ export async function linkSourceReviewGroup(input:{reviewIds:string[];masterSwit
     const sourceKey=sourceIdentity(shaped[0])
     const siblingCatalog=await tx.forceCurveCatalogEntry.findMany({where:{source:FORCE_CURVE_SOURCE,exists:true,displayName:candidate.displayName}})
     const siblingCatalogMap=new Map(siblingCatalog.map(entry=>[entry.id,entry]))
-    const openSourceRows=await tx.forceCurveReviewCase.findMany({where:{status:'OPEN',kind:{in:[...GROUP_LINKABLE_REVIEW_KINDS]}},include:{masterSwitch:true}})
+    const openSourceRows=await tx.forceCurveReviewCase.findMany({where:{status:'OPEN',kind:{in:[...GROUP_EVIDENCE_REVIEW_KINDS]}},include:{masterSwitch:true}})
     const completeIds=openSourceRows.filter(row=>!isAttachedReview(row)&&sourceIdentity({...row,candidates:candidateIds(row.payload).flatMap(id=>siblingCatalogMap.get(id)||[])} as QueueReview)===sourceKey).map(row=>row.id).sort()
     const legacySourceRows=openSourceRows.filter(row=>sourceIdentity({...row,candidates:candidateIds(row.payload).flatMap(id=>siblingCatalogMap.get(id)||[])} as QueueReview)===sourceKey)
     if(!replay&&!legacyAttached&&(completeIds.length!==unique.length||completeIds.some((id,index)=>id!==[...unique].sort()[index]))) throw new Error('INCOMPLETE_SOURCE_GROUP')

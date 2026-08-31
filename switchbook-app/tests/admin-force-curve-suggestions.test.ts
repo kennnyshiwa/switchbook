@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { findNextRankedIndex, rankForceCurveSuggestion } from '../src/lib/admin-force-curve-suggestions'
 import { forceCurveAttachErrorMessage } from '../src/lib/admin-force-curve-attach-feedback'
+import { catalogMasterCompatibility } from '../src/lib/admin-force-curves'
 
 const catalog = { id: 'c1', displayName: 'Acer Yellow', repositoryPath: 'Acer Yellow/TG.csv', manufacturer: null, technology: null }
 const master = (id: string, name: string, manufacturer: string | null = 'Acer', technology: string | null = 'MECHANICAL') => ({ id, name, manufacturer, technology })
@@ -18,6 +19,19 @@ test('rank assist supports full-boundary identity but not loose threshold-80 tok
   const source = { ...catalog, displayName: 'Acme Ocean Silent Dustproof curves', repositoryPath: 'Acme Ocean Silent Dustproof curves/TG.csv' }
   assert.equal(rankForceCurveSuggestion(source, [master('m1', 'Ocean Silent Dustproof', 'Acme')])?.tier, 'BOUNDARY_UNIQUE')
   assert.equal(rankForceCurveSuggestion(source, [master('m1', 'Ocean Silent')]), null)
+})
+
+test('BSUN Agarwood parent measurement rule accepts only numbered and actuation labels', () => {
+  const bsun = { name: 'BSUN Agarwood', manufacturer: 'Bsun', technology: null }
+  const known = [{ name: 'Bsun', aliases: ['BSUN'] }]
+  for (const displayName of ['BSUN Agarwood 1', 'BSUN Agarwood 17', 'BSUN Agarwood 10k Actuations', 'BSUN Agarwood 100000 Actuations']) {
+    assert.equal(catalogMasterCompatibility(bsun, { displayName, repositoryPath: `BSUN Agarwood/${displayName}.csv`, technology: null }, known).compatible, true, displayName)
+  }
+  for (const displayName of ['BSUN Agarwood Prototype', 'BSUN Agarwood 10k Revised', 'BSUN Agarwood 1 Other']) {
+    assert.equal(catalogMasterCompatibility(bsun, { displayName, repositoryPath: `BSUN Agarwood/${displayName}.csv`, technology: null }, known).compatible, false, displayName)
+  }
+  assert.equal(catalogMasterCompatibility({ ...bsun, manufacturer: 'Other' }, { displayName: 'BSUN Agarwood 1', repositoryPath: 'BSUN Agarwood/curve.csv', technology: null }, known).compatible, false)
+  assert.equal(catalogMasterCompatibility({ ...bsun, name: 'BSUN Agarwood Pro' }, { displayName: 'BSUN Agarwood 1', repositoryPath: 'BSUN Agarwood/curve.csv', technology: null }, known).compatible, false)
 })
 
 test('rank assist fails closed for ties and bounded-query overflow', () => {
@@ -108,6 +122,10 @@ test('rejected manual attachment stays actionable and persistent on its exact mo
   assert.doesNotMatch(component, /setOverrideAcknowledged\([^\n]+catch/)
   assert.doesNotMatch(component, /setOverrideReason\([^\n]+catch/)
   assert.equal(forceCurveAttachErrorMessage('APPROVED_MASTER_REQUIRED'), 'This MasterSwitch cannot be attached yet. Select an approved MasterSwitch with a manufacturer, then retry.')
+  assert.equal(forceCurveAttachErrorMessage('REVIEW_CANDIDATE_REQUIRED'), 'This card does not contain a complete attachable source-review group. Review its evidence and select the exact catalog candidate.')
+  assert.match(forceCurveAttachErrorMessage('INCOMPLETE_SOURCE_GROUP'), /Refresh this card/)
+  assert.match(component, /refreshable: message === forceCurveAttachErrorMessage\('INCOMPLETE_SOURCE_GROUP'\)/)
+  assert.match(component, /Refresh group and retry/)
 })
 
 test('manual attachment rejection preserves authorization and does not refresh or change skip/defer behavior', () => {
