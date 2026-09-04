@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
+import { forceCurveReviewFailureStatus } from '../src/lib/admin-force-curve-attach-feedback'
 
 test('admin dashboard exposes an accessible force curve review control', () => {
   const source = readFileSync(new URL('../src/app/admin/page.tsx', import.meta.url), 'utf8')
@@ -69,4 +70,14 @@ test('force curve compatibility overrides are explicit, validated, and audited s
   assert.match(service, /repositoryPath:entry\.repositoryPath,revision:entry\.revision,contentHash:entry\.contentHash/)
   assert.match(service, /state:'AUTO_APPROVED',catalogEntryId:\{not:candidate\.id\}/)
   assert.match(service, /Superseded by explicit reviewed source attachment/)
+})
+
+test('force curve review failures preserve truthful terminal, stale, and validation responses', () => {
+  assert.equal(forceCurveReviewFailureStatus('ATTACHED_REVIEW_IMMUTABLE'), 409)
+  assert.equal(forceCurveReviewFailureStatus('ATTACH_REPLAY_MISMATCH'), 409)
+  assert.equal(forceCurveReviewFailureStatus('INCOMPLETE_SOURCE_GROUP'), 409)
+  assert.equal(forceCurveReviewFailureStatus('OPEN_SOURCE_REVIEW_REQUIRED'), 404)
+  assert.equal(forceCurveReviewFailureStatus('OPEN_REVIEW_REQUIRED'), 404)
+  assert.equal(forceCurveReviewFailureStatus('REVIEW_CANDIDATE_REQUIRED'), 400)
+  assert.equal(forceCurveReviewFailureStatus('APPROVED_MASTER_REQUIRED'), 400)
 })

@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { adminActor, bulkApproveForceCurveReviews, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '@/lib/admin-force-curves'
 import { getForceCurveReviewQueuePage, invalidateForceCurveReviewQueue } from '@/lib/admin-force-curve-queue'
+import { forceCurveReviewFailureStatus } from '@/lib/admin-force-curve-attach-feedback'
 
 const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
 const compatibilityOverrideSchema=z.object({acknowledged:z.literal(true),reason:z.string().trim().min(3).max(1000)}).strict()
@@ -20,9 +21,7 @@ async function actor() { return adminActor(await auth()) }
 function changed(result: unknown) { invalidateForceCurveReviewQueue(prisma); return NextResponse.json(result) }
 function failure(error: unknown) {
   const message = error instanceof Error ? error.message : 'INVALID_REVIEW_OPERATION'
-  const conflicts = ['ATTACHED_REVIEW_IMMUTABLE','ATTACH_REPLAY_MISMATCH','INCOMPLETE_SOURCE_GROUP','REVIEW_ALREADY_LINKED','INCOMPATIBLE_IDENTITY','AMBIGUOUS_REVIEW_IDENTITY','CONFLICTING_OPEN_REVIEW','CONFLICTING_APPROVED_MAPPING','LINKED_MASTER_REQUIRED']
-  const notFound = ['OPEN_SOURCE_REVIEW_REQUIRED','OPEN_REVIEW_REQUIRED']
-  return NextResponse.json({ error: message }, { status: conflicts.includes(message) ? 409 : notFound.includes(message) ? 404 : 400 })
+  return NextResponse.json({ error: message }, { status: forceCurveReviewFailureStatus(message) })
 }
 async function mutationAccess(request: NextRequest) {
   const actorId = await actor()
