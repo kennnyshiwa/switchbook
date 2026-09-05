@@ -2,6 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 
+const SWITCHES_DB_ORIGIN = 'https://switchesdb.switchbook.app'
+const SWITCHES_DB_ESCAPE_MESSAGE = 'switchbook:switchesdb:escape'
+
 type Props = {
   url?: string
   label?: string
@@ -22,6 +25,7 @@ export default function ForceCurveLookupButton({
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const wasOpenRef = useRef(false)
   const titleId = useId()
 
@@ -59,11 +63,20 @@ export default function ForceCurveLookupButton({
       const dialog = dialogRef.current
       if (dialog && !dialog.contains(event.target as Node)) closeRef.current?.focus()
     }
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== SWITCHES_DB_ORIGIN ||
+          event.source !== iframeRef.current?.contentWindow ||
+          event.data !== SWITCHES_DB_ESCAPE_MESSAGE) return
+      setOpen(false)
+      window.requestAnimationFrame(() => triggerRef.current?.focus())
+    }
     document.addEventListener('keydown', onKeyDown)
     document.addEventListener('focusin', onFocusIn)
+    window.addEventListener('message', onMessage)
     return () => {
       document.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('focusin', onFocusIn)
+      window.removeEventListener('message', onMessage)
     }
   // setOpen intentionally closes over the controlled props for this render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,6 +135,7 @@ export default function ForceCurveLookupButton({
             {/* Content */}
             <div className="flex-1 relative">
               <iframe
+                ref={iframeRef}
                 src={url}
                 className="w-full h-full border-0"
                 title={`SwitchesDB exact force curve for ${label}`}

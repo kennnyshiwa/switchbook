@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { build } from 'esbuild'
 import { chromium } from 'playwright-core'
 
@@ -8,6 +8,9 @@ const cachedChromium = `${process.env.HOME}/Library/Caches/ms-playwright/chromiu
 const executablePath = process.env.BROWSER_CHROMIUM_PATH || (existsSync(cachedChromium) ? cachedChromium : undefined)
 
 test('exact SwitchesDB dialog preserves staged UI state and never mutates', async t => {
+  const switchesDBNginx = readFileSync('nginx/conf.d/switchesdb.conf', 'utf8')
+  assert.match(switchesDBNginx, /parent\.postMessage\(\"switchbook:switchesdb:escape\",\"\*\"\)/)
+
   const bundle = await build({
     stdin: {
       loader: 'tsx',
@@ -52,7 +55,11 @@ test('exact SwitchesDB dialog preserves staged UI state and never mutates', asyn
   page.on('pageerror', error => pageErrors.push(error.message))
   await page.route('https://switchesdb.switchbook.app/**', route => route.fulfill({
     contentType: 'text/html',
-    body: '<title>SwitchesDB fixture</title><button>First iframe control</button><button>Last iframe control</button>',
+    body: `<title>SwitchesDB fixture</title>
+      <button>First iframe control</button><button>Last iframe control</button>
+      <script>addEventListener('keydown', event => {
+        if (event.key === 'Escape') parent.postMessage('switchbook:switchesdb:escape', '*')
+      })</script>`,
   }))
   await page.setContent(`<!doctype html><html class="dark"><head><style>
     body { margin: 0; background: #111827; color: white; }
@@ -103,6 +110,8 @@ test('exact SwitchesDB dialog preserves staged UI state and never mutates', asyn
   assert.equal(await dialog.evaluate(element => element.contains(document.activeElement)), true)
   assert.equal(await page.getByRole('link', { name: 'Underlying provenance link' }).evaluate(element => document.activeElement === element), false)
 
+  await firstFrameControl.focus()
+  assert.equal(await firstFrameControl.evaluate(element => document.activeElement === element), true)
   await page.keyboard.press('Escape')
   await dialog.waitFor({ state: 'detached' })
   await page.waitForFunction(() => document.activeElement?.textContent?.trim() === 'View exact curve in SwitchesDB')
