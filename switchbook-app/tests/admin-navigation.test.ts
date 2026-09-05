@@ -55,6 +55,20 @@ test('force curve UI pages and refreshes a bounded server-side queue', () => {
   assert.match(source, /min-h-11/)
   assert.match(source, /aria-label=\{`Open \$\{sourceLink\.publisher\}/)
   assert.doesNotMatch(source, /View source on GitHub[^<]+onClick=/)
+  assert.match(source, /resolveSwitchesDBMeasurement\(first\.candidates, candidate\?\.id\)/)
+  assert.match(source, /open=\{openSwitchesDB === item\.sourceKey\}/)
+  assert.match(source, /switchesdb-unavailable-/)
+  assert.match(source, /target="_blank" rel="noopener noreferrer"[\s\S]*View source on GitHub/)
+
+  const dialog = readFileSync(new URL('../src/components/ForceCurveLookupButton.tsx', import.meta.url), 'utf8')
+  assert.match(dialog, /buttonLabel = 'View exact curve in SwitchesDB'/)
+  assert.match(dialog, /role="dialog" aria-modal="true" aria-labelledby=/)
+  assert.match(dialog, /event\.key === 'Escape'/)
+  assert.match(dialog, /triggerRef\.current\?\.focus\(\)/)
+  assert.match(dialog, /min-h-11 min-w-11/)
+  assert.match(dialog, /h-\[calc\(100dvh-1rem\)\]/)
+  assert.match(dialog, /dark:bg-gray-800/)
+  assert.doesNotMatch(dialog, /fetch\(|router\.|location\./)
 })
 
 test('force curve compatibility overrides are explicit, validated, and audited server-side', () => {

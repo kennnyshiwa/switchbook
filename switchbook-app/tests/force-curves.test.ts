@@ -5,6 +5,7 @@ import { adminActor, buildReviewQueue, catalogMasterCompatibility, catalogMaster
 import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue'
 import { forceCurvePickerPosition } from '../src/lib/force-curve-picker'
 import { forceCurveReviewSourceLink } from '../src/lib/admin-force-curve-source'
+import { resolveSwitchesDBMeasurement, switchesDBThereminGoatKey } from '../src/lib/admin-force-curve-switchesdb'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('sync run identity deterministically versions upstream content and matching algorithm', () => {
@@ -54,6 +55,47 @@ test('admin review source links fail safely to a deterministic trusted repositor
   assert.deepEqual(forceCurveReviewSourceLink('github:evil.example/repo', 'Switch/TG.csv'), fallback)
   assert.deepEqual(forceCurveReviewSourceLink('github:attacker/repository', 'Switch/TG.csv'), fallback)
   assert.equal(forceCurveReviewSourceLink('github:AEBoards/force-curves', 'Switch/data:text.csv').href.startsWith('https://github.com/'), true)
+})
+const overlayCandidate = (overrides: Partial<{ id: string; source: string; displayName: string; repositoryPath: string }> = {}) => ({
+  id: 'raw', source: 'github:ThereminGoat/force-curves', displayName: "'X' Green", repositoryPath: "'X' Green/'X' Green Raw Data CSV.csv", ...overrides,
+})
+test('SwitchesDB resolver derives and URI-encodes the exact generated ThereminGoat CSV key', () => {
+  assert.equal(switchesDBThereminGoatKey("'X' Green/'X' Green Raw Data CSV.csv"), 'X Green~TG.csv')
+  assert.deepEqual(resolveSwitchesDBMeasurement([overlayCandidate()], 'raw'), {
+    available: true,
+    key: 'X Green~TG.csv',
+    url: 'https://switchesdb.switchbook.app/#X%20Green~TG.csv',
+    label: "'X' Green",
+    candidateId: 'raw',
+    repositoryPath: "'X' Green/'X' Green Raw Data CSV.csv",
+  })
+  assert.equal(switchesDBThereminGoatKey('Odd/Odd $&+,:;=?@#|\'<>^*%! Raw Data CSV.csv'), 'Odd ~TG.csv')
+})
+test('SwitchesDB resolver selects only the unique exact raw sibling for a high-resolution primary', () => {
+  const raw = overlayCandidate({ id: 'raw', displayName: 'AEBoards Naevy EC 17000 Actuations', repositoryPath: 'AEBoards Naevy EC/AEBoards Naevy EC 17000 Actuations Raw Data CSV.csv' })
+  const high = overlayCandidate({ id: 'high', displayName: raw.displayName, repositoryPath: 'AEBoards Naevy EC/AEBoards_Naevy_EC_17000_Actuations_HighResolutionRaw.csv' })
+  const result = resolveSwitchesDBMeasurement([high, raw], 'high')
+  assert.equal(result.available, true)
+  if (result.available) assert.deepEqual([result.candidateId, result.key], ['raw', 'AEBoards Naevy EC 17000 Actuations~TG.csv'])
+})
+test('SwitchesDB resolver never merges stock, break-in, dated, actuation-count, or retest variants', () => {
+  const primary = overlayCandidate({ id: 'high', repositoryPath: 'Variant/Variant_Stock_HighResolutionRaw.csv' })
+  for (const variant of ['Variant', 'Variant Break-in', 'Variant 2026-09-04', 'Variant 51000 Actuations', 'Variant Retest']) {
+    const result = resolveSwitchesDBMeasurement([primary, overlayCandidate({ id: variant, repositoryPath: `Variant/${variant} Raw Data CSV.csv` })], 'high')
+    assert.equal(result.available, false)
+  }
+})
+test('SwitchesDB resolver fails closed on ties, missing primary/sibling, unsafe paths, and unknown repositories', () => {
+  const high = overlayCandidate({ id: 'high', repositoryPath: 'Switch/Switch_HighResolutionRaw.csv' })
+  const raw = overlayCandidate({ id: 'raw', repositoryPath: 'Switch/Switch Raw Data CSV.csv' })
+  assert.equal(resolveSwitchesDBMeasurement([high, raw, overlayCandidate({ id: 'raw-2', repositoryPath: raw.repositoryPath })], 'high').available, false)
+  assert.equal(resolveSwitchesDBMeasurement([high], 'high').available, false)
+  assert.equal(resolveSwitchesDBMeasurement([high, raw], 'missing').available, false)
+  assert.equal(resolveSwitchesDBMeasurement([overlayCandidate({ repositoryPath: '../Switch Raw Data CSV.csv' })], 'raw').available, false)
+  assert.equal(resolveSwitchesDBMeasurement([overlayCandidate({ source: 'github:AEBoards/force-curves' })], 'raw').available, false)
+  assert.equal(resolveSwitchesDBMeasurement([high, raw, overlayCandidate({ id: 'foreign', source: 'github:AEBoards/force-curves' })], 'high').available, false)
+  assert.equal(resolveSwitchesDBMeasurement([raw, overlayCandidate({ id: 'raw', repositoryPath: 'Other/Other Raw Data CSV.csv' })], 'raw').available, false)
+  assert.equal(forceCurveReviewSourceLink('github:AEBoards/force-curves', 'AEBoards/Switch Raw Data CSV.csv').exactFile, true)
 })
 test('approved read supports multiple curves and excludes stale/deleted rows', () => {
   const rows = [
