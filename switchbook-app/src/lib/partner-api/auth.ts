@@ -35,6 +35,14 @@ export function partnerScopesFromClaims(payload: unknown) {
   return scopes
 }
 
+export function applicationCredentialIsUsable(credential: {
+  revokedAt: Date | null
+  expiresAt: Date | null
+  application: { active: boolean }
+}, now = new Date()) {
+  return !credential.revokedAt && (!credential.expiresAt || credential.expiresAt > now) && credential.application.active
+}
+
 let jwks: ReturnType<typeof createRemoteJWKSet> | undefined
 
 function bearer(request: Request) {
@@ -62,8 +70,7 @@ export async function requirePartner(request: Request, required: PartnerScope[])
       where: { prefix },
       include: { application: true },
     })
-    if (!credential || credential.revokedAt || credential.expiresAt && credential.expiresAt <= new Date() ||
-        !credential.application.active || !secureEqualHash(apiKey, credential.secretHash)) {
+    if (!credential || !applicationCredentialIsUsable(credential) || !secureEqualHash(apiKey, credential.secretHash)) {
       throw new PartnerApiError(401, 'invalid_client', 'Invalid or revoked application credential')
     }
     const scopes = new Set(credential.scopes.filter(scope => credential.application.scopes.includes(scope)))

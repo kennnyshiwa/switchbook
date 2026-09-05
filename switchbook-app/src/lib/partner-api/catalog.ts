@@ -15,14 +15,15 @@ export function catalogDisposition(status: string, lifecycle?: { status: string;
   return status === 'APPROVED' ? 'ACTIVE' : 'NOT_FOUND'
 }
 
-const absoluteUrl = (path: string) => path.startsWith('http') ? path : `${apiOrigin()}${path.startsWith('/') ? '' : '/'}${path}`
+export const absoluteCatalogUrl = (path: string) => path.startsWith('http') ? path : `${apiOrigin()}${path.startsWith('/') ? '' : '/'}${path}`
 
 export async function toPartnerSwitch(record: PartnerSwitchRecord) {
-  const curve = (await getApprovedCurves(record.id))[0]
+  const curves = await getApprovedCurves(record.id)
+  const curve = curves[0]
   const lifecycle = record.lifecycle?.status || 'ACTIVE'
   const images = record.images.map(image => ({
     id: image.id,
-    url: absoluteUrl(image.url),
+    url: absoluteCatalogUrl(image.url),
     alt: image.altText || image.caption || `${record.manufacturer ? `${record.manufacturer} ` : ''}${record.name}`,
     width: image.width,
     height: image.height,
@@ -73,7 +74,7 @@ export async function toPartnerSwitch(record: PartnerSwitchRecord) {
     compatibility: record.compatibility,
     notes: record.notes,
     images,
-    thumbnail: images[0]?.url || record.imageUrl && absoluteUrl(record.imageUrl) || null,
+    thumbnail: images[0]?.url || record.imageUrl && absoluteCatalogUrl(record.imageUrl) || null,
     forceCurve: curve ? {
       available: true,
       url: curve.url,
@@ -81,6 +82,15 @@ export async function toPartnerSwitch(record: PartnerSwitchRecord) {
       rawDataIncluded: false,
       checkedAt: record.updatedAt.toISOString(),
     } : { available: false, url: null, source: 'SwitchesDB', rawDataIncluded: false, checkedAt: null },
+    forceCurves: curves.map(measurement => ({
+      measurementId: measurement.id,
+      condition: measurement.condition,
+      measuredAt: measurement.measurementDate,
+      url: measurement.url,
+      source: measurement.provenance,
+      rawDataIncluded: false,
+      checkedAt: record.updatedAt.toISOString(),
+    })),
     recordUrl: `${apiOrigin()}/switches/${record.id}`,
     attribution: { text: 'Data and photo from SwitchBook', url: `${apiOrigin()}/switches/${record.id}` },
     version: record.version,

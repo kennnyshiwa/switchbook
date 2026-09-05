@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: SwitchBook Partner API
-  version: 1.0.0
-  description: Canonical approved mechanical-switch catalog and moderated contribution API.
+  version: 1.1.0
+  description: Canonical approved mechanical-switch catalog and moderated contribution API. Application keys are server-side credentials scoped and rate-limited per application. Catalog GET responses are private-cacheable for five minutes and support ETag and Last-Modified conditional requests.
   license: { name: Proprietary integration terms, identifier: LicenseRef-SwitchBook-Partner }
 servers:
   - url: https://switchbook.app/api/v1
@@ -12,7 +12,8 @@ security:
 paths:
   /catalog/switches:
     get:
-      summary: Search active approved switches
+      summary: Search active approved switches by deterministic substring
+      description: The optional q parameter retains its original case-insensitive substring behavior across name, Chinese name, and manufacturer. It does not perform typo correction; use /catalog/switches/similar explicitly for advisory typo-tolerant discovery.
       operationId: searchSwitches
       security: [ { applicationKey: [] }, { oauth: ['catalog:read'] } ]
       parameters:
@@ -32,6 +33,50 @@ paths:
         '403': { $ref: '#/components/responses/Error' }
         '429': { $ref: '#/components/responses/Error' }
         '500': { $ref: '#/components/responses/Error' }
+  /catalog/switches/similar:
+    get:
+      summary: Rank advisory typo-tolerant candidates
+      description: Returns only active APPROVED catalog records. Exact normalized matches rank before substrings, which rank before bounded spelling similarity. rankScore is a deterministic heuristic ordering value, not confidence or probability. Results are advisory and may be ambiguous; clients must never auto-link, merge, resolve, or submit from this response and must confirm a stable SwitchBook ID. The candidate scan is capped at 5,000 records; use exact filters if capacity is exceeded.
+      operationId: findSimilarSwitches
+      security: [ { applicationKey: [] }, { oauth: ['catalog:read'] } ]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: "Trimmed query of 2 to 120 searchable Unicode characters; controls, formatting characters, empty normalized input, and more than 24 terms are rejected."
+          schema: { type: string, minLength: 2, maxLength: 120 }
+        - { name: manufacturer, in: query, schema: { type: string, minLength: 1, maxLength: 100 } }
+        - { name: type, in: query, schema: { type: string, enum: [LINEAR, TACTILE, CLICKY, SILENT_LINEAR, SILENT_TACTILE, MOUSE] } }
+        - { name: technology, in: query, schema: { type: string, enum: [MECHANICAL, OPTICAL, MAGNETIC, INDUCTIVE, ELECTRO_CAPACITIVE] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 25, default: 10 } }
+      responses:
+        '200':
+          description: Deterministically ranked advisory candidates; an empty data array means no sufficiently similar record was found.
+          headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SimilarityResponse' }
+              example:
+                data:
+                  - id: switchbook-id
+                    status: ACTIVE
+                    mergedIntoId: null
+                    name: Oil King
+                    manufacturer: Gateron
+                    type: LINEAR
+                    technology: MECHANICAL
+                    thumbnail: https://switchbook.app/example.png
+                    recordUrl: https://switchbook.app/switches/switchbook-id
+                    updatedAt: '2026-09-05T12:00:00.000Z'
+                    match: { kind: similar, matchedFields: [manufacturer, name], rankScore: 1788, explanation: Normalized spelling is close to manufacturer and name; review all returned candidates, advisory: true, requiresHumanConfirmation: true }
+                meta: { limit: 10, candidateCount: 2700, advisory: true, rankScoreMeaning: 'Heuristic ordering only; not confidence or probability. Confirm identity using the stable SwitchBook ID and full record.' }
+        '304': { description: Not modified }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+        '500': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
   /catalog/switches/{id}:
     get:
       summary: Retrieve a canonical record or lifecycle tombstone
@@ -129,9 +174,13 @@ components:
   schemas:
     Error: { type: object, required: [code, message, requestId], properties: { code: { type: string }, message: { type: string }, requestId: { type: string }, details: {} } }
     SearchItem: { type: object, required: [id, status, name, manufacturer, type, technology, thumbnail, recordUrl, updatedAt], properties: { id: { type: string }, status: { const: ACTIVE }, mergedIntoId: { type: [string, 'null'] }, name: { type: string }, manufacturer: { type: [string, 'null'] }, type: { type: [string, 'null'] }, technology: { type: [string, 'null'] }, thumbnail: { type: [string, 'null'], format: uri }, recordUrl: { type: string, format: uri }, updatedAt: { type: string, format: date-time } } }
+    MatchMetadata: { type: object, required: [kind, matchedFields, rankScore, explanation, advisory, requiresHumanConfirmation], properties: { kind: { type: string, enum: [exact, substring, similar] }, matchedFields: { type: array, minItems: 1, uniqueItems: true, items: { type: string, enum: [name, chineseName, manufacturer] } }, rankScore: { type: integer, description: Deterministic heuristic ordering only; never confidence or probability. }, explanation: { type: string }, advisory: { const: true }, requiresHumanConfirmation: { const: true } } }
+    SimilarityItem: { allOf: [ { $ref: '#/components/schemas/SearchItem' }, { type: object, required: [match], properties: { match: { $ref: '#/components/schemas/MatchMetadata' } } } ] }
+    SimilarityResponse: { type: object, required: [data, meta], properties: { data: { type: array, maxItems: 25, items: { $ref: '#/components/schemas/SimilarityItem' } }, meta: { type: object, required: [limit, candidateCount, advisory, rankScoreMeaning], properties: { limit: { type: integer, minimum: 1, maximum: 25 }, candidateCount: { type: integer, minimum: 0, maximum: 5000 }, advisory: { const: true }, rankScoreMeaning: { type: string } } } } }
     SearchPage: { type: object, required: [data, page], properties: { data: { type: array, items: { $ref: '#/components/schemas/SearchItem' } }, page: { type: object, required: [nextCursor, hasMore, limit], properties: { nextCursor: { type: [string, 'null'] }, hasMore: { type: boolean }, limit: { type: integer } } } } }
     Image: { type: object, required: [id, url, alt, revision, source, attribution, updatedAt], properties: { id: { type: string }, url: { type: string, format: uri }, alt: { type: string }, width: { type: [integer, 'null'] }, height: { type: [integer, 'null'] }, bytes: { type: [integer, 'null'] }, checksumSha256: { type: [string, 'null'] }, revision: { type: integer }, source: { type: string }, sourceUrl: { type: [string, 'null'], format: uri }, license: { type: [string, 'null'] }, attribution: { type: string }, updatedAt: { type: string, format: date-time } } }
-    CatalogSwitch: { type: object, required: [id, status, name, manufacturer, forces, travel, materials, colors, spring, images, forceCurve, recordUrl, attribution, version, createdAt, updatedAt], properties: { id: { type: string }, status: { const: ACTIVE }, mergedIntoId: { type: [string, 'null'] }, name: { type: string }, chineseName: { type: [string, 'null'] }, manufacturer: { type: [string, 'null'] }, type: { type: [string, 'null'] }, technology: { type: [string, 'null'] }, forces: { type: object, additionalProperties: { type: [number, 'null'] } }, travel: { type: object, additionalProperties: { type: [number, 'null'] } }, materials: { type: object, additionalProperties: { type: [string, 'null'] } }, colors: { type: object, additionalProperties: { type: [string, 'null'] } }, stemShape: { type: [string, 'null'] }, spring: { type: object }, magnetic: { type: [object, 'null'] }, clickType: { type: [string, 'null'] }, markings: { type: [string, 'null'] }, compatibility: { type: [string, 'null'] }, notes: { type: [string, 'null'] }, images: { type: array, items: { $ref: '#/components/schemas/Image' } }, thumbnail: { type: [string, 'null'], format: uri }, forceCurve: { type: object, required: [available, url, source, rawDataIncluded, checkedAt], properties: { available: { type: boolean }, url: { type: [string, 'null'], format: uri }, source: { const: SwitchesDB }, rawDataIncluded: { const: false }, checkedAt: { type: [string, 'null'], format: date-time } } }, recordUrl: { type: string, format: uri }, attribution: { type: object }, version: { type: integer }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time } } }
+    CatalogSwitch: { type: object, required: [id, status, name, manufacturer, forces, travel, materials, colors, spring, images, forceCurve, forceCurves, recordUrl, attribution, version, createdAt, updatedAt], properties: { id: { type: string }, status: { const: ACTIVE }, mergedIntoId: { type: [string, 'null'] }, name: { type: string }, chineseName: { type: [string, 'null'] }, manufacturer: { type: [string, 'null'] }, type: { type: [string, 'null'] }, technology: { type: [string, 'null'] }, forces: { type: object, additionalProperties: { type: [number, 'null'] } }, travel: { type: object, additionalProperties: { type: [number, 'null'] } }, materials: { type: object, additionalProperties: { type: [string, 'null'] } }, colors: { type: object, additionalProperties: { type: [string, 'null'] } }, stemShape: { type: [string, 'null'] }, spring: { type: object }, magnetic: { type: [object, 'null'] }, clickType: { type: [string, 'null'] }, markings: { type: [string, 'null'] }, compatibility: { type: [string, 'null'] }, notes: { type: [string, 'null'] }, images: { type: array, items: { $ref: '#/components/schemas/Image' } }, thumbnail: { type: [string, 'null'], format: uri }, forceCurve: { type: object, description: Backward-compatible first approved measurement summary; use forceCurves for complete multi-measurement truth., required: [available, url, source, rawDataIncluded, checkedAt], properties: { available: { type: boolean }, url: { type: [string, 'null'], format: uri }, source: { const: SwitchesDB }, rawDataIncluded: { const: false }, checkedAt: { type: [string, 'null'], format: date-time } } }, forceCurves: { type: array, description: Every currently approved distinct measurement; an empty array means none., items: { $ref: '#/components/schemas/ForceCurveMeasurement' } }, recordUrl: { type: string, format: uri }, attribution: { type: object }, version: { type: integer }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time } } }
+    ForceCurveMeasurement: { type: object, required: [measurementId, condition, measuredAt, url, source, rawDataIncluded, checkedAt], properties: { measurementId: { type: string }, condition: { type: string }, measuredAt: { type: [string, 'null'], format: date }, url: { type: string, format: uri }, source: { type: string }, rawDataIncluded: { const: false }, checkedAt: { type: string, format: date-time } } }
     SwitchResponse: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/CatalogSwitch' } } }
     Tombstone: { type: object, required: [id, status, mergedIntoId, updatedAt], properties: { id: { type: string }, status: { type: string, enum: [MERGED, REMOVED] }, mergedIntoId: { type: [string, 'null'] }, updatedAt: { type: string, format: date-time } } }
     BatchItem: { oneOf: [ { type: object, required: [id, status, data], properties: { id: { type: string }, status: { const: ACTIVE }, data: { $ref: '#/components/schemas/CatalogSwitch' } } }, { $ref: '#/components/schemas/Tombstone' }, { type: object, required: [id, status], properties: { id: { type: string }, status: { const: NOT_FOUND } } } ] }

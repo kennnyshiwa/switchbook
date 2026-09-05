@@ -17,6 +17,7 @@
     "script:migrate-images-safe": "tsx scripts/migrate-image-urls-safe.ts",
     "script:rehost-master-images": "tsx scripts/rehost-master-switch-images.ts",
     "partner:provision": "tsx scripts/provision-partner.ts",
+    "partner:catalog-key": "tsx scripts/catalog-key.ts",
     "partner:webhooks": "tsx scripts/deliver-partner-webhooks.ts",
     "build:force-curves-sync": "esbuild scripts/sync-force-curves.ts --bundle --platform=node --target=node20 --format=cjs --external:@prisma/client --outfile=dist/sync-force-curves.cjs",
     "force-curves:sync": "node dist/sync-force-curves.cjs",

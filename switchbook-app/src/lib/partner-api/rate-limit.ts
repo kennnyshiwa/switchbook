@@ -20,5 +20,9 @@ export async function consumeRateLimit(key: string, limit: number): Promise<Limi
   const redisKey = `partner-rate:${minute}:${key}`
   const count = await redis.incr(redisKey)
   if (count === 1) await redis.expire(redisKey, 65)
+  return rateLimitResult(count, limit, resetAt)
+}
+
+export function rateLimitResult(count: number, limit: number, resetAt: number): LimitResult {
   return { allowed: count <= limit, remaining: Math.max(0, limit - count), resetAt }
 }

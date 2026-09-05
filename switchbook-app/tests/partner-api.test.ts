@@ -6,7 +6,8 @@ import { createPinnedLookup, resolvePublicHost, validateImageUrl } from '../src/
 import { switchesDbSearchUrl } from '../src/lib/partner-api/config'
 import { openSecret, sealSecret } from '../src/lib/partner-api/crypto'
 import { catalogDisposition } from '../src/lib/partner-api/catalog'
-import { missingPartnerScopes, partnerScopesFromClaims } from '../src/lib/partner-api/auth'
+import { applicationCredentialIsUsable, missingPartnerScopes, partnerScopesFromClaims } from '../src/lib/partner-api/auth'
+import { rateLimitResult } from '../src/lib/partner-api/rate-limit'
 import { assertNoMergeCycle } from '../src/lib/partner-api/lifecycle'
 import { PartnerApiError } from '../src/lib/partner-api/errors'
 import { assertSafeWebhookUrl, drainLimitedResponse } from '../src/lib/partner-api/outbound'
@@ -78,6 +79,17 @@ test('webhook validator rejects HTTP, embedded credentials, and non-443 ports be
 
 test('scope enforcement reports every missing permission', () => {
   assert.deepEqual(missingPartnerScopes(new Set(['catalog:read']), ['catalog:read', 'submissions:write', 'corrections:write']), ['submissions:write', 'corrections:write'])
+})
+
+test('application-key lifecycle and per-minute rate boundary fail closed', () => {
+  const now = new Date('2026-09-05T12:00:00Z')
+  const base = { revokedAt: null, expiresAt: null, application: { active: true } }
+  assert.equal(applicationCredentialIsUsable(base, now), true)
+  assert.equal(applicationCredentialIsUsable({ ...base, revokedAt: now }, now), false)
+  assert.equal(applicationCredentialIsUsable({ ...base, expiresAt: now }, now), false)
+  assert.equal(applicationCredentialIsUsable({ ...base, application: { active: false } }, now), false)
+  assert.deepEqual(rateLimitResult(120, 120, 123), { allowed: true, remaining: 0, resetAt: 123 })
+  assert.deepEqual(rateLimitResult(121, 120, 123), { allowed: false, remaining: 0, resetAt: 123 })
 })
 
 test('conditional JSON returns 304 for matching ETag', async () => {
@@ -184,7 +196,9 @@ test('partner provisioning is idempotent unless intentional rotation is requeste
 test('published partner OpenAPI is parser-valid OpenAPI 3.1', async () => {
   const document = await SwaggerParser.validate(new URL('../public/openapi/partner-v1.yaml', import.meta.url).pathname)
   assert.equal((document as { openapi?: string }).openapi, '3.1.0')
+  assert.equal((document.info as { version?: string }).version, '1.1.0')
   assert.ok(document.paths?.['/catalog/switches'])
+  assert.ok(document.paths?.['/catalog/switches/similar'])
   assert.ok(document.paths?.['/submissions'])
 })
 
@@ -192,6 +206,7 @@ test('OpenAPI response and security matrices match reachable partner route behav
   const document = await SwaggerParser.dereference(new URL('../public/openapi/partner-v1.yaml', import.meta.url).pathname) as any
   const expected: Record<string, Record<string, string[]>> = {
     '/catalog/switches': { get: ['200','304','400','401','403','429','500'] },
+    '/catalog/switches/similar': { get: ['200','304','400','401','403','429','500','503'] },
     '/catalog/switches/{id}': { get: ['200','304','401','403','404','429','500'] },
     '/catalog/switches/batch': { post: ['200','304','400','401','403','429','500'] },
     '/profile': { get: ['200','401','403','404','429','500'] },
@@ -207,6 +222,37 @@ test('OpenAPI response and security matrices match reachable partner route behav
   assert.deepEqual(document.paths['/migration/matches'].post.security, [
     { applicationKey: [] }, { oauth: ['catalog:read'] },
   ])
+  assert.deepEqual(document.paths['/catalog/switches/similar'].get.security, [
+    { applicationKey: [] }, { oauth: ['catalog:read'] },
+  ])
+  const similar = document.paths['/catalog/switches/similar'].get
+  assert.equal(similar.parameters.find((item: any) => item.name === 'q').required, true)
+  assert.equal(similar.parameters.find((item: any) => item.name === 'limit').schema.maximum, 25)
+  assert.match(similar.description, /not confidence or probability/)
+  assert.match(similar.responses['200'].content['application/json'].example.meta.rankScoreMeaning, /not confidence or probability/)
+  assert.ok(document.components.schemas.CatalogSwitch.required.includes('forceCurves'))
+})
+
+test('partner handoff is standalone, placeholder-only, and matches catalog, key, lifecycle, cache, and force-curve contracts', () => {
+  const handoff = readFileSync(new URL('../docs/SWITCHBOOK_PARTNER_API_HANDOFF.md', import.meta.url), 'utf8')
+  for (const required of [
+    'https://switchbook.app/api/v1', 'https://sandbox.switchbook.app/api/v1',
+    'X-API-Key', 'partner:catalog-key', '/catalog/switches/similar', 'cursor pagination',
+    'ETag', 'Last-Modified', 'MERGED', 'REMOVED', 'NOT_FOUND', 'forceCurves',
+    'measurementId', 'measuredAt', 'rawDataIncluded', 'attribution', 'requiresHumanConfirmation',
+  ]) assert.ok(handoff.includes(required), required)
+  assert.match(handoff, /rankScore[\s\S]*never confidence, probability/)
+  assert.match(handoff, /curl[\s\S]*JavaScript|server-side JavaScript[\s\S]*curl/i)
+  assert.doesNotMatch(handoff, /sbk_[a-f0-9]{12}\.[A-Za-z0-9_-]{10,}/)
+  assert.doesNotMatch(handoff, /sbk_[a-f0-9]{12}\.TEST_ONLY/)
+})
+
+test('full catalog responses preserve legacy forceCurve and expose every approved measurement additively', () => {
+  const source = readFileSync(new URL('../src/lib/partner-api/catalog.ts', import.meta.url), 'utf8')
+  assert.match(source, /const curves = await getApprovedCurves\(record\.id\)/)
+  assert.match(source, /forceCurve: curve/)
+  assert.match(source, /forceCurves: curves\.map/)
+  for (const field of ['measurementId', 'condition', 'measuredAt', 'url', 'source', 'rawDataIncluded', 'checkedAt']) assert.ok(source.includes(field), field)
 })
 
 test('Next image optimizer is host-allowlisted and runtime Sharp is overridden to the patched line', () => {
