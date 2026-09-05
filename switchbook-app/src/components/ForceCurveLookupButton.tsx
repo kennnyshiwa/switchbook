@@ -55,8 +55,16 @@ export default function ForceCurveLookupButton({
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
     }
+    const onFocusIn = (event: FocusEvent) => {
+      const dialog = dialogRef.current
+      if (dialog && !dialog.contains(event.target as Node)) closeRef.current?.focus()
+    }
     document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
+    document.addEventListener('focusin', onFocusIn)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('focusin', onFocusIn)
+    }
   // setOpen intentionally closes over the controlled props for this render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal])

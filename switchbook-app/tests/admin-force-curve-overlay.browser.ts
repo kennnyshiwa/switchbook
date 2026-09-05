@@ -28,6 +28,7 @@ test('exact SwitchesDB dialog preserves staged UI state and never mutates', asyn
             <output aria-label="Staged action">{staged}</output>
             <ForceCurveLookupButton url="https://switchesdb.switchbook.app/#X%20Green~TG.csv" label="X Green" open={open === 'x'} onOpenChange={value => setOpen(value ? 'x' : null)} />
             <ForceCurveLookupButton url="https://switchesdb.switchbook.app/#Variant%2051000%20Actuations~TG.csv" label="Variant 51000 Actuations" open={open === 'variant'} onOpenChange={value => setOpen(value ? 'variant' : null)} buttonLabel="View actuation curve in SwitchesDB" />
+            <a href="https://github.com/example/source">Underlying provenance link</a>
             <div style={{height: '480px'}} />
           </main>
         }
@@ -49,7 +50,10 @@ test('exact SwitchesDB dialog preserves staged UI state and never mutates', asyn
   const pageErrors: string[] = []
   page.on('request', request => requests.push(request.method()))
   page.on('pageerror', error => pageErrors.push(error.message))
-  await page.route('https://switchesdb.switchbook.app/**', route => route.fulfill({ contentType: 'text/html', body: '<title>SwitchesDB fixture</title><p>exact curve loaded</p>' }))
+  await page.route('https://switchesdb.switchbook.app/**', route => route.fulfill({
+    contentType: 'text/html',
+    body: '<title>SwitchesDB fixture</title><button>First iframe control</button><button>Last iframe control</button>',
+  }))
   await page.setContent(`<!doctype html><html class="dark"><head><style>
     body { margin: 0; background: #111827; color: white; }
     .fixed { position: fixed; } .inset-0 { inset: 0; } .min-h-11 { min-height: 44px; } .min-w-11 { min-width: 44px; }
@@ -78,6 +82,26 @@ test('exact SwitchesDB dialog preserves staged UI state and never mutates', asyn
   assert.ok((await page.getByRole('button', { name: 'Close SwitchesDB preview for X Green' }).boundingBox())!.height >= 44)
   const dialogBox = await dialog.boundingBox()
   assert.ok(dialogBox && dialogBox.width <= 390 && dialogBox.height <= 844)
+
+  const frame = dialog.locator('iframe')
+  const frameBody = frame.contentFrame()
+  const firstFrameControl = frameBody.getByRole('button', { name: 'First iframe control' })
+  const lastFrameControl = frameBody.getByRole('button', { name: 'Last iframe control' })
+  assert.notEqual(await page.evaluate(() => location.origin), await frameBody.locator('body').evaluate(() => location.origin))
+  await page.keyboard.press('Shift+Tab')
+  assert.equal(await frame.evaluate(element => document.activeElement === element), true)
+  await page.keyboard.press('Tab')
+  assert.equal(await firstFrameControl.evaluate(element => document.activeElement === element), true)
+  await page.keyboard.press('Shift+Tab')
+  assert.equal(await dialog.evaluate(element => element.contains(document.activeElement)), true)
+  assert.equal(await page.getByRole('link', { name: 'Underlying provenance link' }).evaluate(element => document.activeElement === element), false)
+  await page.keyboard.press('Tab')
+  assert.equal(await firstFrameControl.evaluate(element => document.activeElement === element), true)
+  await page.keyboard.press('Tab')
+  assert.equal(await lastFrameControl.evaluate(element => document.activeElement === element), true)
+  await page.keyboard.press('Tab')
+  assert.equal(await dialog.evaluate(element => element.contains(document.activeElement)), true)
+  assert.equal(await page.getByRole('link', { name: 'Underlying provenance link' }).evaluate(element => document.activeElement === element), false)
 
   await page.keyboard.press('Escape')
   await dialog.waitFor({ state: 'detached' })
