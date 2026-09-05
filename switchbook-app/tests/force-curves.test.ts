@@ -6,6 +6,7 @@ import { getForceCurveReviewQueuePage } from '../src/lib/admin-force-curve-queue
 import { forceCurvePickerPosition } from '../src/lib/force-curve-picker'
 import { forceCurveReviewSourceLink } from '../src/lib/admin-force-curve-source'
 import { resolveSwitchesDBMeasurement, switchesDBThereminGoatKey } from '../src/lib/admin-force-curve-switchesdb'
+import { buildSwitchesDBExactInventory, switchesDBThereminGoatMetadataKeys } from '../src/lib/admin-force-curve-switchesdb-inventory'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('sync run identity deterministically versions upstream content and matching algorithm', () => {
@@ -56,8 +57,8 @@ test('admin review source links fail safely to a deterministic trusted repositor
   assert.deepEqual(forceCurveReviewSourceLink('github:attacker/repository', 'Switch/TG.csv'), fallback)
   assert.equal(forceCurveReviewSourceLink('github:AEBoards/force-curves', 'Switch/data:text.csv').href.startsWith('https://github.com/'), true)
 })
-const overlayCandidate = (overrides: Partial<{ id: string; source: string; displayName: string; repositoryPath: string }> = {}) => ({
-  id: 'raw', source: 'github:ThereminGoat/force-curves', displayName: "'X' Green", repositoryPath: "'X' Green/'X' Green Raw Data CSV.csv", ...overrides,
+const overlayCandidate = (overrides: Partial<{ id: string; source: string; displayName: string; repositoryPath: string; switchesDBExact: 'verified' | 'collision' | 'unavailable' }> = {}) => ({
+  id: 'raw', source: 'github:ThereminGoat/force-curves', displayName: "'X' Green", repositoryPath: "'X' Green/'X' Green Raw Data CSV.csv", switchesDBExact: 'verified' as const, ...overrides,
 })
 test('SwitchesDB resolver derives and URI-encodes the exact generated ThereminGoat CSV key', () => {
   assert.equal(switchesDBThereminGoatKey("'X' Green/'X' Green Raw Data CSV.csv"), 'X Green~TG.csv')
@@ -78,6 +79,49 @@ test('SwitchesDB resolver selects only the unique exact raw sibling for a high-r
   assert.equal(result.available, true)
   if (result.available) assert.deepEqual([result.candidateId, result.key], ['raw', 'AEBoards Naevy EC 17000 Actuations~TG.csv'])
 })
+test('SwitchesDB inventory proves exact paths from downstream metadata and rejects lossy-key collisions generally', () => {
+  const metadata = '{:switches {"Unique~TG.csv" {:source :goat}, "Same~TG.csv" {:source :goat}, "Other~BP.csv" {:source :pylon}}}'
+  assert.deepEqual([...switchesDBThereminGoatMetadataKeys(metadata)].sort(), ['Same~TG.csv', 'Unique~TG.csv'])
+  const inventory = buildSwitchesDBExactInventory([
+    'Unique/Unique Raw Data CSV.csv',
+    'Same+/Same+ Raw Data CSV.csv',
+    'Same/Same Raw Data CSV.csv',
+    'Absent/Absent Raw Data CSV.csv',
+  ], metadata)
+  assert.deepEqual([...inventory.verifiedPaths], ['Unique/Unique Raw Data CSV.csv'])
+  assert.deepEqual([...inventory.collisionPaths].sort(), ['Same+/Same+ Raw Data CSV.csv', 'Same/Same Raw Data CSV.csv'])
+  assert.equal(inventory.verifiedPaths.has('Absent/Absent Raw Data CSV.csv'), false)
+})
+test('Novelkeys Cream+ and Cream never both resolve available to the shared SwitchesDB key', () => {
+  const plusPath = 'Novelkeys Cream+/Novelkeys Cream+ Raw Data CSV.csv'
+  const plainPath = 'Novelkeys Cream/Novelkeys Cream Raw Data CSV.csv'
+  const inventory = buildSwitchesDBExactInventory([plusPath, plainPath], '{:switches {"Novelkeys Cream~TG.csv" {:source :goat}}}')
+  const resolve = (id: string, repositoryPath: string) => resolveSwitchesDBMeasurement([
+    overlayCandidate({ id, displayName: id, repositoryPath, switchesDBExact: inventory.collisionPaths.has(repositoryPath) ? 'collision' : 'verified' }),
+  ], id)
+  const plus = resolve('Novelkeys Cream+', plusPath)
+  const plain = resolve('Novelkeys Cream', plainPath)
+  assert.equal(plus.available, false)
+  assert.equal(plain.available, false)
+  assert.match(!plus.available ? plus.reason : '', /more than one upstream measurement/)
+  assert.equal([plus, plain].filter(result => 'key' in result && result.key === 'Novelkeys Cream~TG.csv').length, 0)
+})
+test('AEBoards 17000 and 51000 measurements remain independently exact', () => {
+  const paths = [
+    'AEBoards Naevy EC/AEBoards Naevy EC 17000 Actuations Raw Data CSV.csv',
+    'AEBoards Naevy EC/AEBoards Naevy EC 51000 Actuations Raw Data CSV.csv',
+  ]
+  const metadata = '{:switches {"AEBoards Naevy EC 17000 Actuations~TG.csv" {:source :goat}, "AEBoards Naevy EC 51000 Actuations~TG.csv" {:source :goat}}}'
+  const inventory = buildSwitchesDBExactInventory(paths, metadata)
+  const results = paths.map((repositoryPath, index) => resolveSwitchesDBMeasurement([
+    overlayCandidate({ id: String(index), repositoryPath, displayName: index ? 'AEBoards Naevy EC 51000 Actuations' : 'AEBoards Naevy EC 17000 Actuations', switchesDBExact: inventory.verifiedPaths.has(repositoryPath) ? 'verified' : 'unavailable' }),
+  ], String(index)))
+  assert.equal(results.every(result => result.available), true)
+  assert.deepEqual(results.map(result => result.available ? result.key : null), [
+    'AEBoards Naevy EC 17000 Actuations~TG.csv',
+    'AEBoards Naevy EC 51000 Actuations~TG.csv',
+  ])
+})
 test('SwitchesDB resolver never merges stock, break-in, dated, actuation-count, or retest variants', () => {
   const primary = overlayCandidate({ id: 'high', repositoryPath: 'Variant/Variant_Stock_HighResolutionRaw.csv' })
   for (const variant of ['Variant', 'Variant Break-in', 'Variant 2026-09-04', 'Variant 51000 Actuations', 'Variant Retest']) {
@@ -95,6 +139,8 @@ test('SwitchesDB resolver fails closed on ties, missing primary/sibling, unsafe 
   assert.equal(resolveSwitchesDBMeasurement([overlayCandidate({ source: 'github:AEBoards/force-curves' })], 'raw').available, false)
   assert.equal(resolveSwitchesDBMeasurement([high, raw, overlayCandidate({ id: 'foreign', source: 'github:AEBoards/force-curves' })], 'high').available, false)
   assert.equal(resolveSwitchesDBMeasurement([raw, overlayCandidate({ id: 'raw', repositoryPath: 'Other/Other Raw Data CSV.csv' })], 'raw').available, false)
+  const unverified = resolveSwitchesDBMeasurement([overlayCandidate({ switchesDBExact: 'unavailable' })], 'raw')
+  assert.match(!unverified.available ? unverified.reason : '', /one-to-one match[\s\S]*exact GitHub source file/)
   assert.equal(forceCurveReviewSourceLink('github:AEBoards/force-curves', 'AEBoards/Switch Raw Data CSV.csv').exactFile, true)
 })
 test('approved read supports multiple curves and excludes stale/deleted rows', () => {

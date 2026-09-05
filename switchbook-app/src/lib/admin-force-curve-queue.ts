@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { buildReviewQueue, QueueReview, ReviewBucket, reviewWorkflow } from '@/lib/admin-force-curves'
+import { unavailableSwitchesDBInventory } from '@/lib/admin-force-curve-switchesdb-inventory'
+import type { SwitchesDBExactInventory } from '@/lib/admin-force-curve-switchesdb-inventory'
 
 const PAGE_SIZE_DEFAULT = 50
 const PAGE_SIZE_MAX = 100
@@ -35,7 +37,7 @@ async function queueFingerprint(db: PrismaClient) {
   return [reviews, catalog, masters].map(value => `${value._count._all}:${value._max.updatedAt?.getTime() || 0}`).join('|')
 }
 
-function projectItem(item: ReturnType<typeof buildReviewQueue>['items'][number]) {
+function projectItem(item: ReturnType<typeof buildReviewQueue>['items'][number], switchesDBInventory: SwitchesDBExactInventory) {
   return {
     sourceKey: item.sourceKey,
     primaryReviewId: item.primaryReviewId,
@@ -55,12 +57,19 @@ function projectItem(item: ReturnType<typeof buildReviewQueue>['items'][number])
       status: review.status === 'OPEN' && reviewWorkflow(review.payload).status === 'ATTACHED' ? 'RESOLVED' : review.status,
       catalogEntryId: review.catalogEntryId,
       masterSwitch: review.masterSwitch,
-      candidates: review.candidates.map(({ exists: _exists, ...candidate }) => candidate),
+      candidates: review.candidates.map(({ exists: _exists, ...candidate }) => ({
+        ...candidate,
+        switchesDBExact: switchesDBInventory.collisionPaths.has(candidate.repositoryPath)
+          ? 'collision' as const
+          : switchesDBInventory.verifiedPaths.has(candidate.repositoryPath)
+            ? 'verified' as const
+            : 'unavailable' as const,
+      })),
     })),
   }
 }
 
-export async function getForceCurveReviewQueuePage(filters: ForceCurveQueueFilters = {}, db: PrismaClient, diagnose?: QueueDiagnostics) {
+export async function getForceCurveReviewQueuePage(filters: ForceCurveQueueFilters = {}, db: PrismaClient, diagnose?: QueueDiagnostics, switchesDBInventory = unavailableSwitchesDBInventory()) {
   let started = performance.now()
   const fingerprint = await queueFingerprint(db)
   diagnose?.('fingerprint', performance.now() - started)
@@ -112,7 +121,7 @@ export async function getForceCurveReviewQueuePage(filters: ForceCurveQueueFilte
   const page = Math.min(pageCount, Math.max(1, requestedPage))
   const result = {
     ...queue,
-    items: filtered.slice((page - 1) * pageSize, page * pageSize).map(projectItem),
+    items: filtered.slice((page - 1) * pageSize, page * pageSize).map(item => projectItem(item, switchesDBInventory)),
     filteredSourceCount: filtered.length,
     pagination: { page, pageSize, pageCount, hasPrevious: page > 1, hasNext: page < pageCount },
   }

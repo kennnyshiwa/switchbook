@@ -7,7 +7,7 @@ import { forceCurveAttachErrorMessage } from '@/lib/admin-force-curve-attach-fee
 import { resolveSwitchesDBMeasurement } from '@/lib/admin-force-curve-switchesdb'
 import ForceCurveLookupButton from '@/components/ForceCurveLookupButton'
 
-type Candidate = { id: string; source: string; displayName: string; repositoryPath: string; revision: string | null; contentHash: string | null; manufacturer: string | null; technology: string | null }
+type Candidate = { id: string; source: string; displayName: string; repositoryPath: string; revision: string | null; contentHash: string | null; manufacturer: string | null; technology: string | null; switchesDBExact?: 'verified' | 'collision' | 'unavailable' }
 type Master = { id: string; name: string; manufacturer: string | null; technology: string | null; compatibility?: { compatible: boolean; reason: string } }
 type Evidence = { id: string; kind: string; reason: string; status: 'OPEN' | 'RESOLVED'; catalogEntryId: string | null; masterSwitch: Master | null; candidates: Candidate[] }
 type Item = { sourceKey: string; primaryReviewId: string; bucket: string; confidence: number; actionable: boolean; deferred: boolean; status: 'OPEN' | 'RESOLVED'; evidence: Evidence[] }

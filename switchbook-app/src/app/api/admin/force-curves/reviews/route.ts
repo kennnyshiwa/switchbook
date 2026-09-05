@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { adminActor, bulkApproveForceCurveReviews, deferForceCurveReviews, isSameOriginMutation, linkSourceReview, linkSourceReviewGroup, resolveForceCurveReview, resolveNoMatchGroup, verifyReviewMetadata } from '@/lib/admin-force-curves'
 import { getForceCurveReviewQueuePage, invalidateForceCurveReviewQueue } from '@/lib/admin-force-curve-queue'
 import { forceCurveReviewFailureStatus } from '@/lib/admin-force-curve-attach-feedback'
+import { loadSwitchesDBExactInventory } from '@/lib/admin-force-curve-switchesdb-inventory'
 
 const linkSchema = z.object({ reviewId: z.string().cuid(), masterSwitchId: z.string().cuid(), catalogEntryId: z.string().cuid() }).strict()
 const compatibilityOverrideSchema=z.object({acknowledged:z.literal(true),reason:z.string().trim().min(3).max(1000)}).strict()
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get('query') || ''
   const bucket = request.nextUrl.searchParams.get('bucket') || 'ALL'
   const status = request.nextUrl.searchParams.get('status') || 'OPEN'
-  return NextResponse.json(await getForceCurveReviewQueuePage({ page, pageSize, query, bucket: bucket as never, status: status as never }, prisma))
+  const switchesDBInventory = await loadSwitchesDBExactInventory(prisma)
+  return NextResponse.json(await getForceCurveReviewQueuePage({ page, pageSize, query, bucket: bucket as never, status: status as never }, prisma, undefined, switchesDBInventory))
 }
 
 export async function PUT(request: NextRequest) {

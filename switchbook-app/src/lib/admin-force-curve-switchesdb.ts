@@ -9,6 +9,7 @@ export type SwitchesDBCandidate = {
   source: string
   displayName: string
   repositoryPath: string
+  switchesDBExact?: 'verified' | 'collision' | 'unavailable'
 }
 
 export type SwitchesDBResolution =
@@ -86,6 +87,12 @@ export function resolveSwitchesDBMeasurement(candidates: SwitchesDBCandidate[], 
 
   const raw = rawMatches[0]
   const key = switchesDBThereminGoatKey(raw.repositoryPath)!
+  if (raw.switchesDBExact === 'collision') {
+    return { available: false, reason: 'SwitchesDB preview unavailable: this generated key represents more than one upstream measurement. Use the exact GitHub source file below.' }
+  }
+  if (raw.switchesDBExact !== 'verified') {
+    return { available: false, reason: 'SwitchesDB preview unavailable: a one-to-one match against the current SwitchesDB inventory could not be verified. Use the exact GitHub source file below.' }
+  }
   return {
     available: true,
     key,

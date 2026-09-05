@@ -4,12 +4,14 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import ForceCurveReviewQueue from '@/components/admin/ForceCurveReviewQueue'
 import { getForceCurveReviewQueuePage } from '@/lib/admin-force-curve-queue'
+import { loadSwitchesDBExactInventory } from '@/lib/admin-force-curve-switchesdb-inventory'
 
 export default async function Page() {
   const session = await auth()
   if (session?.user?.role !== 'ADMIN') redirect('/dashboard')
 
-  const queue = await getForceCurveReviewQueuePage({}, prisma)
+  const switchesDBInventory = await loadSwitchesDBExactInventory(prisma)
+  const queue = await getForceCurveReviewQueuePage({}, prisma, undefined, switchesDBInventory)
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900">

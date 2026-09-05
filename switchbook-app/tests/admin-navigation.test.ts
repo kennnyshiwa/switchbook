@@ -60,6 +60,12 @@ test('force curve UI pages and refreshes a bounded server-side queue', () => {
   assert.match(source, /switchesdb-unavailable-/)
   assert.match(source, /target="_blank" rel="noopener noreferrer"[\s\S]*View source on GitHub/)
 
+  const inventory = readFileSync(new URL('../src/lib/admin-force-curve-switchesdb-inventory.ts', import.meta.url), 'utf8')
+  assert.match(inventory, /metadata\.edn/)
+  assert.match(inventory, /repositoryPath: \{ endsWith: RAW_SUFFIX \}/)
+  assert.match(inventory, /paths\.size > 1/)
+  assert.match(inventory, /cache: 'no-store'/)
+
   const dialog = readFileSync(new URL('../src/components/ForceCurveLookupButton.tsx', import.meta.url), 'utf8')
   assert.match(dialog, /buttonLabel = 'View exact curve in SwitchesDB'/)
   assert.match(dialog, /role="dialog" aria-modal="true" aria-labelledby=/)
