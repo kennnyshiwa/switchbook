@@ -14,6 +14,11 @@ async function api(path: string, init?: RequestInit) {
 }
 
 const date = (value: string | null) => value ? new Date(value).toLocaleString() : 'Never'
+const credentialState = (credential: Credential, now = Date.now()) => credential.revokedAt
+  ? { label: `Revoked ${date(credential.revokedAt)}`, revocable: false }
+  : credential.expiresAt && new Date(credential.expiresAt).getTime() <= now
+    ? { label: `Expired ${date(credential.expiresAt)}`, revocable: false }
+    : { label: 'Active', revocable: true }
 
 export default function IntegrationKeyManager() {
   const [applications, setApplications] = useState<Application[]>([])
@@ -32,10 +37,11 @@ export default function IntegrationKeyManager() {
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy('create'); setError('')
-    const form = new FormData(event.currentTarget)
+    const formElement = event.currentTarget
+    const form = new FormData(formElement)
     try {
       const result = await api('/api/admin/integrations', { method: 'POST', body: JSON.stringify({ name: form.get('name'), rateLimitPerMinute: Number(form.get('rateLimit')), expiresAt: form.get('expiresAt') ? new Date(String(form.get('expiresAt'))).toISOString() : null }) })
-      setRevealed({ apiKey: result.apiKey, prefix: result.credential.prefix }); setCopied(false); event.currentTarget.reset(); await refresh()
+      setRevealed({ apiKey: result.apiKey, prefix: result.credential.prefix }); setCopied(false); formElement.reset(); await refresh()
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to create integration') }
     finally { setBusy(null) }
   }
@@ -89,13 +95,13 @@ export default function IntegrationKeyManager() {
     </form>
 
     {error && <p role="alert" className="rounded bg-red-100 p-3 text-red-900">{error}</p>}
-    {loading ? <p role="status">Loading integrations…</p> : applications.length === 0 ? <p className="rounded border border-dashed p-6 text-center">No catalog integrations yet.</p> : applications.map(application => <section key={application.id} className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+    {loading ? <p role="status">Loading integrations…</p> : applications.length === 0 ? <p className="rounded border border-dashed p-6 text-center">No catalog integrations yet.</p> : applications.map(application => <section key={application.id} className="min-w-0 max-w-full overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
       <header className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
         <div><h2 className="text-lg font-semibold">{application.name}</h2><p className="font-mono text-xs text-gray-500">{application.clientId}</p></div>
         <div className="flex items-center gap-3"><span className="text-sm">catalog:read · {application.rateLimitPerMinute}/min</span><button disabled={busy !== null || !application.active} onClick={() => void rotate(application)} className="rounded border px-3 py-2 text-sm disabled:opacity-50">Rotate key</button></div>
       </header>
-      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b dark:border-gray-700"><th className="p-3">Prefix</th><th className="p-3">Created</th><th className="p-3">Expires</th><th className="p-3">Last used</th><th className="p-3">Status</th><th className="p-3"><span className="sr-only">Actions</span></th></tr></thead>
-      <tbody>{application.credentials.map(credential => <tr key={credential.id} className="border-b last:border-0 dark:border-gray-700"><td className="p-3 font-mono">{credential.prefix}</td><td className="p-3">{date(credential.createdAt)}</td><td className="p-3">{date(credential.expiresAt)}</td><td className="p-3">{date(credential.lastUsedAt)}</td><td className="p-3">{credential.revokedAt ? `Revoked ${date(credential.revokedAt)}` : 'Active'}</td><td className="p-3">{!credential.revokedAt && <button disabled={busy !== null} onClick={() => void revoke(application, credential)} className="rounded border border-red-500 px-3 py-1 text-red-700 disabled:opacity-50 dark:text-red-300">Revoke</button>}</td></tr>)}</tbody></table></div>
+      <div className="max-w-full overflow-x-auto" role="region" aria-label={`Credentials for ${application.name}`} tabIndex={0}><table className="min-w-[42rem] text-left text-sm"><thead><tr className="border-b dark:border-gray-700"><th className="p-3">Prefix</th><th className="p-3">Created</th><th className="p-3">Expires</th><th className="p-3">Last used</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+      <tbody>{application.credentials.map(credential => { const state = credentialState(credential); return <tr key={credential.id} className="border-b last:border-0 dark:border-gray-700"><td className="p-3 font-mono">{credential.prefix}</td><td className="p-3">{date(credential.createdAt)}</td><td className="p-3">{date(credential.expiresAt)}</td><td className="p-3">{date(credential.lastUsedAt)}</td><td className="p-3">{state.label}</td><td className="p-3">{state.revocable && <button disabled={busy !== null} onClick={() => void revoke(application, credential)} className="min-h-11 rounded border border-red-500 px-3 py-1 text-red-700 disabled:opacity-50 dark:text-red-300">Revoke</button>}</td></tr> })}</tbody></table></div>
       <details className="border-t p-4 dark:border-gray-700"><summary className="cursor-pointer font-medium">Recent audit activity ({application.auditEvents.length})</summary><ul className="mt-3 space-y-2 text-sm">{application.auditEvents.map(event => <li key={event.id}><time>{date(event.createdAt)}</time> · {event.action} · actor {event.actorUserId || 'system'} · target {event.resourceId || 'application'}</li>)}</ul></details>
     </section>)}
   </div>

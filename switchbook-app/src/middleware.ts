@@ -33,7 +33,7 @@ export default auth((req) => {
 
   // Allow API routes (but require auth for non-public APIs)
   if (isApiRoute && !isPublicShareApi && !isPublicForceCurveRead && !isAuthApiRoute && !isPublicMasterSwitchApi && !isLoggedIn) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store, private', Pragma: 'no-cache' } })
   }
 
   // Redirect logged-in users away from auth pages

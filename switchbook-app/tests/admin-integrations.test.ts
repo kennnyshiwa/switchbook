@@ -90,6 +90,19 @@ test('UI has responsive one-time reveal, loading, empty, error, copy and confirm
   assert.match(source, /navigator\.clipboard\.writeText/)
   assert.match(source, /sm:flex-row/)
   assert.match(source, /overflow-x-auto/)
+  assert.match(source, /const formElement = event\.currentTarget/)
+  assert.equal(source.includes('await refresh()\n      event.currentTarget'), false)
+  assert.match(source, /Expired/)
+  assert.match(source, /max-w-full overflow-x-auto/)
+  assert.match(source, /role="region"/)
+})
+
+test('middleware anonymous API denial retains 401 security and no-store cache contract', async () => {
+  const middleware = await readFile(new URL('src/middleware.ts', root), 'utf8')
+  assert.match(middleware, /error: 'Unauthorized'/)
+  assert.match(middleware, /status: 401/)
+  assert.match(middleware, /'Cache-Control': 'no-store, private'/)
+  assert.match(middleware, /Pragma: 'no-cache'/)
 })
 
 test('existing CLI and OAuth paths remain independent of admin management', async () => {

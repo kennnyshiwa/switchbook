@@ -34,6 +34,6 @@ test('anonymous admin integration API is rejected', async t => {
   t.after(() => browser.close())
   const request = await browser.newPage()
   const response = await request.request.get(`${baseUrl}/api/admin/integrations`)
-  assert.equal(response.status(), 403)
+  assert.equal(response.status(), 401)
   assert.match(response.headers()['cache-control'] || '', /no-store/)
 })
