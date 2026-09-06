@@ -233,6 +233,16 @@ export default async function AdminDashboard() {
               </p>
             </div>
           </Link>
+
+          <Link
+            href="/admin/integrations"
+            className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-shadow"
+          >
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Integration API Keys</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Create, rotate, revoke, and audit catalog-only application keys</p>
+            </div>
+          </Link>
         </div>
       </div>
     </div>
