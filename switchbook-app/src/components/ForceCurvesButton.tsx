@@ -3,11 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ForceCurveMatch } from '@/utils/forceCurves'
 import { forceCurvePickerPosition } from '@/lib/force-curve-picker'
+import ForceCurveLookupButton from '@/components/ForceCurveLookupButton'
 
 type CanonicalCurveMatch = ForceCurveMatch & {
   provenance: string
   condition: string
   measurementDate: string | null
+  measurementId: string
+  sourceUrl: string
 }
 
 interface ForceCurvesButtonProps {
@@ -34,6 +37,7 @@ export default function ForceCurvesButton({
   const [matches, setMatches] = useState<CanonicalCurveMatch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [openCurve, setOpenCurve] = useState<CanonicalCurveMatch | null>(null)
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
   const [showAllOptions, setShowAllOptions] = useState(false)
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
@@ -53,7 +57,7 @@ export default function ForceCurvesButton({
     ? new Intl.DateTimeFormat(undefined, { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(`${value}T00:00:00Z`))
     : 'Date not recorded'
 
-  const canonicalMatch = (curve: { id: string; folderName: string; url: string; provenance?: string; condition?: string; measurementDate?: string | null }): CanonicalCurveMatch => ({
+  const canonicalMatch = (curve: { id: string; folderName: string; url: string; sourceUrl: string; measurementId: string; provenance?: string; condition?: string; measurementDate?: string | null }): CanonicalCurveMatch => ({
     catalogEntryId: curve.id,
     folderName: curve.folderName,
     url: curve.url,
@@ -61,6 +65,8 @@ export default function ForceCurvesButton({
     provenance: curve.provenance || 'Source not specified',
     condition: curve.condition || 'Condition not specified',
     measurementDate: curve.measurementDate || null,
+    measurementId: curve.measurementId,
+    sourceUrl: curve.sourceUrl,
   })
 
   useEffect(() => {
@@ -145,35 +151,9 @@ export default function ForceCurvesButton({
     return null
   }
 
-  const savePreference = async (folderName: string, url: string) => {
-    try {
-      const response = await fetch('/api/force-curve-preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          switchName,
-          manufacturer: manufacturer || null,
-          selectedFolder: folderName,
-          selectedUrl: url
-        })
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(`HTTP error! status: ${response.status}, details: ${JSON.stringify(errorData)}`)
-      }
-      
-      setSavedPreference({ folder: folderName, url })
-      setShowAllOptions(false)
-    } catch (error) {
-      // Failed to save preference, but don't interrupt user flow
-    }
-  }
-
-  const selectCurve = (folderName: string, url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer')
-    closePicker()
-    if (isAuthenticated) void savePreference(folderName, url)
+  const selectCurve = (curve: CanonicalCurveMatch) => {
+    closePicker(false)
+    setOpenCurve(curve)
   }
 
   const loadMatchesOnDemand = async () => {
@@ -193,14 +173,7 @@ export default function ForceCurvesButton({
     return matches
   }
 
-  const handleClick = async (url?: string) => {
-    // If specific URL provided (from dropdown selection), open it
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer')
-      setIsDropdownOpen(false)
-      return
-    }
-
+  const handleClick = async () => {
     // Load matches if needed
     const currentMatches = await loadMatchesOnDemand()
 
@@ -213,7 +186,7 @@ export default function ForceCurvesButton({
 
     // If only one match and no saved preference (or unauthenticated), open it directly
     if (currentMatches.length === 1 && (!savedPreference || !isAuthenticated)) {
-      window.open(currentMatches[0].url, '_blank', 'noopener,noreferrer')
+      setOpenCurve(currentMatches[0])
       return
     }
 
@@ -315,8 +288,8 @@ export default function ForceCurvesButton({
           </div>
           <button
             onClick={() => {
-              window.open(savedPreference.url, '_blank', 'noopener,noreferrer')
-              setIsDropdownOpen(false)
+              const preferred = matches.find(match => match.folderName === savedPreference.folder)
+              if (preferred) selectCurve(preferred)
             }}
             className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 block"
           >
@@ -347,11 +320,11 @@ export default function ForceCurvesButton({
               ← Back to selected: {savedPreference.folder}
             </button>
           )}
-          {matches.map((match, index) => (
+          {matches.map((match) => (
             <button
-              key={index}
+              key={match.measurementId}
               data-curve-option
-              onClick={() => selectCurve(match.folderName, match.url)}
+              onClick={() => selectCurve(match)}
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 block"
             >
               <div className="font-medium text-gray-900 dark:text-white">{match.folderName}</div>
@@ -384,8 +357,22 @@ export default function ForceCurvesButton({
     )
   }
 
+  const renderOverlay = () => openCurve && (
+    <ForceCurveLookupButton
+      hideTrigger
+      url={openCurve.url}
+      sourceUrl={openCurve.sourceUrl}
+      readOnlyMessage="Viewing or closing this preview does not change the current page."
+      label={`${openCurve.folderName} · ${openCurve.provenance} · ${openCurve.condition} · ${displayMeasurementDate(openCurve.measurementDate)}`}
+      open
+      onOpenChange={open => { if (!open) setOpenCurve(null) }}
+      returnFocusRef={buttonRef}
+    />
+  )
+
   if (variant === 'badge') {
     return (
+      <>
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
@@ -409,11 +396,14 @@ export default function ForceCurvesButton({
         </button>
         {renderDropdown()}
       </div>
+      {renderOverlay()}
+      </>
     )
   }
 
   if (variant === 'icon') {
     return (
+      <>
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
@@ -439,11 +429,14 @@ export default function ForceCurvesButton({
         </button>
         {renderDropdown()}
       </div>
+      {renderOverlay()}
+      </>
     )
   }
 
   // Default button variant
   return (
+    <>
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
@@ -468,5 +461,7 @@ export default function ForceCurvesButton({
       </button>
       {renderDropdown()}
     </div>
+    {renderOverlay()}
+    </>
   )
 }

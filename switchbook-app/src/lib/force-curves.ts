@@ -91,6 +91,7 @@ export function resolveApprovedCurveRecords(mappings: ReadMapping[]) {
   if (mappings.some(m => m.state === 'NO_MATCH')) return []
   return mappings.filter(m => APPROVED_STATES.includes(m.state) && m.catalogEntry?.exists).flatMap(m => m.catalogEntry ? [{
     id: m.catalogEntry.id,
+    source: m.catalogEntry.source,
     folderName: m.catalogEntry.displayName.replace(/\/TG\.csv$/i, ''),
     path: m.catalogEntry.repositoryPath,
     url: sourceCatalogUrl(m.catalogEntry.source, m.catalogEntry.repositoryPath),

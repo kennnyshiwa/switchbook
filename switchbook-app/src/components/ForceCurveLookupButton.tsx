@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 
 const SWITCHES_DB_ORIGIN = 'https://switchesdb.switchbook.app'
 const SWITCHES_DB_ESCAPE_MESSAGE = 'switchbook:switchesdb:escape'
@@ -11,6 +12,10 @@ type Props = {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   buttonLabel?: string
+  hideTrigger?: boolean
+  returnFocusRef?: RefObject<HTMLButtonElement | null>
+  sourceUrl?: string
+  readOnlyMessage?: string
 }
 
 export default function ForceCurveLookupButton({
@@ -19,10 +24,15 @@ export default function ForceCurveLookupButton({
   open,
   onOpenChange,
   buttonLabel = 'View exact curve in SwitchesDB',
+  hideTrigger = false,
+  returnFocusRef,
+  sourceUrl,
+  readOnlyMessage = 'Viewing or closing this preview does not change the review queue.',
 }: Props) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const showModal = open ?? uncontrolledOpen
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const ownTriggerRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = returnFocusRef || ownTriggerRef
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -89,7 +99,7 @@ export default function ForceCurveLookupButton({
 
   return (
     <>
-      <button
+      {!hideTrigger && <button
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
@@ -102,7 +112,7 @@ export default function ForceCurveLookupButton({
           />
         </svg>
         {buttonLabel}
-      </button>
+      </button>}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4" onMouseDown={event => { if (event.target === event.currentTarget) close() }}>
@@ -146,7 +156,18 @@ export default function ForceCurveLookupButton({
             {/* Footer */}
             <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                <strong>Read only:</strong> Viewing or closing this preview does not change the review queue.
+                <strong>Read only:</strong> {readOnlyMessage}
+                {sourceUrl && (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 font-medium text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    aria-label={`Open exact GitHub source for ${label} in a new tab`}
+                  >
+                    GitHub source
+                  </a>
+                )}
               </div>
             </div>
           </div>

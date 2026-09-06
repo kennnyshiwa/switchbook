@@ -7,6 +7,7 @@ import { forceCurvePickerPosition } from '../src/lib/force-curve-picker'
 import { forceCurveReviewSourceLink } from '../src/lib/admin-force-curve-source'
 import { resolveSwitchesDBMeasurement, switchesDBThereminGoatKey } from '../src/lib/admin-force-curve-switchesdb'
 import { buildSwitchesDBExactInventory, switchesDBThereminGoatMetadataKeys } from '../src/lib/admin-force-curve-switchesdb-inventory'
+import { resolveExactSwitchesDBCurves } from '../src/lib/force-curve-switchesdb'
 const master = { id: 'm1', name: 'Peach', manufacturer: 'KTT', technology: 'MECHANICAL' as const }
 const curve = (overrides = {}) => ({ id: 'c1', displayName: 'KTT Peach', repositoryPath:'KTT Peach/KTT_Peach_HighResolutionRaw.csv', contentHash:'sha', manufacturer: 'KTT', technology: 'MECHANICAL' as const, metadataVerifiedAt: null, exists: true, ...overrides })
 test('sync run identity deterministically versions upstream content and matching algorithm', () => {
@@ -156,6 +157,40 @@ test('approved read supports multiple curves and excludes stale/deleted rows', (
   assert.deepEqual(approved.map(row=>row.measurementDate),[null,'2026-08-29'])
   assert.equal(approved[1].url,'https://github.com/Aeboards/force-curves/blob/main/KTT%20Peach%20Retest/KTT%20Peach%20Break-in%20Retest%20HighResolutionRaw.csv')
   assert.equal(resolveApprovedCurveRecords([{ state: 'AUTO_APPROVED', catalogEntry: { id:'gone',displayName:'gone',repositoryPath:'gone/TG.csv',exists:false } }]).length, 0)
+})
+test('normal force-curve projection preserves exact measurement identity, provenance, and distinct measurements', () => {
+  const stockRaw = 'AEBoards Naevy EC/AEBoards Naevy EC Stock Raw Data CSV.csv'
+  const retestRaw = 'AEBoards Naevy EC/AEBoards Naevy EC 51000 Actuations Raw Data CSV.csv'
+  const inventory = { status: 'ready' as const, verifiedPaths: new Set([stockRaw, retestRaw]), collisionPaths: new Set<string>() }
+  const curves = [
+    { id:'stock', source:'github:ThereminGoat/force-curves', folderName:'AEBoards Naevy EC Stock', path:stockRaw, url:'https://github.com/ThereminGoat/force-curves/blob/main/stock', provenance:'ThereminGoat', condition:'Stock', measurementDate:null },
+    { id:'retest', source:'github:ThereminGoat/force-curves', folderName:'AEBoards Naevy EC 51000 Actuations', path:retestRaw, url:'https://github.com/ThereminGoat/force-curves/blob/main/retest', provenance:'ThereminGoat', condition:'Break-in / retest', measurementDate:'2026-08-29' },
+  ]
+  const projected = resolveExactSwitchesDBCurves(curves, inventory)
+  assert.deepEqual(projected.map(curve => curve.id), ['stock', 'retest'])
+  assert.deepEqual(projected.map(curve => curve.measurementId), [
+    `github:ThereminGoat/force-curves:${stockRaw}`,
+    `github:ThereminGoat/force-curves:${retestRaw}`,
+  ])
+  assert.deepEqual(projected.map(curve => curve.condition), ['Stock', 'Break-in / retest'])
+  assert.deepEqual(projected.map(curve => curve.measurementDate), [null, '2026-08-29'])
+  assert.deepEqual(projected.map(curve => curve.sourceUrl), curves.map(curve => curve.url))
+  assert.deepEqual(projected.map(curve => curve.url), [
+    'https://switchesdb.switchbook.app/#AEBoards%20Naevy%20EC%20Stock~TG.csv',
+    'https://switchesdb.switchbook.app/#AEBoards%20Naevy%20EC%2051000%20Actuations~TG.csv',
+  ])
+})
+test('normal force-curve projection fails the complete control closed on missing, tied, colliding, unsafe, or unavailable inventory', () => {
+  const raw = 'Exact Switch/Exact Switch Raw Data CSV.csv'
+  const curve = { id:'exact', source:'github:ThereminGoat/force-curves', folderName:'Exact Switch', path:raw, url:'https://github.com/ThereminGoat/force-curves/blob/main/exact' }
+  const ready = { status:'ready' as const, verifiedPaths:new Set([raw]), collisionPaths:new Set<string>() }
+  assert.equal(resolveExactSwitchesDBCurves([curve], ready).length, 1)
+  assert.deepEqual(resolveExactSwitchesDBCurves([curve], { ...ready, verifiedPaths:new Set<string>() }), [])
+  assert.deepEqual(resolveExactSwitchesDBCurves([curve], { ...ready, collisionPaths:new Set([raw]) }), [])
+  assert.deepEqual(resolveExactSwitchesDBCurves([{ ...curve, path:'../unsafe Raw Data CSV.csv' }], ready), [])
+  assert.deepEqual(resolveExactSwitchesDBCurves([curve], { status:'unavailable', verifiedPaths:new Set(), collisionPaths:new Set() }), [])
+  assert.deepEqual(resolveExactSwitchesDBCurves([curve, { ...curve, id:'duplicate' }], ready), [])
+  assert.deepEqual(resolveExactSwitchesDBCurves([curve, { ...curve, path:'Other/Other Raw Data CSV.csv' }], ready), [])
 })
 test('measurement labels never promote generic timestamps or ambiguous filename words to source facts', () => {
   assert.deepEqual(deriveMeasurementMetadata('Switch/Switch After New Run.csv', JSON.stringify({decidedAt:'2026-08-30'})), {condition:'Measurement',measurementDate:null})
