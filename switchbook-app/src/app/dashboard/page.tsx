@@ -7,6 +7,9 @@ import CollectionStats from "@/components/CollectionStats"
 import HamburgerMenu from "@/components/HamburgerMenu"
 import MasterSwitchUpdatesNotification from "@/components/MasterSwitchUpdatesNotification"
 import NotificationBanner from "@/components/NotificationBanner"
+import { getApprovedCurvesByMasterSwitchIds } from "@/lib/force-curves"
+import { loadSwitchesDBExactInventory } from "@/lib/admin-force-curve-switchesdb-inventory"
+import { resolveCollectionForceCurves } from "@/lib/collection-force-curves"
 
 // Force dynamic rendering to improve initial load performance
 export const dynamic = 'force-dynamic'
@@ -39,6 +42,13 @@ export default async function DashboardPage() {
   if (!user) {
     redirect("/auth/login")
   }
+
+  const masterSwitchIds = user.switches.flatMap(item => item.masterSwitchId ? [item.masterSwitchId] : [])
+  const [approvedByMasterSwitchId, switchesDBInventory] = await Promise.all([
+    getApprovedCurvesByMasterSwitchIds(masterSwitchIds),
+    loadSwitchesDBExactInventory(prisma),
+  ])
+  const initialForceCurvesByMasterSwitchId = resolveCollectionForceCurves(approvedByMasterSwitchId, switchesDBInventory)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -90,6 +100,7 @@ export default async function DashboardPage() {
           userId={user.id}
           showForceCurves={user.showForceCurves}
           forceCurvePreferences={user.forceCurvePreferences}
+          initialForceCurvesByMasterSwitchId={initialForceCurvesByMasterSwitchId}
         />
       </div>
       

@@ -5,6 +5,17 @@ import type { ForceCurveMatch } from '@/utils/forceCurves'
 import { forceCurvePickerPosition } from '@/lib/force-curve-picker'
 import ForceCurveLookupButton from '@/components/ForceCurveLookupButton'
 
+export type CanonicalCurveInput = {
+  id: string
+  folderName: string
+  url: string
+  sourceUrl: string
+  measurementId: string
+  provenance?: string
+  condition?: string
+  measurementDate?: string | null
+}
+
 type CanonicalCurveMatch = ForceCurveMatch & {
   provenance: string
   condition: string
@@ -22,6 +33,7 @@ interface ForceCurvesButtonProps {
   isAuthenticated?: boolean
   forceCurvesCached?: boolean
   savedPreference?: { folder: string; url: string }
+  initialCurves?: CanonicalCurveInput[]
 }
 
 export default function ForceCurvesButton({ 
@@ -32,10 +44,23 @@ export default function ForceCurvesButton({
   className = '',
   isAuthenticated = false,
   forceCurvesCached,
-  savedPreference: savedPreferenceProp
+  savedPreference: savedPreferenceProp,
+  initialCurves,
 }: ForceCurvesButtonProps) {
-  const [matches, setMatches] = useState<CanonicalCurveMatch[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const canonicalMatch = useCallback((curve: CanonicalCurveInput): CanonicalCurveMatch => ({
+    catalogEntryId: curve.id,
+    folderName: curve.folderName,
+    url: curve.url,
+    matchType: 'exact',
+    provenance: curve.provenance || 'Source not specified',
+    condition: curve.condition || 'Condition not specified',
+    measurementDate: curve.measurementDate || null,
+    measurementId: curve.measurementId,
+    sourceUrl: curve.sourceUrl,
+  }), [])
+  const hasInitialCurves = initialCurves !== undefined
+  const [matches, setMatches] = useState<CanonicalCurveMatch[]>(() => (initialCurves || []).map(canonicalMatch))
+  const [isLoading, setIsLoading] = useState(!hasInitialCurves)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [openCurve, setOpenCurve] = useState<CanonicalCurveMatch | null>(null)
   const [savedPreference, setSavedPreference] = useState<{ folder: string; url: string } | null>(null)
@@ -57,22 +82,18 @@ export default function ForceCurvesButton({
     ? new Intl.DateTimeFormat(undefined, { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(`${value}T00:00:00Z`))
     : 'Date not recorded'
 
-  const canonicalMatch = (curve: { id: string; folderName: string; url: string; sourceUrl: string; measurementId: string; provenance?: string; condition?: string; measurementDate?: string | null }): CanonicalCurveMatch => ({
-    catalogEntryId: curve.id,
-    folderName: curve.folderName,
-    url: curve.url,
-    matchType: 'exact',
-    provenance: curve.provenance || 'Source not specified',
-    condition: curve.condition || 'Condition not specified',
-    measurementDate: curve.measurementDate || null,
-    measurementId: curve.measurementId,
-    sourceUrl: curve.sourceUrl,
-  })
-
   useEffect(() => {
     let isMounted = true
 
     async function loadForceCurveData() {
+      if (hasInitialCurves) {
+        if (isMounted) {
+          setMatches((initialCurves || []).map(canonicalMatch))
+          setSavedPreference(null)
+          setIsLoading(false)
+        }
+        return
+      }
       try {
         let foundMatches: CanonicalCurveMatch[] = []
         if (!masterSwitchId) { if (isMounted) { setMatches([]); setIsLoading(false) }; return }
@@ -104,7 +125,7 @@ export default function ForceCurvesButton({
     return () => {
       isMounted = false
     }
-  }, [masterSwitchId, switchName, manufacturer, isAuthenticated, forceCurvesCached, savedPreferenceProp])
+  }, [masterSwitchId, switchName, manufacturer, isAuthenticated, forceCurvesCached, savedPreferenceProp, hasInitialCurves, initialCurves, canonicalMatch])
 
   // Close dropdown when clicking outside
   useEffect(() => {

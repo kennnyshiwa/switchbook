@@ -51,6 +51,7 @@ function sourceCatalogUrl(source: string | undefined, path: string) {
 }
 
 type ReadMapping = {
+  masterSwitchId?: string
   state: ForceCurveMappingState
   provenance?: string
   catalogEntry: {
@@ -101,9 +102,37 @@ export function resolveApprovedCurveRecords(mappings: ReadMapping[]) {
   }] : [])
 }
 
+export type ApprovedCurveRecord = ReturnType<typeof resolveApprovedCurveRecords>[number]
+
 export async function getApprovedCurves(masterSwitchId: string) {
   const mappings = await prisma.forceCurveMapping.findMany({ where: { masterSwitchId, OR: [{ state: 'NO_MATCH' }, { state: { in: APPROVED_STATES }, catalogEntry: { exists: true } }] }, include: { catalogEntry: true }, orderBy: { catalogEntry: { repositoryPath: 'asc' } } })
   return resolveApprovedCurveRecords(mappings)
+}
+
+type ApprovedCurveDatabase = Pick<typeof prisma, 'forceCurveMapping'>
+
+/**
+ * Load canonical curve records for a collection in one bounded mapping query.
+ * Every requested master id is represented, including ids with no safe curves,
+ * so clients never need a follow-up availability request.
+ */
+export async function getApprovedCurvesByMasterSwitchIds(masterSwitchIds: readonly string[], db: ApprovedCurveDatabase = prisma) {
+  const ids = [...new Set(masterSwitchIds.filter(Boolean))]
+  const grouped: Record<string, ReturnType<typeof resolveApprovedCurveRecords>> = Object.fromEntries(ids.map(id => [id, []]))
+  if (!ids.length) return grouped
+
+  const mappings = await db.forceCurveMapping.findMany({
+    where: {
+      masterSwitchId: { in: ids },
+      OR: [{ state: 'NO_MATCH' }, { state: { in: APPROVED_STATES }, catalogEntry: { exists: true } }],
+    },
+    include: { catalogEntry: true },
+    orderBy: [{ masterSwitchId: 'asc' }, { catalogEntry: { repositoryPath: 'asc' } }],
+  })
+  const mappingsByMaster = new Map(ids.map(id => [id, [] as typeof mappings]))
+  for (const mapping of mappings) mappingsByMaster.get(mapping.masterSwitchId)?.push(mapping)
+  for (const id of ids) grouped[id] = resolveApprovedCurveRecords(mappingsByMaster.get(id) || [])
+  return grouped
 }
 
 async function queueReview(masterSwitchId: string, kind: string, reason: string, candidateIds: string[]) {

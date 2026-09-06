@@ -12,5 +12,6 @@ import "./partner-api.test";
 import "./partner-similarity.test";
 import "./catalog-keys.test";
 import "./force-curves.test";
+import "./collection-force-curves.test";
 import "./admin-force-curve-suggestions.test";
 import "./virtual-switch-list-geometry.test";

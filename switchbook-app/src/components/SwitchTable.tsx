@@ -10,6 +10,7 @@ import { formatWithUnit } from '@/utils/formatters'
 import { linkify } from '@/utils/linkify'
 import FrankenIndicator from './FrankenIndicator'
 import SwitchShareButton from './SwitchShareButton'
+import type { CanonicalCurveInput } from './ForceCurvesButton'
 
 interface SwitchImage {
   id: string
@@ -34,9 +35,10 @@ interface SwitchTableProps {
   forceCurvePreferencesMap?: Map<string, { folder: string; url: string }>
   selectedSwitches?: Set<string>
   onSelectionChange?: (switchId: string) => void
+  forceCurvesByMasterSwitchId?: Record<string, CanonicalCurveInput[]>
 }
 
-function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCache, forceCurvePreferencesMap, selectedSwitches, onSelectionChange }: SwitchTableProps) {
+function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCache, forceCurvePreferencesMap, selectedSwitches, onSelectionChange, forceCurvesByMasterSwitchId }: SwitchTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleDelete = async (switchItem: ExtendedSwitch) => {
@@ -384,6 +386,7 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                           isAuthenticated={true}
                           forceCurvesCached={forceCurveCache?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`) ?? false}
                           savedPreference={forceCurvePreferencesMap?.get(`${switchItem.name}|${switchItem.manufacturer || ''}`)}
+                          initialCurves={forceCurvesByMasterSwitchId ? (switchItem.masterSwitchId ? forceCurvesByMasterSwitchId[switchItem.masterSwitchId] || [] : []) : undefined}
                         />
                         <SwitchScoresButton 
                           switchName={switchItem.name}

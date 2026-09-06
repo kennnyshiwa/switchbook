@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react'
 import { Switch } from '@prisma/client'
 import SwitchCard from './SwitchCard'
+import type { CanonicalCurveInput } from './ForceCurvesButton'
 
 interface SwitchImage {
   id: string
@@ -27,6 +28,7 @@ interface VirtualSwitchGridProps {
   forceCurvePreferencesMap: Map<string, { folder: string; url: string }>
   selectedSwitches: Set<string>
   onSelectionChange: (switchId: string) => void
+  forceCurvesByMasterSwitchId: Record<string, CanonicalCurveInput[]>
 }
 
 const CARD_GAP = 24        // gap-6
@@ -49,6 +51,7 @@ export default function VirtualSwitchGrid({
   forceCurvePreferencesMap,
   selectedSwitches,
   onSelectionChange,
+  forceCurvesByMasterSwitchId,
 }: VirtualSwitchGridProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -207,6 +210,7 @@ export default function VirtualSwitchGrid({
                     savedPreference={savedPreference}
                     isSelected={selectedSwitches.has(switchItem.id)}
                     onSelectionChange={() => onSelectionChange(switchItem.id)}
+                    initialForceCurves={switchItem.masterSwitchId ? forceCurvesByMasterSwitchId[switchItem.masterSwitchId] || [] : []}
                   />
                 )
               })}

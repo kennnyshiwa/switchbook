@@ -183,3 +183,54 @@ test('Collections and Master Database one/multi controls open exact GET-only ove
   assert.deepEqual(requests.filter(request => mutating.has(request.method)), [])
   assert.equal(requests.filter(request => request.url.includes('/api/force-curves/')).every(request => request.method === 'GET'), true)
 })
+
+test('Personal Collection preloaded curves render immediately with zero client discovery or detail requests', async t => {
+  const bundle = await browserBundle(`
+    import React from 'react'
+    import { createRoot } from 'react-dom/client'
+    import ForceCurvesButton from './src/components/ForceCurvesButton'
+    const curves = [{ id:'preloaded', measurementId:'github:ThereminGoat/force-curves:Preloaded/Preloaded Raw Data CSV.csv', folderName:'Preloaded', url:'https://switchesdb.switchbook.app/#Preloaded~TG.csv', sourceUrl:'https://github.com/ThereminGoat/force-curves/blob/main/Preloaded/Preloaded%20Raw%20Data%20CSV.csv', provenance:'ThereminGoat', condition:'Stock', measurementDate:null }]
+    createRoot(document.getElementById('root')).render(<ForceCurvesButton masterSwitchId="preloaded-master" switchName="Preloaded" manufacturer="Exact" forceCurvesCached initialCurves={curves} isAuthenticated />)
+  `)
+  const browser = await chromium.launch({ executablePath, headless: true })
+  t.after(() => browser.close())
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  const legacyRequests: string[] = []
+  await page.route('http://switchbook.test/', route => route.fulfill({ contentType:'text/html', body:shell }))
+  await page.route('http://switchbook.test/api/**', async route => {
+    legacyRequests.push(route.request().url())
+    await new Promise(resolve => setTimeout(resolve, 5_000))
+    await route.fulfill({ contentType:'application/json', body:'{}' })
+  })
+  await page.route('https://switchesdb.switchbook.app/**', route => route.fulfill({ contentType:'text/html', body:'ok' }))
+  await page.goto('http://switchbook.test/')
+  const started = performance.now()
+  await page.addScriptTag({ content:bundle })
+  const trigger = page.getByRole('button', { name:'View force curves for Preloaded' })
+  await trigger.waitFor({ timeout:1_000 })
+  const renderedMs = performance.now() - started
+  assert.ok(renderedMs < 1_000, `preloaded trigger rendered in ${renderedMs}ms`)
+  assert.deepEqual(legacyRequests, [])
+  await trigger.click()
+  assert.equal(await page.getByRole('dialog', { name:/SwitchesDB · Preloaded/ }).locator('iframe').getAttribute('src'), 'https://switchesdb.switchbook.app/#Preloaded~TG.csv')
+  assert.deepEqual(legacyRequests, [])
+})
+
+test('Personal Collection preload stays immediate on desktop', async t => {
+  const bundle = await browserBundle(`
+    import React from 'react'; import { createRoot } from 'react-dom/client'; import ForceCurvesButton from './src/components/ForceCurvesButton';
+    const curves=[{id:'desktop',measurementId:'desktop',folderName:'Desktop',url:'https://switchesdb.switchbook.app/#Desktop~TG.csv',sourceUrl:'https://github.com/ThereminGoat/force-curves/blob/main/Desktop/Desktop%20Raw%20Data%20CSV.csv',provenance:'ThereminGoat',condition:'Measurement',measurementDate:null}];
+    createRoot(document.getElementById('root')).render(<ForceCurvesButton masterSwitchId="desktop" switchName="Desktop" initialCurves={curves} forceCurvesCached />)
+  `)
+  const browser = await chromium.launch({ executablePath, headless:true })
+  t.after(() => browser.close())
+  const page = await browser.newPage({ viewport:{ width:1440, height:900 } })
+  const apiRequests:string[]=[]
+  page.on('request', request => { if (request.url().includes('/api/force-curve')) apiRequests.push(request.url()) })
+  await page.setContent(shell)
+  const started=performance.now()
+  await page.addScriptTag({ content:bundle })
+  await page.getByRole('button',{name:'View force curves for Desktop'}).waitFor({timeout:1_000})
+  assert.ok(performance.now()-started < 1_000)
+  assert.deepEqual(apiRequests,[])
+})

@@ -13,6 +13,7 @@ import VirtualSwitchGrid from './VirtualSwitchGrid'
 import { findForceCurveData } from '@/utils/forceCurves'
 import { hasSwitchScoreData } from '@/utils/switchScores'
 import { applySwitchFilters, deriveSwitchFilterOptions } from '@/lib/switch-filters'
+import type { CanonicalCurveInput } from './ForceCurvesButton'
 
 interface SwitchImage {
   id: string
@@ -33,9 +34,10 @@ interface SwitchCollectionProps {
   userId: string
   showForceCurves: boolean
   forceCurvePreferences: ForceCurvePreference[]
+  initialForceCurvesByMasterSwitchId: Record<string, CanonicalCurveInput[]>
 }
 
-export default function SwitchCollection({ switches: initialSwitches, userId, showForceCurves, forceCurvePreferences }: SwitchCollectionProps) {
+export default function SwitchCollection({ switches: initialSwitches, userId, showForceCurves, forceCurvePreferences, initialForceCurvesByMasterSwitchId }: SwitchCollectionProps) {
   const [switches, setSwitches] = useState(initialSwitches)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingSwitch, setEditingSwitch] = useState<ExtendedSwitch | null>(null)
@@ -118,7 +120,10 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   }
 
   // Cache for force curve results to avoid repeated API calls
-  const [forceCurveCache, setForceCurveCache] = useState<Map<string, boolean>>(new Map())
+  const [forceCurveCache, setForceCurveCache] = useState<Map<string, boolean>>(() => new Map(initialSwitches.map(item => [
+    `${item.name}|${item.manufacturer || ''}`,
+    Boolean(item.masterSwitchId && initialForceCurvesByMasterSwitchId[item.masterSwitchId]?.length),
+  ])))
   
   // Create a map of force curve preferences for quick lookup
   const forceCurvePreferencesMap = useMemo(() => {
@@ -134,69 +139,6 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   }, [forceCurvePreferences])
 
   // Track if we've already done the initial batch check
-  const [hasCheckedForceCurves, setHasCheckedForceCurves] = useState(false)
-  
-  // Load existing cache entries and batch check force curves for all switches on mount
-  useEffect(() => {
-    const checkAllForceCurves = async () => {
-      if (switches.length === 0 || hasCheckedForceCurves) return
-      
-      setHasCheckedForceCurves(true)
-      
-      try {
-        // First, load existing cache entries from database
-        const existingCache = await fetch('/api/force-curve-cache').then(res => res.json())
-        const cacheMap = new Map<string, boolean>()
-        
-        if (existingCache && Array.isArray(existingCache)) {
-          existingCache.forEach((entry: any) => {
-            const key = `${entry.switchName}|${entry.manufacturer || ''}`
-            cacheMap.set(key, entry.hasForceCurve)
-          })
-          // Loaded force curve cache entries
-        }
-        
-        // Update local cache with database entries
-        setForceCurveCache(prev => new Map([...prev, ...cacheMap]))
-        
-        // Now check which switches still need to be checked
-        const switchesToCheck = switches
-          .filter(sw => {
-            const key = `${sw.name}|${sw.manufacturer || ''}`
-            const inCache = cacheMap.has(key)
-            return !inCache
-          })
-          .map(sw => ({ key: `${sw.name}|${sw.manufacturer || ''}`, masterSwitchId: sw.masterSwitchId }))
-        
-        if (switchesToCheck.length > 0) {
-          // Batch checking switches for force curves
-          
-          // Use API endpoint for batch checking
-          const response = await fetch('/api/force-curve-batch-check', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ switches: switchesToCheck })
-          })
-          
-          if (response.ok) {
-            const resultsObject = await response.json()
-            const results = new Map(Object.entries(resultsObject).map(([key, value]) => [key, value as boolean]))
-            setForceCurveCache(prev => new Map([...prev, ...results]))
-          } else {
-            // Failed to batch check force curves
-          }
-        } else {
-          // All switches already cached
-        }
-      } catch (error) {
-        // Error batch checking force curves
-      }
-    }
-    
-    checkAllForceCurves()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // Helper function to check if a switch has force curves
   const switchHasForceCurves = useCallback(async (switchItem: Switch): Promise<boolean> => {
     // Check cache first
@@ -560,6 +502,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           showForceCurves={showForceCurves}
           forceCurveCache={forceCurveCache}
           forceCurvePreferencesMap={forceCurvePreferencesMap}
+          forceCurvesByMasterSwitchId={initialForceCurvesByMasterSwitchId}
           selectedSwitches={selectedSwitches}
           onSelectionChange={handleSwitchSelection}
         />
@@ -571,6 +514,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           showForceCurves={showForceCurves}
           forceCurveCache={forceCurveCache}
           forceCurvePreferencesMap={forceCurvePreferencesMap}
+          forceCurvesByMasterSwitchId={initialForceCurvesByMasterSwitchId}
           selectedSwitches={selectedSwitches}
           onSelectionChange={handleSwitchSelection}
         />

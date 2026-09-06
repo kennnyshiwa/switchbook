@@ -12,6 +12,7 @@ import { linkify } from '@/utils/linkify'
 import ImageCarousel from './ImageCarousel'
 import FrankenIndicator from './FrankenIndicator'
 import SwitchShareButton from './SwitchShareButton'
+import type { CanonicalCurveInput } from './ForceCurvesButton'
 
 interface SwitchImage {
   id: string
@@ -36,9 +37,10 @@ interface SwitchCardProps {
   savedPreference?: { folder: string; url: string }
   isSelected?: boolean
   onSelectionChange?: () => void
+  initialForceCurves?: CanonicalCurveInput[]
 }
 
-function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, forceCurvesCached, savedPreference, isSelected, onSelectionChange }: SwitchCardProps) {
+function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, forceCurvesCached, savedPreference, isSelected, onSelectionChange, initialForceCurves }: SwitchCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
 
@@ -430,6 +432,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
                 isAuthenticated={true}
                 forceCurvesCached={forceCurvesCached}
                 savedPreference={savedPreference}
+                initialCurves={initialForceCurves}
               />
             </div>
           )}
