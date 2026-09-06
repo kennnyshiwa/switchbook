@@ -147,7 +147,7 @@ test('Collections and Master Database one/multi controls open exact GET-only ove
   await collectionOneDialog.locator('iframe').contentFrame().getByRole('button', { name:'Iframe control' }).focus()
   await page.keyboard.press('Escape')
   await collectionOneDialog.waitFor({ state:'detached' })
-  assert.equal(await collectionOne.evaluate(element => document.activeElement === element), true)
+  await page.waitForFunction(element => document.activeElement === element, await collectionOne.elementHandle())
 
   const collectionMulti = page.getByRole('button', { name:'View force curves for Collections Multi' })
   await collectionMulti.click()
