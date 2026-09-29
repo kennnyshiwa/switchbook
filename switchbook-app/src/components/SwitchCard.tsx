@@ -12,6 +12,7 @@ import { linkify } from '@/utils/linkify'
 import ImageCarousel from './ImageCarousel'
 import FrankenIndicator from './FrankenIndicator'
 import SwitchShareButton from './SwitchShareButton'
+import PrintLabelButton from './PrintLabelButton'
 import type { CanonicalCurveInput } from './ForceCurvesButton'
 
 interface SwitchImage {
@@ -440,7 +441,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
           {/* Switch Scorecard Button */}
           {showForceCurves && (
             <div className="mt-2">
-              <SwitchScoresButton 
+              <SwitchScoresButton
                 switchName={switchItem.name}
                 manufacturer={switchItem.manufacturer}
                 variant="button"
@@ -448,6 +449,15 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
               />
             </div>
           )}
+
+          {/* Print Label Button */}
+          <div className="mt-2">
+            <PrintLabelButton
+              switchId={switchItem.id}
+              variant="button"
+              className="w-full justify-center"
+            />
+          </div>
         </div>
       </div>
     </div>

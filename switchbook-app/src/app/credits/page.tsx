@@ -202,6 +202,15 @@ export default async function CreditsPage() {
             
             <div className="space-y-6">
               <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">rossw_</h3>
+                <p className="text-gray-700 dark:text-gray-300">
+                  For the design and the idea behind Switchbook&apos;s printable switch labels. The card
+                  template &mdash; the cut-down tag, the type marker, the spec layout &mdash; came from
+                  rossw_ in the 40s Discord server, and the printable labels exist because of it.
+                </p>
+              </div>
+
+              <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">The Mechanical Keyboard Community</h3>
                 <p className="text-gray-700 dark:text-gray-300">
                   To all the enthusiasts, collectors, reviewers, and makers who share their knowledge and passion, 

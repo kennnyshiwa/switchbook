@@ -184,6 +184,16 @@ function LoginContent() {
               Forgot your password?
             </Link>
           </div>
+
+          <p className="text-center text-xs text-gray-500 dark:text-gray-400">
+            Printable switch label design by rossw_ (40s Discord) &middot;{' '}
+            <Link
+              href="/credits"
+              className="underline hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              Credits
+            </Link>
+          </p>
         </form>
       </div>
     </div>
