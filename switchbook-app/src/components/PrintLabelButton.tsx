@@ -19,11 +19,22 @@ export default function PrintLabelButton({
   // triggers print itself once loaded.
   const openLabel = () => {
     const win = window.open(
-      `/api/switches/${switchId}/label`,
+      '',
       '_blank',
-      'noopener,noreferrer,width=520,height=760'
+      'width=520,height=760'
     )
-    setBlocked(!win)
+    if (!win) {
+      setBlocked(true)
+      return
+    }
+
+    // `noopener` makes window.open return null even when the popup opened,
+    // which falsely reports a blocked popup after every successful print.
+    // Sever the opener before navigating instead so the null return remains a
+    // reliable popup-block signal.
+    win.opener = null
+    win.location.replace(`/api/switches/${switchId}/label`)
+    setBlocked(false)
   }
 
   const label = 'Print Label'
