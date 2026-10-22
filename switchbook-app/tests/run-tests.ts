@@ -16,3 +16,5 @@ import "./collection-force-curves.test";
 import "./admin-force-curve-suggestions.test";
 import "./virtual-switch-list-geometry.test";
 import "./print-label-popup.test";
+
+import "./discord-auth.test";

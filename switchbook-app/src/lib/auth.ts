@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import Discord from "next-auth/providers/discord"
+import { discordProvider } from "@/lib/discord-provider"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
@@ -23,10 +23,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   debug: process.env.NODE_ENV === "development",
   trustHost: true,
   providers: [
-    Discord({
-      clientId: process.env.DISCORD_CLIENT_ID!,
-      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
-    }),
+    discordProvider,
     Credentials({
       name: "credentials",
       credentials: {
