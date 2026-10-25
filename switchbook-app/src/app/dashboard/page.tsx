@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import SwitchCollection from "@/components/SwitchCollection"
-import CollectionStats from "@/components/CollectionStats"
 import HamburgerMenu from "@/components/HamburgerMenu"
 import MasterSwitchUpdatesNotification from "@/components/MasterSwitchUpdatesNotification"
 import NotificationBanner from "@/components/NotificationBanner"
@@ -88,12 +87,6 @@ export default async function DashboardPage() {
         </div>
 
         <MasterSwitchUpdatesNotification switches={user.switches} userId={user.id} />
-
-        {user.switches.length > 0 && (
-          <div className="mb-8">
-            <CollectionStats switches={user.switches} />
-          </div>
-        )}
 
         <SwitchCollection 
           switches={user.switches} 

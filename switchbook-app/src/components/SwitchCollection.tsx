@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Switch, ForceCurvePreference } from '@prisma/client'
 import Link from 'next/link'
-import SwitchCard from './SwitchCard'
+import CollectionStats from './CollectionStats'
 import SwitchTable from './SwitchTable'
 import AddSwitchModal from './AddSwitchModal'
 import EditSwitchModal from './EditSwitchModal'
@@ -64,13 +64,21 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     localStorage.setItem('switchViewMode', viewMode)
   }, [viewMode])
 
+  // A router refresh can deliver new server data without remounting us.
+  useEffect(() => {
+    setSwitches(initialSwitches)
+    setSelectedSwitches(previous => new Set(
+      [...previous].filter(id => initialSwitches.some(item => item.id === id))
+    ))
+  }, [initialSwitches])
+
   const handleSwitchAdded = (newSwitch: ExtendedSwitch) => {
-    setSwitches([newSwitch, ...switches])
+    setSwitches(previous => [newSwitch, ...previous.filter(item => item.id !== newSwitch.id)])
     setShowAddModal(false)
   }
 
   const handleSwitchUpdated = (updatedSwitch: ExtendedSwitch) => {
-    setSwitches(switches.map(s => s.id === updatedSwitch.id ? updatedSwitch : s))
+    setSwitches(previous => previous.map(s => s.id === updatedSwitch.id ? updatedSwitch : s))
     // Update the editing switch with new data but keep modal open
     if (editingSwitch && editingSwitch.id === updatedSwitch.id) {
       setEditingSwitch(updatedSwitch)
@@ -78,7 +86,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   }
 
   const handleSwitchDeleted = (switchId: string) => {
-    setSwitches(switches.filter(s => s.id !== switchId))
+    setSwitches(previous => previous.filter(s => s.id !== switchId))
     // Also remove from selection if deleted
     setSelectedSwitches(prev => {
       const newSelection = new Set(prev)
@@ -176,6 +184,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
   // Filter and sort switches (async due to force curve checking)
   useEffect(() => {
+    let cancelled = false
     const filterSwitches = async () => {
       setIsFiltering(true)
       let filtered = [...switches]
@@ -297,11 +306,14 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           break
       }
 
-      setFilteredSwitches(sorted)
-      setIsFiltering(false)
+      if (!cancelled) {
+        setFilteredSwitches(sorted)
+        setIsFiltering(false)
+      }
     }
 
     filterSwitches()
+    return () => { cancelled = true }
   }, [switches, searchTerm, sortOption, activeFilters, switchHasForceCurves])
 
   useEffect(() => {
@@ -396,6 +408,9 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
 
   return (
     <>
+      <div className="mb-8">
+        <CollectionStats switches={switches} />
+      </div>
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -434,13 +449,14 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-2">
               <CompareForceCurvesButton
-                selectedSwitches={Array.from(selectedSwitches).map(id => {
-                  const sw = switches.find(s => s.id === id)!
-                  return {
+                selectedSwitches={Array.from(selectedSwitches).flatMap(id => {
+                  const sw = switches.find(s => s.id === id)
+                  if (!sw) return []
+                  return [{
                     id: sw.id,
                     name: sw.name,
                     manufacturer: sw.manufacturer
-                  }
+                  }]
                 })}
               />
               <button

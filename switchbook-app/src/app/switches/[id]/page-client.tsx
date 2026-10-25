@@ -148,6 +148,8 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
       if (response.ok) {
         const data = await response.json()
         setSwitchData(prev => prev ? { ...prev, inCollection: true, userSwitchId: data.switchId } : null)
+        // Discard the cached dashboard so returning to it includes this add.
+        router.refresh()
       } else {
         const error = await response.json()
         alert(error.error || 'Failed to add switch to collection')

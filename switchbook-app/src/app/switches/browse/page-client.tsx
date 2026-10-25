@@ -431,8 +431,8 @@ export default function BrowseMasterSwitchesPage() {
         if (selectedSwitch && selectedSwitch.id === switchId) {
           setSelectedSwitch({ ...selectedSwitch, inCollection: true })
         }
-        // Optionally redirect to the switch in their collection
-        // router.push(`/dashboard/switches/${data.switchId}`)
+        // Discard the cached dashboard so returning to it includes this add.
+        router.refresh()
       } else {
         const error = await response.json()
         alert(error.error || 'Failed to add switch to collection')

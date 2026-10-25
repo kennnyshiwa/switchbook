@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 import { getMaterials } from '@/utils/materials'
 import { getStemShapes } from '@/utils/stemShapes'
@@ -752,6 +753,7 @@ const SwitchTableRow = memo(({
 SwitchTableRow.displayName = 'SwitchTableRow'
 
 export default function BulkUploadPage() {
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload')
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
@@ -1268,6 +1270,7 @@ export default function BulkUploadPage() {
     
     setImportResults(results)
     setCurrentStep('complete')
+    if (results.success > 0) router.refresh()
   }
 
   if (currentStep === 'upload') {

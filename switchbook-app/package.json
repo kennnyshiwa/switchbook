@@ -22,6 +22,7 @@
     "build:force-curves-sync": "esbuild scripts/sync-force-curves.ts --bundle --platform=node --target=node20 --format=cjs --external:@prisma/client --outfile=dist/sync-force-curves.cjs",
     "force-curves:sync": "node dist/sync-force-curves.cjs",
     "test": "tsx --test tests/run-tests.ts",
+    "test:collection-browser": "tsx --test tests/collection-refresh.browser.ts",
     "test:admin-browser": "tsx --test tests/admin-master-switch-cardinality.browser.ts",
     "test:admin-force-curve-browser": "tsx --test tests/admin-force-curve-performance.browser.ts",
     "test:admin-integrations-browser": "tsx --test tests/admin-integrations.browser.ts",
