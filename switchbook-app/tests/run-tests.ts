@@ -18,3 +18,5 @@ import "./virtual-switch-list-geometry.test";
 import "./print-label-popup.test";
 
 import "./discord-auth.test";
+
+import "./master-match-images.test";

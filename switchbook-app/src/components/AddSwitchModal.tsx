@@ -198,7 +198,7 @@ export default function AddSwitchModal({ userId, onClose, onSwitchAdded }: AddSw
     try {
       // Include masterSwitchId if selected from master database
       const submitData = selectedMasterSwitchId 
-        ? { ...data, masterSwitchId: selectedMasterSwitchId }
+        ? { ...data, masterSwitchId: selectedMasterSwitchId, copyMasterImages: pendingImages.length === 0 }
         : data
 
       const response = await fetch('/api/switches', {

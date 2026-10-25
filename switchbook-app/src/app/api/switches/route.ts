@@ -59,7 +59,12 @@ async function createSwitchHandler(request: NextRequest) {
     if (masterSwitchId) {
       const masterSwitch = await prisma.masterSwitch.findUnique({
         where: { id: masterSwitchId },
-        select: { status: true, version: true }
+        select: {
+          status: true,
+          version: true,
+          imageUrl: true,
+          images: { orderBy: { order: 'asc' } }
+        }
       })
 
       if (!masterSwitch || masterSwitch.status !== 'APPROVED') {
@@ -69,20 +74,45 @@ async function createSwitchHandler(request: NextRequest) {
         )
       }
 
-      // Create switch linked to master database
-      const newSwitch = await prisma.switch.create({
-        data: {
-          ...transformedData,
-          userId,
-          masterSwitchId,
-          masterSwitchVersion: masterSwitch.version,
-          isModified: false
-        },
-        include: {
-          images: {
-            orderBy: { order: 'asc' }
-          }
-        }
+      // Copy image records, not their master IDs or ownership. Keep the same
+      // gallery-first / legacy URL fallback as the dedicated collection route.
+      // Explicitly selected photos in the add modal take precedence and are
+      // uploaded separately; do not consume their slots with inherited images.
+      const images = body.copyMasterImages === false ? [] : masterSwitch.images.length > 0
+        ? masterSwitch.images.map((image, order) => ({
+            url: image.url,
+            type: image.type,
+            order,
+            caption: image.caption,
+            width: image.width,
+            height: image.height,
+            size: image.size
+          }))
+        : masterSwitch.imageUrl
+          ? [{ url: masterSwitch.imageUrl, type: 'LINKED' as const, order: 0 }]
+          : []
+
+      // A failed image copy must not leave a successful but image-less switch.
+      const newSwitch = await prisma.$transaction(async (tx) => {
+        const created = await tx.switch.create({
+          data: {
+            ...transformedData,
+            userId,
+            masterSwitchId,
+            masterSwitchVersion: masterSwitch.version,
+            isModified: false,
+            images: { create: images }
+          },
+          include: { images: { orderBy: { order: 'asc' } } }
+        })
+
+        if (created.images.length === 0) return created
+
+        return tx.switch.update({
+          where: { id: created.id },
+          data: { primaryImageId: created.images[0].id },
+          include: { images: { orderBy: { order: 'asc' } } }
+        })
       })
 
       return NextResponse.json(newSwitch)
