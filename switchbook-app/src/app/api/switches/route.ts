@@ -227,7 +227,8 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
       include: {
         images: {
-          orderBy: { order: 'asc' }
+          orderBy: { order: 'asc' },
+          take: new URL(request.url).searchParams.get('view') === 'dashboard' ? 1 : undefined
         }
       }
     })

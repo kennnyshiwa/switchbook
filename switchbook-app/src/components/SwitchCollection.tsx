@@ -49,6 +49,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   const [visibleCount, setVisibleCount] = useState(60)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const collectionRevision = useRef(0)
   const PAGE_SIZE = 60
 
   // Load view mode from localStorage on mount
@@ -64,20 +65,53 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
     localStorage.setItem('switchViewMode', viewMode)
   }, [viewMode])
 
-  // A router refresh can deliver new server data without remounting us.
+  // Back/Forward can restore an older RSC snapshot even after router.refresh().
+  // Reconcile against the database when this view is restored, without reloading
+  // the document. Local mutations invalidate in-flight reads so they cannot be
+  // overwritten by a response that started before the save.
   useEffect(() => {
-    setSwitches(initialSwitches)
-    setSelectedSwitches(previous => new Set(
-      [...previous].filter(id => initialSwitches.some(item => item.id === id))
-    ))
+    let controller: AbortController | undefined
+    const refreshCollection = async () => {
+      controller?.abort()
+      controller = new AbortController()
+      const signal = controller.signal
+      const revision = ++collectionRevision.current
+      try {
+        const response = await fetch('/api/switches?view=dashboard', {
+          cache: 'no-store', signal
+        })
+        if (!response.ok) return
+        const freshSwitches: ExtendedSwitch[] = await response.json()
+        if (signal.aborted || revision !== collectionRevision.current || !Array.isArray(freshSwitches)) return
+        setSwitches(freshSwitches)
+        setSelectedSwitches(previous => new Set(
+          [...previous].filter(id => freshSwitches.some(item => item.id === id))
+        ))
+      } catch {
+        // Keep the current collection if the request is interrupted or offline.
+      }
+    }
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) void refreshCollection()
+    }
+    void refreshCollection()
+    window.addEventListener('popstate', refreshCollection)
+    window.addEventListener('pageshow', onPageShow)
+    return () => {
+      controller?.abort()
+      window.removeEventListener('popstate', refreshCollection)
+      window.removeEventListener('pageshow', onPageShow)
+    }
   }, [initialSwitches])
 
   const handleSwitchAdded = (newSwitch: ExtendedSwitch) => {
+    collectionRevision.current++
     setSwitches(previous => [newSwitch, ...previous.filter(item => item.id !== newSwitch.id)])
     setShowAddModal(false)
   }
 
   const handleSwitchUpdated = (updatedSwitch: ExtendedSwitch) => {
+    collectionRevision.current++
     setSwitches(previous => previous.map(s => s.id === updatedSwitch.id ? updatedSwitch : s))
     // Update the editing switch with new data but keep modal open
     if (editingSwitch && editingSwitch.id === updatedSwitch.id) {
@@ -86,6 +120,7 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
   }
 
   const handleSwitchDeleted = (switchId: string) => {
+    collectionRevision.current++
     setSwitches(previous => previous.filter(s => s.id !== switchId))
     // Also remove from selection if deleted
     setSelectedSwitches(prev => {

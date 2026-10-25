@@ -15,7 +15,7 @@ const stubs: Record<string, string> = {
   '@/utils/switchScores': `export const hasSwitchScoreData=name=>window.slowScores?new Promise(resolve=>window.pendingScores.push({name,resolve})):Promise.resolve(true);`,
   'SwitchCard': `import React from 'react'; export default function Card({switch:item,onDelete,onSelectionChange}) { return <article data-testid="switch-card">{item.name}<button onClick={onSelectionChange}>Select {item.name}</button><button onClick={()=>onDelete(item.id)}>Delete {item.name}</button></article> }`,
   'SwitchTable': `import React from 'react'; export default function Table({switches}) { return <div>{switches.map(item=><article data-testid="switch-card" key={item.id}>{item.name}</article>)}</div> }`,
-  'AddSwitchModal': `import React from 'react'; export default function Add({onSwitchAdded}) { return <button onClick={()=>onSwitchAdded(window.newSwitch)}>Save test switch</button> }`,
+  'AddSwitchModal': `import React from 'react'; export default function Add({onSwitchAdded}) { return <button onClick={()=>{window.serverRows=[window.newSwitch,...window.serverRows];onSwitchAdded(window.newSwitch)}}>Save test switch</button> }`,
   'EditSwitchModal': `export default ()=>null;`,
   'CompareForceCurvesButton': `export default ()=>null;`,
   'ForceCurvesButton': `export default ()=>null;`,
@@ -34,12 +34,24 @@ import Collection from './src/components/SwitchCollection';
 import Browse from './src/app/switches/browse/page-client';
 import Detail from './src/app/switches/[id]/page-client';
 import Bulk from './src/app/dashboard/bulk-upload/page';
-window.refreshes=0; window.pendingScores=[];
+window.refreshes=0; window.pendingScores=[]; window.pendingCollectionReads=[];
+const nativeFetch=window.fetch;
+window.fetch=(url,options)=>{
+  if(url==='/api/switches?view=dashboard') {
+    const snapshot=structuredClone(window.serverRows);
+    if(window.delayCollectionReads) return new Promise(resolve=>window.pendingCollectionReads.push(()=>resolve(Response.json(snapshot))));
+    return Promise.resolve(Response.json(snapshot));
+  }
+  return nativeFetch(url,options);
+};
 window.newSwitch={id:'new-1',name:'New Jade',createdAt:'2026-10-25T12:00:00Z',images:[],personalTags:[]};
 const first={id:'old-1',name:'Existing Switch',createdAt:'2026-10-24T12:00:00Z',images:[],personalTags:[]};
 const root=createRoot(document.getElementById('root'));
 const empty={};
-window.showCollection=(rows=[first])=>root.render(<Collection switches={rows} userId="test-user" showForceCurves={false} forceCurvePreferences={[]} initialForceCurvesByMasterSwitchId={empty}/>);
+window.showCollection=(rows=[first],setServer=true)=>{
+  if(setServer) window.serverRows=rows;
+  root.render(<Collection switches={rows} userId="test-user" showForceCurves={false} forceCurvePreferences={[]} initialForceCurvesByMasterSwitchId={empty}/>);
+};
 window.showBrowse=()=>root.render(<Browse/>);
 window.showBulk=()=>root.render(<Bulk/>);
 const params=Promise.resolve({id:'master-1'}), search=Promise.resolve({});
@@ -154,5 +166,22 @@ test('collection changes appear without a reload and master adds invalidate cach
   await page.getByRole('button',{name:/Import 1 of 1 Switches/}).click()
   await page.getByRole('heading',{name:'Import Complete!'}).waitFor()
   assert.equal(await page.evaluate(()=>(window as any).refreshes),1)
+  // Restore a stale empty history snapshot; the view must load current rows.
+  await page.evaluate(() => { (window as any).serverRows=[(window as any).newSwitch]; (window as any).showCollection([],false) })
+  await cards.filter({hasText:'Another Switch'}).waitFor()
+  await page.evaluate(() => { (window as any).serverRows=[{...(window as any).newSwitch,name:'Restored on Back'}]; window.dispatchEvent(new PopStateEvent('popstate')) })
+  await cards.filter({hasText:'Restored on Back'}).waitFor()
+  await page.evaluate(() => { (window as any).serverRows=[{...(window as any).newSwitch,name:'Restored from BFCache'}]; window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})) })
+  await cards.filter({hasText:'Restored from BFCache'}).waitFor()
+
+  // A read started before a local save must never remove the saved item.
+  await page.evaluate(() => { (window as any).delayCollectionReads=true; (window as any).showCollection([]) })
+  await page.waitForFunction(()=>(window as any).pendingCollectionReads.length>0)
+  await page.getByRole('button',{name:'Add Switch',exact:true}).click()
+  await page.getByRole('button',{name:'Save test switch'}).click()
+  await cards.filter({hasText:'Another Switch'}).waitFor()
+  await page.evaluate(() => (window as any).pendingCollectionReads.forEach((resolve:any)=>resolve()))
+  await page.waitForTimeout(100)
+  assert.equal(await cards.filter({hasText:'Another Switch'}).count(),1)
   assert.deepEqual(errors,[])
 })
