@@ -259,6 +259,26 @@ export async function POST(req: NextRequest) {
       console.error('Failed to send admin notification emails:', error)
     })
 
+    // Load the source switch up front so we know which of its images is the
+    // submitted imageUrl (see the gallery sharing below).
+    const userSwitch = validated.sourceSwitchId
+      ? await prisma.switch.findFirst({
+          where: {
+            id: validated.sourceSwitchId,
+            userId: session.user.id
+          },
+          include: {
+            images: {
+              orderBy: { order: 'asc' }
+            }
+          }
+        }).catch(error => {
+          console.error('Failed to load source switch for master submission:', error)
+          return null
+        })
+      : null
+
+    let rehostedSubmittedImage = false
     if (validated.imageUrl) {
       try {
         const rehostedImage = await rehostRemoteImage(
@@ -271,12 +291,14 @@ export async function POST(req: NextRequest) {
             masterSwitchId: masterSwitch.id,
             url: rehostedImage.url,
             type: 'UPLOADED',
-            order: 0,
+            // Take the original's gallery position, since it replaces it below
+            order: userSwitch?.images.find(image => image.url === validated.imageUrl)?.order ?? 0,
             width: rehostedImage.width,
             height: rehostedImage.height,
             size: rehostedImage.size,
           },
         })
+        rehostedSubmittedImage = true
 
         await prisma.masterSwitch.update({
           where: { id: masterSwitch.id },
@@ -291,60 +313,44 @@ export async function POST(req: NextRequest) {
     }
 
     // If a source switch ID was provided, link it to the new master switch
-    if (validated.sourceSwitchId) {
+    if (userSwitch) {
       try {
-        // Verify the switch belongs to the current user and fetch with images
-        const userSwitch = await prisma.switch.findFirst({
-          where: {
-            id: validated.sourceSwitchId,
-            userId: session.user.id
-          },
-          include: {
-            images: {
-              orderBy: { order: 'asc' }
+        // Link the user's switch to the newly created master switch if not already linked
+        if (!userSwitch.masterSwitchId) {
+          await prisma.switch.update({
+            where: { id: userSwitch.id },
+            data: {
+              masterSwitchId: masterSwitch.id,
+              masterSwitchVersion: 1,
+              isModified: false,
+              modifiedFields: Prisma.JsonNull
             }
-          }
-        })
+          })
+        }
 
-        if (userSwitch) {
-          // Link the user's switch to the newly created master switch if not already linked
-          if (!userSwitch.masterSwitchId) {
-            await prisma.switch.update({
-              where: { id: validated.sourceSwitchId },
-              data: {
-                masterSwitchId: masterSwitch.id,
-                masterSwitchVersion: 1,
-                isModified: false,
-                modifiedFields: Prisma.JsonNull
-              }
-            })
-          }
+        // Share the user's images with the master switch. The rehosted copy above
+        // already represents the submitted image, so don't share the original as
+        // well: the master would show it twice. The master keeps its own hosted
+        // copy, so deleting the photo from the user's gallery can't break it.
+        const sharedImages = rehostedSubmittedImage
+          ? userSwitch.images.filter(image => image.url !== validated.imageUrl)
+          : userSwitch.images
+        await Promise.all(sharedImages.map(image =>
+          prisma.switchImage.update({
+            where: { id: image.id },
+            data: { masterSwitchId: masterSwitch.id }
+          })
+        ))
 
-          // Copy user's switch images to master switch
-          // This allows the images to be shared with the master switch
-          if (userSwitch.images && userSwitch.images.length > 0) {
-            const imageUpdates = userSwitch.images.map(image => 
-              prisma.switchImage.update({
-                where: { id: image.id },
-                data: {
-                  masterSwitchId: masterSwitch.id
-                }
-              })
-            )
-            
-            await Promise.all(imageUpdates)
-            
-            // Set the first image as primary if no imageUrl is set
-            if (!validated.imageUrl && userSwitch.images[0]) {
-              await prisma.masterSwitch.update({
-                where: { id: masterSwitch.id },
-                data: {
-                  primaryImageId: userSwitch.images[0].id,
-                  imageUrl: userSwitch.images[0].url
-                }
-              })
+        // Without a rehosted image, the first shared image is the primary
+        if (!rehostedSubmittedImage && sharedImages[0]) {
+          await prisma.masterSwitch.update({
+            where: { id: masterSwitch.id },
+            data: {
+              primaryImageId: sharedImages[0].id,
+              imageUrl: sharedImages[0].url
             }
-          }
+          })
         }
       } catch (linkError) {
         console.error('Failed to link source switch to master switch:', linkError)

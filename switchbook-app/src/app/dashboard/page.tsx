@@ -26,11 +26,10 @@ export default async function DashboardPage() {
       switches: {
         orderBy: { createdAt: "desc" },
         include: {
-          // Load only the primary image for dashboard list performance.
-          // Full image set is fetched lazily when editing a switch.
+          // Cards render a carousel, so they need every image row. Rows are
+          // URLs plus metadata; the image bytes still load lazily per card.
           images: {
-            orderBy: { order: 'asc' },
-            take: 1
+            orderBy: { order: 'asc' }
           }
         }
       },

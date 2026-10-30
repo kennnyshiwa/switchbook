@@ -20,3 +20,4 @@ import "./print-label-popup.test";
 import "./discord-auth.test";
 
 import "./master-match-images.test";
+import "./master-submit-images.test";

@@ -91,12 +91,12 @@ export async function POST(
 
     // Sync master switch imageUrl if it exists
     if (userSwitch.masterSwitch.imageUrl) {
-      // Check if this image URL already exists for this switch
+      // Only seed an image-less switch. A switch with its own gallery already
+      // shows those photos, and the master primary is often one of them under a
+      // rehosted URL, so adding it again duplicates the first image.
       const existingImage = await prisma.switchImage.findFirst({
-        where: {
-          switchId: id,
-          url: userSwitch.masterSwitch.imageUrl
-        }
+        where: { switchId: id },
+        select: { id: true }
       })
 
       if (!existingImage) {

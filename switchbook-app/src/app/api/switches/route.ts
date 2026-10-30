@@ -211,7 +211,7 @@ async function createSwitchHandler(request: NextRequest) {
 
 export const POST = withSmartRateLimit(createSwitchHandler)
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const session = await auth()
     
@@ -227,8 +227,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
       include: {
         images: {
-          orderBy: { order: 'asc' },
-          take: new URL(request.url).searchParams.get('view') === 'dashboard' ? 1 : undefined
+          orderBy: { order: 'asc' }
         }
       }
     })
