@@ -33,7 +33,7 @@
   "license": "ISC",
   "type": "commonjs",
   "overrides": {
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.5"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -56,7 +56,7 @@
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "mailgun.js": "^12.0.2",
-    "next": "^15.5.23",
+    "next": "^15.5.28",
     "next-auth": "^5.0.0-beta.32",
     "postcss": "^8.5.26",
     "prisma": "^6.19.3",
@@ -65,7 +65,7 @@
     "react-hook-form": "^7.57.0",
     "recharts": "^2.15.3",
     "redis": "^6.2.1",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "undici": "^6.21.3",
@@ -76,7 +76,7 @@
     "@types/lodash": "^4.17.17",
     "esbuild": "^0.27.1",
     "eslint": "^9.28.0",
-    "eslint-config-next": "^15.3.3",
+    "eslint-config-next": "^15.5.28",
     "playwright-core": "^1.51.1",
     "tsx": "^4.20.3"
   }

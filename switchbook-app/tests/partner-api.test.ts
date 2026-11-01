@@ -260,7 +260,7 @@ test('Next image optimizer is host-allowlisted and runtime Sharp is overridden t
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
   assert.doesNotMatch(config, /hostname:\s*['"]\*\*['"]/)
   assert.match(config, /hostname:\s*'switchbook\.app'/)
-  assert.equal(pkg.overrides.sharp, '^0.35.3')
+  assert.equal(pkg.overrides.sharp, '^0.35.5')
 })
 
 test('partner runbook separates temporary SwitchBook acceptance from partner handoff', () => {
