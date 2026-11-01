@@ -6,20 +6,21 @@ Implementation review artifact; not independent QA acceptance or deployment appr
 
 - Worktree: `/Users/kennnyshiwa/.openclaw/workspace-builder/switchbook-scope-20261101`.
 - Branch: `fix/csv-quantity-scope-20261101`.
-- Base: `73c3509bcb35449d33297a52c1ff4b97bdda337a` (current main; parent is released `8cd2eacf620dca96ad30140e2ecabd7ccce7e4bb`). Dependency/security changes are inherited, not edited or included in the focused diff.
-- Inputs: QA `workspace-qa/evidence/switchbook-8cd2eac-scope-audit/REPORT.md`; ops `workspace-ops/switchbook-authenticated-acceptance-20261101T231000Z.md`.
+- Base: `73c3509bcb35449d33297a52c1ff4b97bdda337a` (original review baseline; parent is released `8cd2eacf620dca96ad30140e2ecabd7ccce7e4bb`). Dependency/security changes are inherited, not edited or included in the focused diff.
+- Follow-up input: independent QA `workspace-qa/evidence/switchbook-477759b-review/REPORT.md` and its captured payload, base comparison, real-route probes and local-file alias proof. Only F1/F2 repaired after `477759b`.
+- Initial inputs: QA `workspace-qa/evidence/switchbook-8cd2eac-scope-audit/REPORT.md`; ops `workspace-ops/switchbook-authenticated-acceptance-20261101T231000Z.md`.
 - Baseline QA probe rerun against unchanged main confirmed all 12 groups, including actual sparse PUT data loss, notes rejection and bulk modified-state drift. Those passing probe assertions confirm defects, not product acceptance.
 - No production access/mutations, migration/backfill, push, deployment, PR or main-checkout edits in this pass.
 
 ## Import/update contract
 
-1. **Omitted means preserve.** Single PUT, bulk PUT and notes PATCH validate partial inputs and transform only present fields. Missing CSV columns and short trailing rows omit keys. Full forms send explicit empty strings/NaN (JSON null) to clear; zero and false remain values. Required name cannot be cleared.
+1. **Omitted means preserve.** Single PUT, bulk PUT and notes PATCH validate partial inputs and transform only present fields. Missing CSV columns and short trailing rows omit keys. Full forms send explicit empty strings/NaN (JSON null) to clear; zero and false remain values. Required name cannot be cleared. Bulk-edit grid blanks now retain explicit intent: text/enum/material cells send empty strings, numeric cells send null. Never-edited absent fields still omit; the API sparse transform is unchanged.
 2. **Explicit empty means clear.** Text/enum/date clears to null, numeric blank/null to null, spring flags to false, tags to []. Empty galleries clear owned relations and primary selection, independently of legacy URL. To remove every photo reference, clear both Image References and Legacy Image URL.
 3. **Owned identity, not names.** Exported Collection Switch ID is only an overwrite hint. Names/makers are never sufficient to overwrite. Repeated IDs, edited name/maker, and ambiguous name collisions default to skip and offer explicit create-new. Within-file duplicates are detected. Removing another row cannot convert a create choice into overwrite. Single route checks ID/path consistency and owner; bulk rejects repeated target IDs.
 4. **Text fidelity.** Native export uses RFC4180, UTF-8 BOM, quoted CR/LF and JSON tags/gallery. Name, manufacturer, spring descriptions and magnetic text are not trimmed/aliased on import. Empty string and database null are equivalent for optional text; whitespace-only strings are preserved. Unquoted hand-written CSV cells still trim; enum aliases and delimited tags remain supported. Malformed numeric/boolean cells and unclosed quotes report errors. Missing names remain visible as errors, not dropped rows.
 5. **Validation harmonized.** Collection strings have no arbitrary app length caps; measurements accept finite database/catalog values rather than narrower collection-only ranges. Browser measurement inputs use `step="any"`; quantity retains integer/range constraints. No truncation. No schema/migration change.
 6. **Catalog copying.** One tracked-spec contract drives catalog search/form selection, add-to-collection, link, sync, sync-all and modification tracking. Fresh linked POST seeds omitted specs from current master, explicit supplied values win and differences are truthful. Native imports retain snapshot specs; an older master version is not an archived master body. Submit-to-master copies Franken fields and numeric zero, but never inventory/personal data.
-7. **CSV references, not media backup.** Import never fetches a URL or reads a file; source media must remain available. HTTP(S) or safe public `/uploads/` references only. User IDs, image IDs, master image ownership and public tokens are never restored. Not a binary archive or whole-account backup.
+7. **CSV references, not media backup.** Import never fetches a URL or reads a file; source media must remain available. HTTP(S) or safe public `/uploads/` references only. User IDs, image IDs, master image ownership and public tokens are never restored. Not a binary archive or whole-account backup. Owned-upload cleanup compares canonical local asset paths across gallery, collection legacy and master legacy references, including same-origin absolute URLs, redundant slashes, encoded paths and same-row aliases. Hostnames are not used to prove absence (proxy/host aliases conservatively retain). Unparseable references or failed lookups retain the file; foreign/master ownership rules are unchanged.
 
 ## Exhaustive Switch member matrix (54 members; 51 scalars/enums + 3 relations)
 
@@ -164,7 +165,8 @@ Image References is a JSON array with URL, type, display order, metadata and opt
 
 ## Regression map
 
-- `tests/scope-rework.test.ts`: real POST/PUT/bulk/PATCH/catalog/label/image-delete routes with mocked auth/database/storage boundaries; scalar preservation/clearing, images, ownership, primary, identity, modifications and quantity helpers.
+- `tests/scope-rework.test.ts`: real POST/PUT/bulk/PATCH/catalog/label/image-delete routes with mocked auth/database/storage boundaries; scalar preservation/clearing, images, ownership, primary, identity, modifications and quantity helpers. F2 adds 28 alias/owner combinations plus unreadable-reference, unparseable-reference and distinct-file cases alongside the five existing cleanup ownership cases.
+- `tests/bulk-edit-clearing.browser.ts`: actual grid JSON through real bulk PUT, then browser reload; Notes, Actuation Force, Type and Top Housing clear; quantity zero/blank, measurement zero and omitted personal notes/images survive. Auth/database/lookups are test boundaries, not a live authenticated E2E.
 - `tests/scope-rework.browser.ts`: actual form/card/table/stats/controls/import preview; long unlinked notes, failed submission, numeric clears/zero, duplicate IDs and edited identity.
 - `tests/collection-refresh.browser.ts`: actual browse/detail add handlers and existing collection refresh flows; optional quantity confirmation now asserted.
 - Updated existing CSV, quantity and master-image regressions to reflect lossless text and transaction contracts. See `SCOPE_REWORK_HANDOFF.md` for final commands/counts/logs and changed files.

@@ -26,23 +26,23 @@ interface EditableSwitchData {
   magnetOrientation?: string
   magnetPosition?: string
   magnetPolarity?: string
-  initialForce?: number
-  initialMagneticFlux?: number
-  bottomOutMagneticFlux?: number
+  initialForce?: number | null
+  initialMagneticFlux?: number | null
+  bottomOutMagneticFlux?: number | null
   pcbThickness?: string
   compatibility?: string
   manufacturer?: string
   springWeight?: string
   springLength?: string
-  actuationForce?: number
-  tactileForce?: number
-  tactilePosition?: number
-  bottomOutForce?: number
+  actuationForce?: number | null
+  tactileForce?: number | null
+  tactilePosition?: number | null
+  bottomOutForce?: number | null
   progressiveSpring?: boolean
   doubleStage?: boolean
   clickType?: string
-  preTravel?: number
-  bottomOut?: number
+  preTravel?: number | null
+  bottomOut?: number | null
   notes?: string
   topHousing?: string
   bottomHousing?: string
@@ -57,7 +57,7 @@ interface EditableSwitchData {
   frankenStem?: string
   dateObtained?: string
   personalTags?: string[]
-  quantity?: number
+  quantity?: number | null
   manufacturerValid?: boolean
   manufacturerSuggestions?: string[]
 }
@@ -109,7 +109,7 @@ const EditableCell = memo(({
   value: any
   field: keyof EditableSwitchData
   switchId: string
-  onUpdate: (switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | string[] | undefined) => void
+  onUpdate: (switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | string[] | null | undefined) => void
   type?: string
   placeholder?: string
   min?: number
@@ -160,9 +160,10 @@ const EditableCell = memo(({
     }
     
     timeoutRef.current = setTimeout(() => {
-      onUpdate(switchId, field, newValue === '' ? undefined : newValue)
+      // An edited blank is an explicit clear, not an omitted sparse field.
+      onUpdate(switchId, field, newValue === '' && type === 'number' ? null : newValue)
     }, 300)
-  }, [switchId, field, onUpdate, manufacturers])
+  }, [switchId, field, onUpdate, manufacturers, type])
 
   const selectSuggestion = useCallback((suggestion: string) => {
     setLocalValue(suggestion)
@@ -701,7 +702,7 @@ export default function BulkEditPage() {
       .catch(err => console.error('Failed to fetch user tags:', err))
   }, [])
 
-  const updateSwitch = useCallback((switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | string[] | undefined) => {
+  const updateSwitch = useCallback((switchId: string, field: keyof EditableSwitchData, value: string | number | boolean | string[] | null | undefined) => {
     setSwitches(prev => prev.map(s => 
       s.id === switchId ? { ...s, [field]: value } : s
     ))
@@ -853,7 +854,7 @@ export default function BulkEditPage() {
         cell: ({ row }) => (
           <select
             value={row.original.type || ''}
-            onChange={(e) => updateSwitch(row.original.id, 'type', e.target.value || undefined)}
+            onChange={(e) => updateSwitch(row.original.id, 'type', e.target.value)}
             className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
             <option value="">-</option>
@@ -874,7 +875,7 @@ export default function BulkEditPage() {
         cell: ({ row }) => (
           <select
             value={row.original.technology || ''}
-            onChange={(e) => updateSwitch(row.original.id, 'technology', e.target.value || undefined)}
+            onChange={(e) => updateSwitch(row.original.id, 'technology', e.target.value)}
             className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
             <option value="">-</option>
@@ -1088,7 +1089,7 @@ export default function BulkEditPage() {
           return isVisible ? (
             <select
               value={row.original.clickType || ''}
-              onChange={(e) => updateSwitch(row.original.id, 'clickType', e.target.value || undefined)}
+              onChange={(e) => updateSwitch(row.original.id, 'clickType', e.target.value)}
               className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               <option value="">-</option>
@@ -1317,7 +1318,7 @@ export default function BulkEditPage() {
             return isVisible ? (
               <select
                 value={row.original.magnetOrientation || ''}
-                onChange={(e) => updateSwitch(row.original.id, 'magnetOrientation', e.target.value || undefined)}
+                onChange={(e) => updateSwitch(row.original.id, 'magnetOrientation', e.target.value)}
                 className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">-</option>
@@ -1337,7 +1338,7 @@ export default function BulkEditPage() {
             return isVisible ? (
               <select
                 value={row.original.magnetPosition || ''}
-                onChange={(e) => updateSwitch(row.original.id, 'magnetPosition', e.target.value || undefined)}
+                onChange={(e) => updateSwitch(row.original.id, 'magnetPosition', e.target.value)}
                 className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">-</option>
@@ -1357,7 +1358,7 @@ export default function BulkEditPage() {
             return isVisible ? (
               <select
                 value={row.original.magnetPolarity || ''}
-                onChange={(e) => updateSwitch(row.original.id, 'magnetPolarity', e.target.value || undefined)}
+                onChange={(e) => updateSwitch(row.original.id, 'magnetPolarity', e.target.value)}
                 className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">-</option>
@@ -1440,7 +1441,7 @@ export default function BulkEditPage() {
             return isVisible ? (
               <select
                 value={row.original.pcbThickness || ''}
-                onChange={(e) => updateSwitch(row.original.id, 'pcbThickness', e.target.value || undefined)}
+                onChange={(e) => updateSwitch(row.original.id, 'pcbThickness', e.target.value)}
                 className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="">-</option>

@@ -19,6 +19,7 @@ import {
 import { checkRateLimit } from '@/lib/rate-limit'
 import { imageUploadSchema } from '@/lib/validation'
 import crypto from 'crypto'
+import { localUploadIdentity } from '@/lib/switch-image-references'
 
 export async function GET(
   request: NextRequest,
@@ -270,14 +271,35 @@ export async function DELETE(
 
     // Reference imports do not grant ownership of another switch's files.
     // Keep shared/master assets and legacy URL references alive.
-    const others = await prisma.switchImage.count({ where: { url: image.url, id: { not: imageId } } })
-    const legacyOwners = await prisma.switch.count({ where: { imageUrl: image.url, id: { not: id } } })
-    const masterOwners = await prisma.masterSwitch.count({ where: { imageUrl: image.url } })
     const ownUpload = image.type === 'UPLOADED' && !image.masterSwitchId &&
       image.url.startsWith(`/uploads/switches/${id}/`) &&
       !image.url.includes('..') && !image.url.includes('\\') && !image.url.includes('%')
-    if (ownUpload && others === 0 && legacyOwners === 0 && masterOwners === 0) {
-      await deleteFile(image.url.slice('/uploads/'.length))
+    const uploadIdentity = ownUpload ? localUploadIdentity(image.url) : null
+    if (uploadIdentity) {
+      let unreferenced = false
+      try {
+        // Exact-string database counts miss redundant slashes, encoded paths,
+        // and absolute URLs. Inspect URL metadata across all owners, including
+        // this row's legacy alias unless that exact URL will be cleared below.
+        const [gallery, legacy, masters] = await Promise.all([
+          prisma.switchImage.findMany({ where: { id: { not: imageId } }, select: { url: true } }),
+          prisma.switch.findMany({ where: {
+            imageUrl: { not: null },
+            ...(image.switch?.imageUrl === image.url ? { id: { not: id } } : {}),
+          }, select: { imageUrl: true } }),
+          prisma.masterSwitch.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
+        ])
+        const references = [...gallery.map(row => row.url), ...legacy.map(row => row.imageUrl), ...masters.map(row => row.imageUrl)]
+        unreferenced = references.every(reference => {
+          if (reference === null || reference === '') return true
+          const identity = localUploadIdentity(reference)
+          return identity !== undefined && identity !== uploadIdentity
+        })
+      } catch {
+        // Failure to prove absence must never become permission to unlink.
+        console.warn('Retaining upload: image reference lookup unavailable')
+      }
+      if (unreferenced) await deleteFile(uploadIdentity)
     }
     // A dual-owned image must remain attached to the master.
     if (image.masterSwitchId) {

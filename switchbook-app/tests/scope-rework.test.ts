@@ -258,7 +258,7 @@ test('real label route selects quantity and renderer prints zero but not unknown
 for (const scenario of ['foreign-path', 'shared-url', 'master-owned', 'linked', 'own-upload']) test(`image delete respects ${scenario} reference ownership`, async () => {
   let fileDeletes = 0, detached = 0, removed = 0
   const image = { id: 'image', switchId: 'owned', url: scenario === 'foreign-path' ? '/uploads/switches/foreign/photo.jpg' : '/uploads/switches/owned/photo.jpg', type: scenario === 'linked' ? 'LINKED' : 'UPLOADED', masterSwitchId: scenario === 'master-owned' ? 'master' : null, switch: { primaryImageId: 'image', imageUrl: null } }
-  const db = { switchImage: { findFirst: async () => image, count: async () => scenario === 'shared-url' ? 1 : 0, update: async () => { detached++ }, delete: async () => { removed++ }, findMany: async () => [] }, switch: { count: async () => 0, update: async () => ({}) }, masterSwitch: { count: async () => 0 } }
+  const db = { switchImage: { findFirst: async () => image, count: async () => scenario === 'shared-url' ? 1 : 0, update: async () => { detached++ }, delete: async () => { removed++ }, findMany: async (query: any) => query.select && scenario === 'shared-url' ? [{ url: image.url }] : [] }, switch: { count: async () => 0, findMany: async () => [], update: async () => ({}) }, masterSwitch: { count: async () => 0, findMany: async () => [] } }
   const r = await route('src/app/api/switches/[id]/images/route.ts', db, { '@/lib/local-storage': { deleteFile: async () => { fileDeletes++ } } })
   const res = await r.DELETE(new Request('http://localhost/api/switches/owned/images?imageId=image', { method: 'DELETE' }), params)
   assert.equal(res.status, 200)
@@ -303,4 +303,53 @@ test('primary survives equal URLs and equal display orders independent of return
   const images = [{ ...gallery[0], primary: false, caption: 'first' }, { ...gallery[0], primary: true, caption: 'second' }]
   assert.equal((await create.POST(req({ name: 'Same', imageReferences: images }, 'POST'))).status, 200)
   assert.equal(f.row().images.find((image: any) => image.id === f.row().primaryImageId).caption, 'second')
+})
+
+// Already accepted references must remain safe; tightening import validation
+// alone cannot protect aliases stored before this repair.
+for (const owner of ['gallery', 'legacy', 'master', 'own-legacy']) {
+  for (const alias of [
+    '/uploads/switches/owned//photo.jpg',
+    'http://localhost/uploads/switches/owned/photo.jpg',
+    'http://localhost/uploads//switches/owned//photo.jpg?size=original#photo',
+    'http://localhost/uploads/switches/owned/%70hoto.jpg',
+    'http://localhost/uploads/switches/owned/sub/../photo.jpg',
+    '//localhost/uploads/switches/owned/photo.jpg',
+    // Host aliases / reverse proxies cannot be ruled out at cleanup time.
+    'https://media.example.com/uploads/switches/owned/photo.jpg',
+  ]) test(`image cleanup retains ${owner} alias ${alias}`, async () => {
+    const fileDeletes: string[] = []
+    let removed = 0
+    const image = { id: 'image', url: '/uploads/switches/owned/photo.jpg', type: 'UPLOADED', masterSwitchId: null,
+      switch: { primaryImageId: null, imageUrl: owner === 'own-legacy' ? alias : null } }
+    const db = {
+      switchImage: { findFirst: async () => image, count: async () => 0,
+        findMany: async () => owner === 'gallery' ? [{ url: alias }] : [], delete: async () => { removed++ } },
+      switch: { count: async () => 0, findMany: async ({ where }: any) => {
+        // Model the own-row exclusion too: an alias left on this row must count.
+        if (owner === 'own-legacy') return where?.id?.not === 'owned' ? [] : [{ imageUrl: alias }]
+        return owner === 'legacy' ? [{ imageUrl: alias }] : []
+      } },
+      masterSwitch: { count: async () => 0, findMany: async () => owner === 'master' ? [{ imageUrl: alias }] : [] },
+    }
+    const r = await route('src/app/api/switches/[id]/images/route.ts', db, { '@/lib/local-storage': { deleteFile: async (path: string) => { fileDeletes.push(path) } } })
+    assert.equal((await r.DELETE(new Request('http://localhost/api/switches/owned/images?imageId=image'), params)).status, 200)
+    assert.deepEqual(fileDeletes, [])
+    assert.equal(removed, 1, 'detach the owned relation without deleting shared bytes')
+  })
+}
+
+for (const scenario of ['unreadable-references', 'unparseable-reference', 'distinct-file']) test(`image cleanup handles ${scenario} conservatively`, async () => {
+  const fileDeletes: string[] = []
+  const image = { id: 'image', url: '/uploads/switches/owned/photo.jpg', type: 'UPLOADED', masterSwitchId: null, switch: {} }
+  const db = {
+    switchImage: { findFirst: async () => image, count: async () => 0, findMany: async () => {
+      if (scenario === 'unreadable-references') throw new Error('reference lookup unavailable')
+      return [{ url: scenario === 'unparseable-reference' ? '/uploads/%invalid' : '/uploads/switches/owned/other.jpg' }]
+    }, delete: async () => ({}) },
+    switch: { count: async () => 0, findMany: async () => [] }, masterSwitch: { count: async () => 0, findMany: async () => [] },
+  }
+  const r = await route('src/app/api/switches/[id]/images/route.ts', db, { '@/lib/local-storage': { deleteFile: async (path: string) => { fileDeletes.push(path) } } })
+  assert.equal((await r.DELETE(new Request('http://localhost/api/switches/owned/images?imageId=image'), params)).status, 200)
+  assert.deepEqual(fileDeletes, scenario === 'distinct-file' ? ['switches/owned/photo.jpg'] : [])
 })

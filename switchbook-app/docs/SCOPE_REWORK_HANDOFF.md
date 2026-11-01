@@ -2,13 +2,46 @@
 
 **Implementation complete for independent review; not self-accepted or deployed.**
 
+## F1/F2 follow-up for independent re-review
+
+This follow-up repairs only the two findings in `/Users/kennnyshiwa/.openclaw/workspace-qa/evidence/switchbook-477759b-review/REPORT.md` on top of `477759b98e1a8bd7a1b4861f7cab015fd0128200`. The initial implementation record below is historical; it is not an independent acceptance claim. Independent QA must re-review before integration.
+
+- **F1:** Edited blank grid text/select/material values remain explicit empty strings; numeric blanks become null. Sparse API omission semantics are unchanged. The new browser regression sends the actual grid request through the actual bulk PUT handler and reloads Notes, Actuation Force, Type and Top Housing. It also verifies quantity zero then blank, measurement zero, long omitted personal notes and omitted image fields.
+- **F2:** Physical cleanup compares canonical local upload identities across remaining gallery, collection legacy and master legacy references. Redundant slashes, absolute/scheme-relative URLs, encoded paths and dot segments are covered, including a legacy alias on the same switch. Ambiguous reference identity or failed metadata lookup retains bytes while removing the owned relation. Existing foreign-path denial, master detachment, linked-image retention, exact shared-reference protection and unreferenced owned deletion remain covered. No import/storage redesign or stricter import validation.
+- **Trade-off:** Cleanup reads URL-only metadata across owners (linear in reference count), only for an otherwise eligible owned upload. Hostnames are ignored for retention because proxy aliases cannot be disproved here; this can retain extra files. No garbage collector, schema/index or transaction redesign. Reference races and live PostgreSQL/storage are not exercised by these boundary-substituted regressions.
+- **Isolation:** Same isolated branch/worktree. No main-checkout edits or production access, push, deployment, dependencies/schema/migration changes, quantity backfill or real-user data changes. Production health/revision is user-supplied context, not rechecked here.
+
+### Follow-up evidence and checks
+
+Evidence directory: `/Users/kennnyshiwa/.openclaw/workspace-builder/evidence/switchbook-qa-repair-20261101`.
+
+| Check | Result / evidence |
+|---|---|
+| Original grid reproduction | `browser-before.log`: exit 1, `notes clear must be explicit`, against the original `477759b` grid with repaired regression harness. |
+| Original cleanup reproduction | `regressions-before.log`: all 28 alias/owner cases plus both conservative-retention cases fail on original cleanup; distinct-file and existing route cases pass. The first browser attempt in this log has a response-envelope assertion error, corrected in `browser-before.log`; not counted as F1 evidence. |
+| Focused regressions | `regressions-after.log`: **68 passed, 0 failed/skipped** (67 route/helper + 1 browser). |
+| `npx tsc --noEmit` | Exit 0, no diagnostics; `typecheck.log`. |
+| `npm test` | Exit 0, **261 passed, 0 failed/skipped** (31 additional cleanup regressions); `npm-test.log`. |
+| `npx tsx --test tests/bulk-edit-clearing.browser.ts tests/scope-rework.browser.ts tests/collection-refresh.browser.ts` | Exit 0, **3 passed, 0 failed/skipped**, headless Chromium; `browser.log`. |
+| `npm run lint` | Exit 0, **26 warnings, 0 errors**, same warning inventory as below; `lint.log`. |
+| Cold `env -u NEXT_FONT_GOOGLE_MOCKED_RESPONSES npm run build` | Exit 1, Inter Google Fonts download failure after retries; `build-cold.log`. Only this worktree's prior `.next` was moved to evidence to avoid a warm-cache pass. |
+| Fixture-assisted build | Exit 0, compiled successfully, **87/87 static pages**, with the same 26 lint warnings plus existing Edge-runtime/Tailwind/cache build warnings; `build-font-fixture.log`. This is not an uncached network-build pass. Command: `NEXT_FONT_GOOGLE_MOCKED_RESPONSES=/Users/kennnyshiwa/.openclaw/workspace-builder/evidence/switchbook-qa-repair-20261101/font-fixture/responses.cjs npm run build`. Fixture is `font-fixture/responses.cjs`, with an actual Inter WOFF2 copied from prior builder evidence, not from main. |
+
+`git diff --check` passes; the dependency/package/Prisma diff against `477759b` is empty.
+
+Changed files in this follow-up: these two docs; `src/app/dashboard/bulk-edit/page.tsx`; `src/app/api/switches/[id]/images/route.ts`; `src/lib/switch-image-references.ts`; `tests/scope-rework.test.ts`; new `tests/bulk-edit-clearing.browser.ts` (**7 files**). No changes to other seven-group scope implementations. The final commit identity and evidence checksums are recorded outside the commit in `review-state.json` / `SHA256SUMS.json` to avoid a self-referential SHA.
+
+Rollback: revert this follow-up commit only to restore `477759b`; this reintroduces F1/F2. No database or production state was changed to undo.
+
+## Initial implementation record (477759b)
+
 ## Review location
 
 - Worktree: `/Users/kennnyshiwa/.openclaw/workspace-builder/switchbook-scope-20261101`
 - Branch: `fix/csv-quantity-scope-20261101`
-- Base: `73c3509bcb35449d33297a52c1ff4b97bdda337a`, current main containing the separately authored dependency upgrade. Released ancestor: `8cd2eacf620dca96ad30140e2ecabd7ccce7e4bb`.
+- Base: `73c3509bcb35449d33297a52c1ff4b97bdda337a`, original baseline containing the separately authored dependency upgrade. Released ancestor: `8cd2eacf620dca96ad30140e2ecabd7ccce7e4bb`.
 - Review diff: branch tip against that base. No push, PR, merge or deployment performed.
-- Main checkout remains at the base with its original five untracked entries; its package files were never edited/stashed/reverted/staged by this pass.
+- At the initial pass, main was at the base with its original five untracked entries; its package files were never edited/stashed/reverted/staged by this pass.
 - `package.json`, `package-lock.json`, Prisma schema and nullable quantity migration are unchanged. No backfill.
 
 ## Delivered changes

@@ -46,3 +46,27 @@ export function primaryReferenceId(images: ImageReference[], creates: { id: stri
   const index = images.findIndex(image => image.primary)
   return index < 0 ? null : creates[index].id
 }
+
+/**
+ * Cleanup identity, not import validation. Legacy references can use URL aliases
+ * that new imports don't accept. Hostnames are deliberately ignored: another
+ * origin may be a public/proxy alias for this upload directory. Retaining an
+ * extra file is safer than deleting one still served through such an alias.
+ * null = definitely not an upload; undefined = cannot establish identity.
+ */
+export function localUploadIdentity(reference: string): string | null | undefined {
+  try {
+    if (reference.includes('\\')) return undefined
+    if (!reference.startsWith('/') && !/^https?:\/\//i.test(reference)) return undefined
+    const url = new URL(reference, 'http://local-upload.invalid')
+    const decoded = decodeURIComponent(url.pathname)
+    // Double encodings, controls and backslashes have ambiguous serving rules.
+    if (/[%\\\x00-\x1f\x7f]/.test(decoded)) return undefined
+    const parts: string[] = []
+    for (const part of decoded.split('/')) {
+      if (part === '..') parts.pop()
+      else if (part && part !== '.') parts.push(part)
+    }
+    return parts[0] === 'uploads' && parts.length > 1 ? parts.slice(1).join('/') : null
+  } catch { return undefined }
+}
