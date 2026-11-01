@@ -48,6 +48,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
   const [similarSwitches, setSimilarSwitches] = useState<any[]>([])
   const [confirmNotDuplicate, setConfirmNotDuplicate] = useState(false)
   const [localImages, setLocalImages] = useState<SwitchImage[]>(switchItem.images || [])
+  const [originalDateObtained, setOriginalDateObtained] = useState(() =>
+    switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '')
 
   const {
     register,
@@ -90,7 +92,7 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       frankenStem: switchItem.frankenStem || '',
       clickType: switchItem.clickType || undefined,
       tactilePosition: switchItem.tactilePosition ?? undefined,
-      dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
+      dateObtained: originalDateObtained,
       personalTags: switchItem.personalTags || [],
       quantity: switchItem.quantity ?? undefined,
       topHousingColor: switchItem.topHousingColor || '',
@@ -179,7 +181,9 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       setValue('frankenBottom', syncedSwitch.frankenBottom || '')
       setValue('frankenStem', syncedSwitch.frankenStem || '')
       setValue('clickType', syncedSwitch.clickType || undefined)
-      setValue('dateObtained', syncedSwitch.dateObtained ? new Date(syncedSwitch.dateObtained).toISOString().split('T')[0] : '')
+      const syncedDateObtained = syncedSwitch.dateObtained ? new Date(syncedSwitch.dateObtained).toISOString().split('T')[0] : ''
+      setValue('dateObtained', syncedDateObtained)
+      setOriginalDateObtained(syncedDateObtained)
       setValue('topHousingColor', syncedSwitch.topHousingColor || '')
       setValue('bottomHousingColor', syncedSwitch.bottomHousingColor || '')
       setValue('stemColor', syncedSwitch.stemColor || '')
@@ -207,7 +211,8 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        // The picker displays only a day. Do not overwrite an untouched timestamp.
+        body: JSON.stringify({ ...data, dateObtained: data.dateObtained === originalDateObtained ? undefined : data.dateObtained }),
       })
 
       if (!response.ok) {

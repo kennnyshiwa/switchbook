@@ -2,6 +2,34 @@
 
 **Implementation complete for independent review; not self-accepted or deployed.**
 
+## F3 untouched-date follow-up (after 0f1a7f7)
+
+This focused follow-up addresses the remaining finding in `/Users/kennnyshiwa/.openclaw/workspace-qa/evidence/switchbook-0f1a7f7-review/REPORT.md`. F1/F2 were independently verified at that parent; this follow-up still needs independent re-review.
+
+- **Reproduced before editing:** Quantity-only saves in both the actual bulk grid and analogous single-switch modal sent `2024-04-01` through their actual PUT routes, changing `2024-04-01T12:13:14.567Z` to midnight. The corrected browser harness failed **2/2** on that exact timestamp assertion.
+- **Repair:** Both forms compare the date-only value with their loaded baseline and omit an unchanged/reverted date. Deliberate date changes and explicit blank clears still submit. The modal refreshes its comparison baseline along with the existing master-sync date hydration. No timestamp editor expansion or route/schema changes.
+- **Regression:** `tests/date-obtained-preservation.browser.ts` runs both actual UIs against actual bulk/single PUT handlers, with local auth/database/lookup boundaries. Each flow checks five saves and five reloads: untouched timestamp with quantity 0; reverted date with quantity null; explicit date change; explicit clear; reverted initially-empty date with quantity 1. It asserts exact persisted timestamps, payload omission/clear, long personal notes, tags and image preservation, and no browser page errors. The modal reload also uses the actual single GET handler. This is not live PostgreSQL/authenticated-stack validation.
+- **Scope/isolation:** Only the two UI files, this handoff, the coverage matrix and the new browser suite change. F1/F2 implementation and existing tests remain untouched. No main changes, push, deployment, dependency/lockfile/schema/migration edits, production writes or backfill.
+
+### F3 evidence and checks
+
+Evidence directory: `/Users/kennnyshiwa/.openclaw/workspace-builder/evidence/switchbook-f3-repair-20261101`.
+
+| Command/check | Result / log |
+|---|---|
+| New browser regression before repair | **0 passed, 2 failed**, exact timestamp loss in both flows; `browser-before-corrected.log`. First attempt `browser-before.log` reproduced bulk loss but had an empty stem-shape lookup fixture preventing modal rendering; fixed before modal attribution. |
+| Focused scope route/helper + F1/F3 browser tests | **70 passed, 0 failed/skipped**; `focused.log`. |
+| `./node_modules/.bin/tsc --noEmit --incremental false` | Exit 0, no diagnostics; `tsc.log`. |
+| `npm test` | **261 passed, 0 failed/skipped**; `npm-test.log`. |
+| `./node_modules/.bin/tsx --test tests/date-obtained-preservation.browser.ts tests/bulk-edit-clearing.browser.ts tests/scope-rework.browser.ts tests/collection-refresh.browser.ts` | **5 passed, 0 failed/skipped**, Chromium; `browser.log` includes the ten save payload/date observations. Final run also covers reverting an initially-empty date. |
+| `npm run lint` | Exit 0, **26 warnings, 0 errors** (22 image, 4 hooks), unchanged inventory; `lint.log`. |
+| `env -u NEXT_FONT_GOOGLE_MOCKED_RESPONSES npm run build` | Exit 0; compiled, **87/87 static pages**; `build-plain.log`. Existing cache retained, no font override, dependency or configuration change. **Warm-cache pass, not a cold-network pass.** No new fixture-assisted build was needed. The existing cache came from earlier fixture-assisted work; prior QA cold Inter fetch failure remains documented, not disproved. Same 26 lint warnings plus existing Tailwind ES-module warning. |
+| `git diff --check` and protected-file diff | Exit 0; no package/lockfile/Prisma changes. |
+
+No unrelated authenticated admin/production-cardinality browser suite or live-database suite was run. Independent QA should rerun F3 preservation and F1/F2 clear/omission/retention regressions before integration. A date deliberately changed through the day-only picker still becomes midnight; previously truncated data is not recoverable from this code change and was not backfilled.
+
+Rollback: revert only this F3 commit, which reintroduces untouched-date loss in both UI paths but retains the parent's F1/F2 repairs. No data/schema changes to undo. The final SHA, clean status and evidence checksums are recorded externally in `review-state.json` / `SHA256SUMS.json` to avoid a self-referential commit identity.
+
 ## F1/F2 follow-up for independent re-review
 
 This follow-up repairs only the two findings in `/Users/kennnyshiwa/.openclaw/workspace-qa/evidence/switchbook-477759b-review/REPORT.md` on top of `477759b98e1a8bd7a1b4861f7cab015fd0128200`. The initial implementation record below is historical; it is not an independent acceptance claim. Independent QA must re-review before integration.

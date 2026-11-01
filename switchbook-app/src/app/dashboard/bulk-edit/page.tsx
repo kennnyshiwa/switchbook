@@ -745,7 +745,10 @@ export default function BulkEditPage() {
         personalTags,
         // Send null (not an omitted key) so clearing the cell clears it.
         quantity: quantity ?? null,
-        dateObtained: dateObtained || ''
+        // The date-only cell cannot represent the stored timestamp's precision.
+        // Omit unchanged (including reverted) dates; an edited blank still clears.
+        ...((dateObtained || '') === (originalData.find(original => original.id === rest.id)?.dateObtained || '')
+          ? {} : { dateObtained: dateObtained || '' })
       }))
       
       const response = await fetch('/api/switches/bulk', {

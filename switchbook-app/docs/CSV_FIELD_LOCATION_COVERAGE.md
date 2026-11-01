@@ -43,7 +43,7 @@ There are **45 CSV columns**: 44 scalar values/hints plus Image References. Ever
 | `topHousing` | `String?` | Top Housing | Portable user spec; copied/compared only where shared with master. Text preserved verbatim; finite measurements preserve zero. |
 | `bottomHousing` | `String?` | Bottom Housing | Portable user spec; copied/compared only where shared with master. Text preserved verbatim; finite measurements preserve zero. |
 | `stem` | `String?` | Stem | Portable user spec; copied/compared only where shared with master. Text preserved verbatim; finite measurements preserve zero. |
-| `dateObtained` | `DateTime?` | Date Obtained | Full ISO timestamp retained by native CSV/API, including milliseconds. The ordinary date picker intentionally edits calendar dates. |
+| `dateObtained` | `DateTime?` | Date Obtained | Full ISO timestamp retained by native CSV/API, including milliseconds. Bulk and single-edit forms omit unchanged/reverted dates, preserving untouched timestamp precision; deliberate picker changes edit calendar dates and explicit blanks clear. |
 | `createdAt` | `DateTime` | Excluded | New database timestamp; not user-authored data. |
 | `updatedAt` | `DateTime` | Excluded | New database timestamp; not user-authored data. |
 | `userId` | `String` | Excluded | Current authenticated owner only; never imported. |
