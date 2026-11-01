@@ -11,7 +11,7 @@ export const MASTER_TRACKED_FIELDS = [
   'magnetOrientation', 'magnetPosition', 'magnetPolarity',
   'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
   'pcbThickness', 'compatibility', 'tactileForce',
-  'progressiveSpring', 'doubleStage', 'clickType',
+  'progressiveSpring', 'doubleStage', 'clickType', 'tactilePosition', 'frankenTop', 'frankenBottom', 'frankenStem',
 ] as const
 
 export type MasterTrackedField = typeof MASTER_TRACKED_FIELDS[number]
@@ -29,4 +29,9 @@ export function computeMasterModifiedFields(
   master: Record<string, unknown>
 ): string[] {
   return MASTER_TRACKED_FIELDS.filter(field => normalize(switchData[field]) !== normalize(master[field]))
+}
+
+/** One exhaustive scalar copy contract; excludes inventory, personal data and images. */
+export function copyMasterFields<T extends Record<MasterTrackedField, unknown>>(master: T): Pick<T, MasterTrackedField> {
+  return Object.fromEntries(MASTER_TRACKED_FIELDS.map(field => [field, master[field]])) as Pick<T, MasterTrackedField>
 }

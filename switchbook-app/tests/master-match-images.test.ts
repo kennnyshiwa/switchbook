@@ -105,7 +105,7 @@ test('manual switch creation does not look up or inherit master images', async (
   assert.equal(response.status, 200)
   assert.deepEqual((await response.json()).images, [])
   assert.equal(f.state().lookup, null)
-  assert.equal(f.state().transactions, 0)
+  assert.equal(f.state().transactions, 1)
 })
 
 for (const invalid of [null, { ...master, status: 'PENDING' }]) {

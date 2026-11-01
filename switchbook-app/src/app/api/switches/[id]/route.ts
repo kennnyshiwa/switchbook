@@ -1,11 +1,11 @@
+import { imageImportSchema, imageReferenceCreates, primaryReferenceId } from '@/lib/switch-image-references'
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { switchSchema, SWITCH_NOTES_MAX, SWITCH_PERSONAL_NOTES_MAX } from "@/lib/validation"
+import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
 import { computeMasterModifiedFields } from "@/lib/master-switch-modifications"
-import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
 import { withSmartRateLimit } from "@/lib/with-rate-limit"
 
 interface RouteParams {
@@ -84,18 +84,15 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
 
     // Rate limiting removed as imageUrl field is deprecated
     
-    const validatedData = switchSchema.parse(body)
+    if (body && typeof body === 'object' && 'id' in body && body.id && body.id !== id) {
+      return NextResponse.json({ error: 'Collection Switch ID does not match the update target' }, { status: 400 })
+    }
+    const imageData = imageImportSchema.parse(body)
+    const referenceCreates = imageData.imageReferences === undefined ? undefined : imageReferenceCreates(imageData.imageReferences)
+    const validatedData = switchSchema.partial().parse(body)
     
     // Transform empty strings to null for optional fields
     const transformedData = transformSwitchData(validatedData)
-
-    // Normalize manufacturer name if provided
-    if (transformedData.manufacturer) {
-      transformedData.manufacturer = await normalizeManufacturerName(
-        transformedData.manufacturer, 
-        session.user.id
-      )
-    }
 
     // Check if this switch is linked to a master switch
     const masterSwitch = switchItem.masterSwitchId ? await prisma.masterSwitch.findUnique({
@@ -103,83 +100,38 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
     }) : null;
     
     // Track which fields are modified from the master switch
-    const modifiedFields: string[] = masterSwitch ? computeMasterModifiedFields(transformedData, masterSwitch) : []
+    const modifiedFields: string[] = masterSwitch ? computeMasterModifiedFields({ ...switchItem, ...transformedData }, masterSwitch) : []
     const isModified = modifiedFields.length > 0
 
     // Update the switch
-    const updatedSwitch = await prisma.switch.update({
-      where: { id },
-      data: {
-        ...transformedData,
-        ...(switchItem.masterSwitchId ? {
-          isModified,
-          modifiedFields: modifiedFields
-        } : {})
-      },
-      include: {
-        images: {
-          orderBy: { order: 'asc' }
-        }
+    const updatedSwitch = await prisma.$transaction(async tx => {
+      if (imageData.imageReferences !== undefined) {
+        // Remove only owned relations; master-attached records and media bytes
+        // survive. A reference import never acquires physical-file ownership.
+        await tx.switchImage.updateMany({ where: { switchId: id, masterSwitchId: { not: null } }, data: { switchId: null } })
+        await tx.switchImage.deleteMany({ where: { switchId: id, masterSwitchId: null } })
       }
+      const updated = await tx.switch.update({
+        where: { id },
+        data: {
+          ...transformedData,
+          ...(imageData.imageUrl !== undefined ? { imageUrl: imageData.imageUrl || null } : {}),
+          ...(switchItem.masterSwitchId ? { isModified, modifiedFields } : {}),
+          ...(imageData.imageReferences !== undefined ? { primaryImageId: null, images: { create: referenceCreates! } } : {}),
+        },
+        include: { images: { orderBy: { order: 'asc' } } }
+      })
+      if (!imageData.imageReferences?.length) return updated
+      return tx.switch.update({ where: { id }, data: { primaryImageId: primaryReferenceId(imageData.imageReferences, referenceCreates!) },
+        include: { images: { orderBy: { order: 'asc' } } } })
     })
 
     return NextResponse.json(updatedSwitch)
   } catch (error) {
     if (error instanceof z.ZodError) {
       // Create user-friendly error messages for each validation issue
-      const fieldErrors = error.errors.map(err => {
-        const field = err.path.join('.')
-        let message = ''
-        
-        switch (field) {
-          case 'name':
-            message = 'Switch name is required'
-            break
-          case 'manufacturer':
-            message = 'Manufacturer field cannot exceed 100 characters'
-            break
-          case 'notes':
-            message = `Notes cannot exceed ${SWITCH_NOTES_MAX} characters`
-            break
-          case 'personalNotes':
-            message = `Personal notes cannot exceed ${SWITCH_PERSONAL_NOTES_MAX} characters`
-            break
-          case 'markings':
-            message = 'Markings cannot exceed 500 characters'
-            break
-          case 'actuationForce':
-          case 'bottomOutForce':
-          case 'tactileForce':
-            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 1000 grams`
-            break
-          case 'preTravel':
-          case 'bottomOut':
-          case 'tactilePosition':
-            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 10 mm`
-            break
-          case 'initialMagneticFlux':
-          case 'bottomOutMagneticFlux':
-            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 10000`
-            break
-          case 'personalTags':
-            if (err.code === 'too_big' && err.message.includes('50')) {
-              message = 'Each tag cannot exceed 50 characters'
-            } else {
-              message = err.message
-            }
-            break
-          default:
-            // For enum fields, provide clearer messages
-            if (err.code === 'invalid_enum_value') {
-              message = `Invalid ${field}. Please select from the available options`
-            } else {
-              message = err.message
-            }
-        }
-        
-        return { field, message }
-      })
-      
+      const fieldErrors = error.errors.map(err => ({ field: err.path.join('.'), message: err.message }))
+
       const errorMessage = fieldErrors.length === 1 
         ? fieldErrors[0].message
         : `Please fix the following issues: ${fieldErrors.map(e => e.message).join(', ')}`

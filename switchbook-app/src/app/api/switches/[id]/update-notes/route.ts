@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { PERSONAL_NOTES_TOO_LONG_ERROR, SWITCH_NOTES_MAX, SWITCH_PERSONAL_NOTES_MAX } from '@/lib/validation'
-
-// Same limits as switchSchema so the switch stays editable afterwards.
-// EditSwitchModal merges notes into personal notes here before linking; an
-// over-long merge is rejected (no write) instead of being truncated.
-const updateNotesSchema = z.object({
-  notes: z.string().max(SWITCH_NOTES_MAX, `Notes cannot exceed ${SWITCH_NOTES_MAX} characters`),
-  personalNotes: z.string().max(SWITCH_PERSONAL_NOTES_MAX, PERSONAL_NOTES_TOO_LONG_ERROR)
-})
+import { switchSchema } from '@/lib/validation'
+import { computeMasterModifiedFields } from '@/lib/master-switch-modifications'
+const updateNotesSchema = switchSchema.pick({ notes: true, personalNotes: true })
 
 export async function PATCH(
   req: NextRequest,
@@ -43,12 +37,14 @@ export async function PATCH(
       )
     }
 
-    // Update only the notes fields
+    const master = existingSwitch.masterSwitchId ? await prisma.masterSwitch.findUnique({ where: { id: existingSwitch.masterSwitchId } }) : null
+    const modifiedFields = master ? computeMasterModifiedFields({ ...existingSwitch, ...validated }, master) : []
+    // Update only supplied notes fields
     const updatedSwitch = await prisma.switch.update({
       where: { id },
       data: {
-        notes: validated.notes,
-        personalNotes: validated.personalNotes,
+        ...validated,
+        ...(master ? { modifiedFields, isModified: modifiedFields.length > 0 } : {}),
       },
     })
 

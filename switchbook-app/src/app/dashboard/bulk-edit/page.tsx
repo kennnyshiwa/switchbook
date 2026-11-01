@@ -256,9 +256,9 @@ const EditableCell = memo(({
           title={integerInvalid ? 'Enter a whole number of 0 or more' : undefined}
           onKeyDown={field === 'manufacturer' ? handleKeyDown : undefined}
           placeholder={placeholder}
-          min={min}
-          max={max}
-          step={step}
+          min={integer ? min : undefined}
+          max={integer ? max : undefined}
+          step={integer ? step : 'any'}
           className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 ${
             isInvalid || integerInvalid
               ? 'border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500' 

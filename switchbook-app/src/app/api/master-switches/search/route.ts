@@ -1,3 +1,4 @@
+import { MASTER_TRACKED_SELECT } from '@/lib/master-switch-modifications'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -37,29 +38,7 @@ export async function GET(req: NextRequest) {
       },
       select: {
         id: true,
-        name: true,
-        chineseName: true,
-        manufacturer: true,
-        type: true,
-        technology: true,
-        actuationForce: true,
-        bottomOutForce: true,
-        preTravel: true,
-        bottomOut: true,
-        springWeight: true,
-        springLength: true,
-        topHousing: true,
-        bottomHousing: true,
-        stem: true,
-        magnetOrientation: true,
-        magnetPosition: true,
-        magnetPolarity: true,
-        initialForce: true,
-        initialMagneticFlux: true,
-        bottomOutMagneticFlux: true,
-        pcbThickness: true,
-        compatibility: true,
-        notes: true
+        ...MASTER_TRACKED_SELECT
       },
       take: 10, // Limit results
       orderBy: {

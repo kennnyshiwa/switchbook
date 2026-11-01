@@ -1,10 +1,10 @@
+import { computeMasterModifiedFields } from '@/lib/master-switch-modifications'
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
-import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
 import { BulkOperationMonitor } from "@/lib/performance-monitor"
 
 // Configuration for bulk operations  
@@ -19,24 +19,25 @@ const BULK_CONFIG = {
 const activeBulkOperations = new Map<string, number>()
 
 const bulkCreateSchema = z.object({
-  switches: z.array(switchSchema).max(BULK_CONFIG.MAX_SWITCHES_PER_REQUEST, 
+  switches: z.array(switchSchema.extend({ imageReferences: z.never().optional(), imageUrl: z.never().optional() })).max(BULK_CONFIG.MAX_SWITCHES_PER_REQUEST,
     `Maximum ${BULK_CONFIG.MAX_SWITCHES_PER_REQUEST} switches per request`),
   batchId: z.string().optional(), // For tracking multi-batch uploads
 })
 
 const bulkUpdateSchema = z.object({
-  switches: z.array(switchSchema.extend({
+  switches: z.array(switchSchema.partial().extend({
     id: z.string(), // Required for updates
+    imageReferences: z.never().optional(), imageUrl: z.never().optional(),
   })).max(BULK_CONFIG.MAX_SWITCHES_PER_REQUEST, 
     `Maximum ${BULK_CONFIG.MAX_SWITCHES_PER_REQUEST} switches per request`),
 })
 
 async function bulkCreateHandler(request: NextRequest) {
   let monitor: BulkOperationMonitor | null = null
-  
+
   try {
     const session = await auth()
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -100,20 +101,12 @@ async function bulkCreateHandler(request: NextRequest) {
       const batchSize = 25 // Larger batches for better throughput
       for (let i = 0; i < switches.length; i += batchSize) {
         const batch = switches.slice(i, i + batchSize)
-        
+
         // Process batch items in parallel for speed
         const batchPromises = batch.map(async (switchData, index) => {
           try {
             // Transform and validate data
             const transformedData = transformSwitchData(switchData)
-
-            // Normalize manufacturer name if provided (cached for performance)
-            if (transformedData.manufacturer) {
-              transformedData.manufacturer = await normalizeManufacturerName(
-                transformedData.manufacturer, 
-                userId
-              )
-            }
 
             // Create switch in database
             await prisma.switch.create({
@@ -197,10 +190,10 @@ async function bulkCreateHandler(request: NextRequest) {
 // Bulk update handler for editing multiple switches
 async function bulkUpdateHandler(request: NextRequest) {
   let monitor: BulkOperationMonitor | null = null
-  
+
   try {
     const session = await auth()
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -212,6 +205,9 @@ async function bulkUpdateHandler(request: NextRequest) {
     const body = await request.json()
     const { switches } = bulkUpdateSchema.parse(body)
 
+    if (new Set(switches.map(row => row.id)).size !== switches.length) {
+      return NextResponse.json({ error: 'Repeated switch IDs in one bulk update are ambiguous' }, { status: 400 })
+    }
     // Initialize performance monitoring
     monitor = new BulkOperationMonitor(userId, 'bulk_update', switches.length)
 
@@ -225,7 +221,7 @@ async function bulkUpdateHandler(request: NextRequest) {
     const batchSize = 25
     for (let i = 0; i < switches.length; i += batchSize) {
       const batch = switches.slice(i, i + batchSize)
-      
+
       const batchPromises = batch.map(async (switchData, index) => {
         try {
           // Verify the switch belongs to the user
@@ -243,18 +239,12 @@ async function bulkUpdateHandler(request: NextRequest) {
           // Transform and validate data
           const transformedData = transformSwitchData(switchData)
 
-          // Normalize manufacturer name if provided
-          if (transformedData.manufacturer) {
-            transformedData.manufacturer = await normalizeManufacturerName(
-              transformedData.manufacturer, 
-              userId
-            )
-          }
-
+          const master = existingSwitch.masterSwitchId ? await prisma.masterSwitch.findUnique({ where: { id: existingSwitch.masterSwitchId } }) : null
+          const modifiedFields = master ? computeMasterModifiedFields({ ...existingSwitch, ...transformedData }, master) : []
           // Update switch in database
           await prisma.switch.update({
             where: { id: switchData.id },
-            data: transformedData,
+            data: { ...transformedData, ...(master ? { modifiedFields, isModified: modifiedFields.length > 0 } : {}) },
           })
 
           results.success++

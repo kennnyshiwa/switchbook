@@ -30,6 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       // switch itself, so they would spend label space for nothing.
       select: {
         name: true,
+        quantity: true,
         type: true,
         technology: true,
         manufacturer: true,

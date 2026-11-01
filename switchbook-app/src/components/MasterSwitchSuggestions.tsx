@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react'
 import { UseFormSetValue } from 'react-hook-form'
 import { z } from 'zod'
 import { switchSchema } from '@/lib/validation'
+import { masterFieldsToForm } from '@/lib/master-switch-form'
+import { MASTER_TRACKED_FIELDS } from '@/lib/master-switch-modifications'
 import debounce from 'lodash/debounce'
 
 type SwitchFormData = z.infer<typeof switchSchema>
 
-interface MasterSwitch {
+interface MasterSwitch extends Record<string, unknown> {
   id: string
   name: string
   chineseName?: string
@@ -74,33 +76,8 @@ export default function MasterSwitchSuggestions({ searchQuery, setValue, onSelec
   }, [searchQuery])
 
   const handleSelectSwitch = (masterSwitch: MasterSwitch) => {
-    // Map master switch data to form fields
-    setValue('name', masterSwitch.name)
-    if (masterSwitch.chineseName) setValue('chineseName', masterSwitch.chineseName)
-    if (masterSwitch.manufacturer) setValue('manufacturer', masterSwitch.manufacturer)
-    if (masterSwitch.type) setValue('type', masterSwitch.type as any)
-    if (masterSwitch.technology) setValue('technology', masterSwitch.technology as any)
-    if (masterSwitch.actuationForce) setValue('actuationForce', masterSwitch.actuationForce)
-    if (masterSwitch.bottomOutForce) setValue('bottomOutForce', masterSwitch.bottomOutForce)
-    if (masterSwitch.preTravel) setValue('preTravel', masterSwitch.preTravel)
-    if (masterSwitch.bottomOut) setValue('bottomOut', masterSwitch.bottomOut)
-    if (masterSwitch.springWeight) setValue('springWeight', masterSwitch.springWeight)
-    if (masterSwitch.springLength) setValue('springLength', masterSwitch.springLength)
-    if (masterSwitch.topHousing) setValue('topHousing', masterSwitch.topHousing)
-    if (masterSwitch.bottomHousing) setValue('bottomHousing', masterSwitch.bottomHousing)
-    if (masterSwitch.stem) setValue('stem', masterSwitch.stem)
-    if (masterSwitch.notes) setValue('notes', masterSwitch.notes)
-    // imageUrl field removed
-    
-    // Magnetic switch properties
-    if (masterSwitch.magnetOrientation) setValue('magnetOrientation', masterSwitch.magnetOrientation)
-    if (masterSwitch.magnetPosition) setValue('magnetPosition', masterSwitch.magnetPosition)
-    if (masterSwitch.magnetPolarity) setValue('magnetPolarity', masterSwitch.magnetPolarity)
-    if (masterSwitch.initialForce) setValue('initialForce', masterSwitch.initialForce)
-    if (masterSwitch.initialMagneticFlux) setValue('initialMagneticFlux', masterSwitch.initialMagneticFlux)
-    if (masterSwitch.bottomOutMagneticFlux) setValue('bottomOutMagneticFlux', masterSwitch.bottomOutMagneticFlux)
-    if (masterSwitch.pcbThickness) setValue('pcbThickness', masterSwitch.pcbThickness)
-    if (masterSwitch.compatibility) setValue('compatibility', masterSwitch.compatibility)
+    const values = masterFieldsToForm(masterSwitch)
+    for (const field of MASTER_TRACKED_FIELDS) setValue(field, values[field])
 
     // Hide suggestions and call parent callback
     setShowSuggestions(false)

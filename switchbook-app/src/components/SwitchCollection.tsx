@@ -1,5 +1,7 @@
 'use client'
 
+import { compareQuantity } from '@/lib/collection-quantity'
+
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Switch, ForceCurvePreference } from '@prisma/client'
 import Link from 'next/link'
@@ -304,6 +306,12 @@ export default function SwitchCollection({ switches: initialSwitches, userId, sh
       // Apply sorting
       const sorted = [...filtered]
       switch (sortOption) {
+        case 'quantity-asc':
+          sorted.sort((a, b) => compareQuantity(a, b, 'asc'))
+          break
+        case 'quantity-desc':
+          sorted.sort((a, b) => compareQuantity(a, b, 'desc'))
+          break
         case 'recent':
           sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           break

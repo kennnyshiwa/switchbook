@@ -1,5 +1,7 @@
 'use client'
 
+import { compareQuantity } from '@/lib/collection-quantity'
+
 import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { Switch, ForceCurvePreference } from '@prisma/client'
@@ -315,7 +317,13 @@ export default function SharePage() {
     // Apply sorting
     const sorted = [...filtered]
     switch (sortOption) {
-      case 'recent':
+      case 'quantity-asc':
+          sorted.sort((a, b) => compareQuantity(a, b, 'asc'))
+          break
+        case 'quantity-desc':
+          sorted.sort((a, b) => compareQuantity(a, b, 'desc'))
+          break
+        case 'recent':
         sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         break
       case 'oldest':

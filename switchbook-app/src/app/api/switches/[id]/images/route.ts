@@ -268,35 +268,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'Image not found' }, { status: 404 })
     }
 
-    // Delete from local storage
-    try {
-      // Extract pathname from URL
-      const pathname = image.url.replace('/uploads/', '')
-      await deleteFile(pathname)
-    } catch (error) {
-      console.error('Failed to delete file from storage:', error)
-      // Continue with database deletion even if file deletion fails
+    // Reference imports do not grant ownership of another switch's files.
+    // Keep shared/master assets and legacy URL references alive.
+    const others = await prisma.switchImage.count({ where: { url: image.url, id: { not: imageId } } })
+    const legacyOwners = await prisma.switch.count({ where: { imageUrl: image.url, id: { not: id } } })
+    const masterOwners = await prisma.masterSwitch.count({ where: { imageUrl: image.url } })
+    const ownUpload = image.type === 'UPLOADED' && !image.masterSwitchId &&
+      image.url.startsWith(`/uploads/switches/${id}/`) &&
+      !image.url.includes('..') && !image.url.includes('\\') && !image.url.includes('%')
+    if (ownUpload && others === 0 && legacyOwners === 0 && masterOwners === 0) {
+      await deleteFile(image.url.slice('/uploads/'.length))
     }
-
-    // Delete from database
-    await prisma.switchImage.delete({
-      where: { id: imageId }
-    })
-
-    // If this was the primary image, clear it
-    if (image.switch && image.switch.imageUrl === image.url) {
-      const remainingImages = await prisma.switchImage.findMany({
-        where: { switchId: id },
-        orderBy: { order: 'asc' },
-        take: 1
-      })
-
-      await prisma.switch.update({
-        where: { id },
-        data: { 
-          imageUrl: remainingImages[0]?.url || null 
-        }
-      })
+    // A dual-owned image must remain attached to the master.
+    if (image.masterSwitchId) {
+      await prisma.switchImage.update({ where: { id: imageId }, data: { switchId: null } })
+    } else {
+      await prisma.switchImage.delete({ where: { id: imageId } })
+    }
+    if (image.switch?.primaryImageId === imageId || image.switch?.imageUrl === image.url) {
+      const remaining = await prisma.switchImage.findMany({ where: { switchId: id }, orderBy: { order: 'asc' }, take: 1 })
+      await prisma.switch.update({ where: { id }, data: {
+        ...(image.switch.primaryImageId === imageId ? { primaryImageId: remaining[0]?.id ?? null } : {}),
+        ...(image.switch.imageUrl === image.url ? { imageUrl: remaining[0]?.url ?? null } : {}),
+      } })
     }
 
     return NextResponse.json({ success: true })

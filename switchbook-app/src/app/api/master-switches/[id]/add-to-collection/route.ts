@@ -1,3 +1,6 @@
+import { quantitySchema } from '@/lib/validation'
+import { z } from 'zod'
+import { copyMasterFields } from '@/lib/master-switch-modifications'
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -13,6 +16,10 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const text = await request.text()
+    let body: unknown
+    try { body = text ? JSON.parse(text) : {} } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+    const { quantity } = z.object({ quantity: quantitySchema }).parse(body)
     const { id } = await params
     
     // Get the master switch with its linked images
@@ -71,41 +78,9 @@ export async function POST(
       // Create the switch in user's collection
       const switch_ = await tx.switch.create({
         data: {
+          quantity,
           // Copy all fields from master switch
-          name: masterSwitch.name,
-          chineseName: masterSwitch.chineseName,
-          type: masterSwitch.type,
-          technology: masterSwitch.technology,
-          magnetOrientation: masterSwitch.magnetOrientation,
-          magnetPosition: masterSwitch.magnetPosition,
-          magnetPolarity: masterSwitch.magnetPolarity,
-          initialForce: masterSwitch.initialForce,
-          initialMagneticFlux: masterSwitch.initialMagneticFlux,
-          bottomOutMagneticFlux: masterSwitch.bottomOutMagneticFlux,
-          pcbThickness: masterSwitch.pcbThickness,
-          compatibility: masterSwitch.compatibility,
-          springWeight: masterSwitch.springWeight,
-          springLength: masterSwitch.springLength,
-          actuationForce: masterSwitch.actuationForce,
-          tactileForce: masterSwitch.tactileForce,
-          bottomOutForce: masterSwitch.bottomOutForce,
-          progressiveSpring: masterSwitch.progressiveSpring,
-          doubleStage: masterSwitch.doubleStage,
-          preTravel: masterSwitch.preTravel,
-          bottomOut: masterSwitch.bottomOut,
-          manufacturer: masterSwitch.manufacturer,
-          notes: masterSwitch.notes,
-          topHousing: masterSwitch.topHousing,
-          bottomHousing: masterSwitch.bottomHousing,
-          stem: masterSwitch.stem,
-          topHousingColor: masterSwitch.topHousingColor,
-          bottomHousingColor: masterSwitch.bottomHousingColor,
-          stemColor: masterSwitch.stemColor,
-          stemShape: masterSwitch.stemShape,
-          markings: masterSwitch.markings,
-          frankenTop: masterSwitch.frankenTop,
-          frankenBottom: masterSwitch.frankenBottom,
-          frankenStem: masterSwitch.frankenStem,
+          ...copyMasterFields(masterSwitch),
           
           // Set master switch reference
           masterSwitchId: masterSwitch.id,
@@ -146,6 +121,8 @@ export async function POST(
             type: image.type,
             order: index,
             caption: image.caption,
+            altText: image.altText, remoteUrl: image.remoteUrl, sourceUrl: image.sourceUrl,
+            sourceName: image.sourceName, license: image.license, attribution: image.attribution,
             width: image.width,
             height: image.height,
             size: image.size
@@ -185,6 +162,7 @@ export async function POST(
       switchId: newSwitch.id
     })
   } catch (error) {
+    if (error instanceof z.ZodError) return NextResponse.json({ error: error.errors[0]?.message }, { status: 400 })
     console.error('Error adding master switch to collection:', error)
     return NextResponse.json(
       { error: 'Failed to add switch to collection' },

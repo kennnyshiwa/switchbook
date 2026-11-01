@@ -48,9 +48,9 @@ function numberOrNull(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
-export function transformSwitchData(data: SwitchData) {
-  return {
-    name: data.name,
+export function transformSwitchData<T extends Partial<SwitchData>>(data: T) {
+  const result = {
+    name: data.name as T['name'],
     chineseName: data.chineseName || null,
     type: data.type === '' ? null : (data.type || null),
     technology: data.technology === '' ? null : (data.technology || null),
@@ -95,4 +95,10 @@ export function transformSwitchData(data: SwitchData) {
     personalTags: data.personalTags === undefined ? undefined : data.personalTags,
     quantity: data.quantity === undefined ? undefined : (data.quantity ?? null),
   };
+  // Missing keys are never clearing instructions. Present form NaN/blank values
+  // still clear, including fields that Zod emitted as explicitly undefined.
+  for (const key of Object.keys(result) as (keyof typeof result)[]) {
+    if (!Object.prototype.hasOwnProperty.call(data, key)) delete result[key]
+  }
+  return result
 }

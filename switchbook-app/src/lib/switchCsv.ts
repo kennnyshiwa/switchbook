@@ -9,15 +9,16 @@
 // - The file starts with a UTF-8 byte order mark so Excel reads unicode
 //   correctly; the parser strips it.
 // - Booleans are `true` / `false`.
-// - Date Obtained is `YYYY-MM-DD` (the UTC date it is stored under).
+// - Date Obtained is a full ISO timestamp, preserving time on native round trips.
 // - Personal Tags is a JSON array of strings (e.g. `["a","b, c"]`) so tags can
 //   contain commas or quotes. On import a value that isn't a JSON array falls
 //   back to a comma/semicolon separated list, for hand-written files.
 
+import { exportImageReferences, imageReferencesSchema, type ImageReference } from './switch-image-references'
 import { QUANTITY_MAX, parseQuantityInput } from './validation'
 
 export type SwitchCsvField =
-  | 'name' | 'chineseName' | 'type' | 'technology'
+  | 'id' | 'imageUrl' | 'imageReferences' | 'name' | 'chineseName' | 'type' | 'technology'
   | 'magnetOrientation' | 'magnetPosition' | 'magnetPolarity'
   | 'initialForce' | 'initialMagneticFlux' | 'bottomOutMagneticFlux'
   | 'pcbThickness' | 'compatibility' | 'manufacturer'
@@ -34,7 +35,7 @@ export type SwitchCsvField =
 type SwitchCsvKind =
   | 'string' | 'name' | 'float' | 'quantity' | 'version' | 'boolean' | 'date' | 'tags' | 'spring'
   | 'type' | 'technology' | 'clickType'
-  | 'magnetOrientation' | 'magnetPosition' | 'magnetPolarity'
+  | 'magnetOrientation' | 'magnetPosition' | 'magnetPolarity' | 'images'
 
 export interface SwitchCsvColumn {
   key: SwitchCsvField
@@ -49,6 +50,9 @@ export interface SwitchCsvColumn {
 }
 
 export const SWITCH_CSV_COLUMNS: readonly SwitchCsvColumn[] = [
+  { key: 'id', header: 'Collection Switch ID', kind: 'string', fuzzyRequires: ['collection', 'id'] },
+  { key: 'imageUrl', header: 'Legacy Image URL', kind: 'string' },
+  { key: 'imageReferences', header: 'Image References', kind: 'images' },
   { key: 'name', header: 'Switch Name', kind: 'name', required: true, aliases: ['Name'] },
   { key: 'chineseName', header: 'Chinese Name', kind: 'string' },
   { key: 'type', header: 'Type', kind: 'type' },
@@ -99,18 +103,19 @@ export const SWITCH_CSV_COLUMNS: readonly SwitchCsvColumn[] = [
  * tests/switch-csv-roundtrip.test.ts).
  */
 export const SWITCH_CSV_EXCLUDED_FIELDS: Readonly<Record<string, string>> = {
-  id: 'internal primary key; import creates new rows',
   userId: 'owner is the importing account',
   createdAt: 'row bookkeeping timestamp, set by the database',
   updatedAt: 'row bookkeeping timestamp, set by the database',
   isModified: 'link bookkeeping; recomputed on import by comparing the row against its master',
   modifiedFields: 'link bookkeeping; recomputed on import by comparing the row against its master',
   shareableId: 'unique share token; copying it would collide or leak a share link',
-  primaryImageId: 'points at a SwitchImage row; images are not part of the CSV',
-  imageUrl: 'deprecated legacy image field; create/update APIs no longer accept it',
+  primaryImageId: 'selection exported as Image References primary flag; remapped to fresh image ID',
 }
 
 export type SwitchCsvData = {
+  id?: string
+  imageUrl?: string
+  imageReferences?: ImageReference[]
   name?: string
   chineseName?: string
   type?: string
@@ -153,11 +158,11 @@ export type SwitchCsvData = {
   quantity?: number | null
   dateObtained?: string
   masterSwitchId?: string
-  masterSwitchVersion?: number
+  masterSwitchVersion?: number | null
 }
 
 /** Any switch-like record (Prisma row or API JSON) that can be exported. */
-export type SwitchCsvSource = { [K in SwitchCsvField]?: unknown }
+export type SwitchCsvSource = { [K in SwitchCsvField]?: unknown } & { images?: readonly Record<string, unknown>[]; primaryImageId?: unknown }
 
 // ---------------------------------------------------------------------------
 // Export
@@ -174,10 +179,11 @@ export function encodeCsvTags(tags: readonly string[] | null | undefined): strin
 function formatDate(value: unknown): string {
   if (value === null || value === undefined || value === '') return ''
   const date = value instanceof Date ? value : new Date(String(value))
-  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString().slice(0, 10)
+  return Number.isNaN(date.getTime()) ? String(value) : date.toISOString()
 }
 
 export function formatSwitchCsvValue(column: SwitchCsvColumn, record: SwitchCsvSource): string {
+  if (column.key === 'imageReferences') return JSON.stringify(exportImageReferences(record))
   const value = record[column.key]
   if (value === null || value === undefined) return ''
   switch (column.kind) {
@@ -270,6 +276,7 @@ export function parseCsv(text: string): string[][] {
     }
     i++
   }
+  if (inQuotes) throw new Error('Unclosed quoted CSV field')
   if (field !== '' || quoted || row.length > 0) endRow()
   return rows
 }
@@ -366,47 +373,34 @@ const CLICK_TYPE_ALIASES: Record<string, string> = {
   CLICK_JACKET: 'CLICK_JACKET', CLICKJACKET: 'CLICK_JACKET', JACKET: 'CLICK_JACKET',
 }
 
-function normalizeChoice(value: string, choices: Record<string, string[]>): string {
-  const trimmed = value.trim()
-  const lower = trimmed.toLowerCase()
-  for (const [canonical, aliases] of Object.entries(choices)) {
-    if (aliases.includes(lower)) return canonical
-  }
-  return trimmed
-}
-
 export const QUANTITY_ERROR = `Quantity must be a whole number from 0 to ${QUANTITY_MAX.toLocaleString('en-US')}`
 
 type ParsedCell =
   | { ok: true; value: SwitchCsvData[SwitchCsvField] | undefined }
   | { ok: false; error: string }
 
-/**
- * Convert one raw CSV cell to the value the switch API expects.
- * - Blank cells are `undefined` (field not set), except the user-only fields
- *   Quantity (null), Personal Notes ('') and Personal Tags ([]): a blank cell
- *   in a mapped column for those clears the stored value on overwrite.
- * - Unparsable floats are dropped (legacy behaviour); an invalid Quantity is
- *   reported as an error so the row can be fixed instead of silently losing it.
- * - Name, enum, number and date cells are trimmed; free-text cells (notes,
- *   materials, ...) are kept verbatim.
+/** Explicit blank cells clear; missing columns/short rows remain absent.
+ * Text remains verbatim. Numbers/enums accept typed CSV input. Invalid cells
+ * are reported and must not disappear into a successful partial import.
  */
 function parseCell(key: SwitchCsvField, raw: string): ParsedCell {
   const column = SWITCH_CSV_COLUMNS.find(candidate => candidate.key === key)
   if (!column) return { ok: true, value: undefined }
   const trimmed = raw.trim()
-  if (trimmed === '') {
-    if (key === 'quantity') return { ok: true, value: null }
-    if (key === 'personalNotes') return { ok: true, value: '' }
-    if (key === 'personalTags') return { ok: true, value: [] }
-    return { ok: true, value: undefined }
+  if (raw === '') {
+    if (column.kind === 'images' || column.kind === 'tags') return { ok: true, value: [] }
+    if (column.kind === 'quantity') return { ok: true, value: null }
+    if (column.kind === 'float') return { ok: true, value: NaN }
+    if (column.kind === 'version') return { ok: true, value: null }
+    if (column.kind === 'boolean') return { ok: true, value: false }
+    return { ok: true, value: '' }
   }
   switch (column.kind) {
     case 'name':
-      return { ok: true, value: trimmed }
+      return { ok: true, value: raw }
     case 'float': {
-      const number = parseFloat(trimmed)
-      return { ok: true, value: Number.isNaN(number) ? undefined : number }
+      const number = Number(trimmed)
+      return trimmed && Number.isFinite(number) ? { ok: true, value: number } : { ok: false, error: 'Expected a finite number' }
     }
     case 'quantity': {
       const parsed = parseQuantityInput(trimmed)
@@ -417,13 +411,18 @@ function parseCell(key: SwitchCsvField, raw: string): ParsedCell {
       return { ok: true, value: Number.isInteger(number) && number >= 1 ? number : undefined }
     }
     case 'boolean':
+      if (!['true', 'yes', '1', 'y', 'false', 'no', '0', 'n'].includes(trimmed.toLowerCase())) return { ok: false, error: 'Expected true or false' }
       return { ok: true, value: ['true', 'yes', '1', 'y'].includes(trimmed.toLowerCase()) }
+    case 'images': {
+      try { return { ok: true, value: imageReferencesSchema.parse(JSON.parse(raw)) } }
+      catch { return { ok: false, error: 'Invalid Image References JSON (URLs, metadata and at most one primary; no database IDs)' } }
+    }
     case 'tags':
       return { ok: true, value: decodeCsvTags(raw) }
     case 'date':
       return { ok: true, value: trimmed }
     case 'spring':
-      return { ok: true, value: cleanSpringValue(raw) }
+      return { ok: true, value: raw }
     case 'type': {
       const normalized = trimmed.toUpperCase().replace(/[\s_-]/g, '_')
       return { ok: true, value: TYPE_ALIASES[normalized] || normalized }
@@ -437,11 +436,11 @@ function parseCell(key: SwitchCsvField, raw: string): ParsedCell {
       return { ok: true, value: CLICK_TYPE_ALIASES[normalized] || normalized }
     }
     case 'magnetOrientation':
-      return { ok: true, value: normalizeChoice(raw, { Horizontal: ['horizontal', 'h'], Vertical: ['vertical', 'v'] }) }
+      return { ok: true, value: raw }
     case 'magnetPosition':
-      return { ok: true, value: normalizeChoice(raw, { Center: ['center', 'c'], 'Off-Center': ['off-center', 'offcenter', 'off center', 'oc'] }) }
+      return { ok: true, value: raw }
     case 'magnetPolarity':
-      return { ok: true, value: normalizeChoice(raw, { North: ['north', 'n'], South: ['south', 's'] }) }
+      return { ok: true, value: raw }
     default:
       return { ok: true, value: raw }
   }

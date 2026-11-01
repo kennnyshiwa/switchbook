@@ -1,3 +1,4 @@
+import { copyMasterFields, MASTER_TRACKED_SELECT, MASTER_TRACKED_FIELDS } from '@/lib/master-switch-modifications'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -43,40 +44,7 @@ export async function POST(
     const updatedSwitch = await prisma.switch.update({
       where: { id },
       data: {
-        name: userSwitch.masterSwitch.name,
-        chineseName: userSwitch.masterSwitch.chineseName,
-        type: userSwitch.masterSwitch.type,
-        technology: userSwitch.masterSwitch.technology,
-        magnetOrientation: userSwitch.masterSwitch.magnetOrientation,
-        magnetPosition: userSwitch.masterSwitch.magnetPosition,
-        magnetPolarity: userSwitch.masterSwitch.magnetPolarity,
-        initialForce: userSwitch.masterSwitch.initialForce,
-        initialMagneticFlux: userSwitch.masterSwitch.initialMagneticFlux,
-        bottomOutMagneticFlux: userSwitch.masterSwitch.bottomOutMagneticFlux,
-        pcbThickness: userSwitch.masterSwitch.pcbThickness,
-        compatibility: userSwitch.masterSwitch.compatibility,
-        springWeight: userSwitch.masterSwitch.springWeight,
-        springLength: userSwitch.masterSwitch.springLength,
-        actuationForce: userSwitch.masterSwitch.actuationForce,
-        bottomOutForce: userSwitch.masterSwitch.bottomOutForce,
-        preTravel: userSwitch.masterSwitch.preTravel,
-        bottomOut: userSwitch.masterSwitch.bottomOut,
-        manufacturer: userSwitch.masterSwitch.manufacturer,
-        notes: userSwitch.masterSwitch.notes,
-        topHousing: userSwitch.masterSwitch.topHousing,
-        bottomHousing: userSwitch.masterSwitch.bottomHousing,
-        stem: userSwitch.masterSwitch.stem,
-        topHousingColor: userSwitch.masterSwitch.topHousingColor,
-        bottomHousingColor: userSwitch.masterSwitch.bottomHousingColor,
-        stemColor: userSwitch.masterSwitch.stemColor,
-        stemShape: userSwitch.masterSwitch.stemShape,
-        markings: userSwitch.masterSwitch.markings,
-        tactileForce: userSwitch.masterSwitch.tactileForce,
-        tactilePosition: userSwitch.masterSwitch.tactilePosition,
-        progressiveSpring: userSwitch.masterSwitch.progressiveSpring,
-        doubleStage: userSwitch.masterSwitch.doubleStage,
-        clickType: userSwitch.masterSwitch.clickType,
-        imageUrl: userSwitch.masterSwitch.imageUrl,
+        ...copyMasterFields(userSwitch.masterSwitch),
         // Reset tracking fields
         isModified: false,
         modifiedFields: [],
@@ -160,41 +128,7 @@ export async function GET(
       include: {
         masterSwitch: {
           select: {
-            id: true,
-            name: true,
-            chineseName: true,
-            type: true,
-            technology: true,
-            manufacturer: true,
-            actuationForce: true,
-            bottomOutForce: true,
-            preTravel: true,
-            bottomOut: true,
-            springWeight: true,
-            springLength: true,
-            notes: true,
-            topHousing: true,
-            bottomHousing: true,
-            stem: true,
-            topHousingColor: true,
-            bottomHousingColor: true,
-            stemColor: true,
-            stemShape: true,
-            markings: true,
-            magnetOrientation: true,
-            magnetPosition: true,
-            magnetPolarity: true,
-            initialForce: true,
-            initialMagneticFlux: true,
-            bottomOutMagneticFlux: true,
-            pcbThickness: true,
-            compatibility: true,
-            tactileForce: true,
-            tactilePosition: true,
-            progressiveSpring: true,
-            doubleStage: true,
-            clickType: true,
-            imageUrl: true,
+            ...MASTER_TRACKED_SELECT,
             version: true,
             lastModifiedAt: true,
           }
@@ -224,17 +158,7 @@ export async function GET(
     const differences: Record<string, { current: any; master: any }> = {}
     if (hasUpdates) {
       const masterSwitch = userSwitch.masterSwitch
-      const fieldsToCheck = [
-        'name', 'chineseName', 'type', 'technology', 'manufacturer',
-        'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut',
-        'springWeight', 'springLength', 'notes',
-        'topHousing', 'bottomHousing', 'stem',
-        'topHousingColor', 'bottomHousingColor', 'stemColor', 'stemShape', 'markings',
-        'magnetOrientation', 'magnetPosition', 'magnetPolarity',
-        'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
-        'pcbThickness', 'compatibility', 'tactileForce', 'tactilePosition',
-        'progressiveSpring', 'doubleStage', 'clickType', 'imageUrl'
-      ]
+      const fieldsToCheck = MASTER_TRACKED_FIELDS
 
       for (const field of fieldsToCheck) {
         const userValue = (userSwitch as any)[field]

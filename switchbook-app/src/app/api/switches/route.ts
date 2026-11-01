@@ -1,11 +1,11 @@
+import { imageImportSchema, imageReferenceCreates, primaryReferenceId } from '@/lib/switch-image-references'
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { switchSchema, SWITCH_NOTES_MAX, SWITCH_PERSONAL_NOTES_MAX } from "@/lib/validation"
+import { switchSchema } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
-import { computeMasterModifiedFields, MASTER_TRACKED_SELECT } from "@/lib/master-switch-modifications"
-import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
+import { computeMasterModifiedFields, MASTER_TRACKED_SELECT, copyMasterFields } from "@/lib/master-switch-modifications"
 import { withSmartRateLimit } from "@/lib/with-rate-limit"
 
 async function createSwitchHandler(request: NextRequest) {
@@ -40,18 +40,12 @@ async function createSwitchHandler(request: NextRequest) {
 
     const body = await request.json()
     
+    const imageData = imageImportSchema.parse(body)
+    const referenceCreates = imageData.imageReferences === undefined ? undefined : imageReferenceCreates(imageData.imageReferences)
     const validatedData = switchSchema.parse(body)
     
     // Transform empty strings to null for optional fields
     const transformedData = transformSwitchData(validatedData)
-
-    // Normalize manufacturer name if provided
-    if (transformedData.manufacturer) {
-      transformedData.manufacturer = await normalizeManufacturerName(
-        transformedData.manufacturer, 
-        userId
-      )
-    }
 
     // Extract masterSwitchId if provided (it's not part of the schema validation)
     const masterSwitchId = body.masterSwitchId
@@ -76,31 +70,29 @@ async function createSwitchHandler(request: NextRequest) {
         )
       }
 
-      // Re-linking an exported switch (CSV import) carries the master version
-      // it was last synced to. Keep it when it is a plausible earlier version so
-      // "updates available" still works, and record which fields the user had
-      // customised. Ordinary adds from the master database (AddSwitchModal)
-      // don't send a version: they link at the current version, unmodified,
-      // exactly as before (that form doesn't copy every master field, so
-      // diffing it would wrongly flag fresh adds as modified).
+      // Native imports retain snapshot specs/version. Fresh catalog adds seed
+      // omitted specs from the master; explicit form values still win.
       const requestedVersion = body.masterSwitchVersion
-      const isRelink = requestedVersion !== undefined && requestedVersion !== null && requestedVersion !== ''
+      const isRelink = Object.prototype.hasOwnProperty.call(body, 'masterSwitchVersion')
       const parsedVersion = Number(requestedVersion)
-      const masterSwitchVersion = isRelink && Number.isInteger(parsedVersion) && parsedVersion >= 1 && parsedVersion <= masterSwitch.version
+      const masterSwitchVersion = isRelink && requestedVersion === null ? null : isRelink && Number.isInteger(parsedVersion) && parsedVersion >= 1 && parsedVersion <= masterSwitch.version
         ? parsedVersion
         : masterSwitch.version
-      const modifiedFields = isRelink ? computeMasterModifiedFields(transformedData, masterSwitch) : []
+      const linkedData = isRelink ? transformedData : { ...copyMasterFields(masterSwitch), ...transformedData }
+      const modifiedFields = computeMasterModifiedFields(linkedData, masterSwitch)
 
       // Copy image records, not their master IDs or ownership. Keep the same
       // gallery-first / legacy URL fallback as the dedicated collection route.
       // Explicitly selected photos in the add modal take precedence and are
       // uploaded separately; do not consume their slots with inherited images.
-      const images = body.copyMasterImages === false ? [] : masterSwitch.images.length > 0
+      const images = imageData.imageReferences !== undefined ? referenceCreates! : body.copyMasterImages === false ? [] : masterSwitch.images.length > 0
         ? masterSwitch.images.map((image, order) => ({
             url: image.url,
             type: image.type,
             order,
             caption: image.caption,
+            altText: image.altText, remoteUrl: image.remoteUrl, sourceUrl: image.sourceUrl,
+            sourceName: image.sourceName, license: image.license, attribution: image.attribution,
             width: image.width,
             height: image.height,
             size: image.size
@@ -113,12 +105,13 @@ async function createSwitchHandler(request: NextRequest) {
       const newSwitch = await prisma.$transaction(async (tx) => {
         const created = await tx.switch.create({
           data: {
-            ...transformedData,
+            ...linkedData,
+            imageUrl: imageData.imageUrl || null,
             userId,
             masterSwitchId,
             masterSwitchVersion,
             isModified: modifiedFields.length > 0,
-            ...(isRelink ? { modifiedFields } : {}),
+            modifiedFields,
             images: { create: images }
           },
           include: { images: { orderBy: { order: 'asc' } } }
@@ -128,7 +121,7 @@ async function createSwitchHandler(request: NextRequest) {
 
         return tx.switch.update({
           where: { id: created.id },
-          data: { primaryImageId: created.images[0].id },
+          data: { primaryImageId: imageData.imageReferences !== undefined ? primaryReferenceId(imageData.imageReferences, referenceCreates!) : created.images[0].id },
           include: { images: { orderBy: { order: 'asc' } } }
         })
       })
@@ -137,75 +130,24 @@ async function createSwitchHandler(request: NextRequest) {
     }
 
     // Create regular switch without master link
-    const newSwitch = await prisma.switch.create({
-      data: {
-        ...transformedData,
-        userId,
-      },
-      include: {
-        images: {
-          orderBy: { order: 'asc' }
-        }
-      }
+    const newSwitch = await prisma.$transaction(async tx => {
+      const created = await tx.switch.create({
+        data: { ...transformedData, userId, imageUrl: imageData.imageUrl || null,
+          ...(imageData.imageReferences !== undefined ? { images: { create: referenceCreates! } } : {}) },
+        include: { images: { orderBy: { order: 'asc' } } }
+      })
+      if (!imageData.imageReferences?.length) return created
+      return tx.switch.update({ where: { id: created.id },
+        data: { primaryImageId: primaryReferenceId(imageData.imageReferences, referenceCreates!) },
+        include: { images: { orderBy: { order: 'asc' } } } })
     })
 
     return NextResponse.json(newSwitch)
   } catch (error) {
     if (error instanceof z.ZodError) {
       // Create user-friendly error messages for each validation issue
-      const fieldErrors = error.errors.map(err => {
-        const field = err.path.join('.')
-        let message = ''
-        
-        switch (field) {
-          case 'name':
-            message = 'Switch name is required'
-            break
-          case 'manufacturer':
-            message = 'Manufacturer field cannot exceed 100 characters'
-            break
-          case 'notes':
-            message = `Notes cannot exceed ${SWITCH_NOTES_MAX} characters`
-            break
-          case 'personalNotes':
-            message = `Personal notes cannot exceed ${SWITCH_PERSONAL_NOTES_MAX} characters`
-            break
-          case 'markings':
-            message = 'Markings cannot exceed 500 characters'
-            break
-          case 'actuationForce':
-          case 'bottomOutForce':
-          case 'tactileForce':
-            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 1000 grams`
-            break
-          case 'preTravel':
-          case 'bottomOut':
-          case 'tactilePosition':
-            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 10 mm`
-            break
-          case 'initialMagneticFlux':
-          case 'bottomOutMagneticFlux':
-            message = `${field.replace(/([A-Z])/g, ' $1').trim()} must be between 0 and 10000`
-            break
-          case 'personalTags':
-            if (err.code === 'too_big' && err.message.includes('50')) {
-              message = 'Each tag cannot exceed 50 characters'
-            } else {
-              message = err.message
-            }
-            break
-          default:
-            // For enum fields, provide clearer messages
-            if (err.code === 'invalid_enum_value') {
-              message = `Invalid ${field}. Please select from the available options`
-            } else {
-              message = err.message
-            }
-        }
-        
-        return { field, message }
-      })
-      
+      const fieldErrors = error.errors.map(err => ({ field: err.path.join('.'), message: err.message }))
+
       const errorMessage = fieldErrors.length === 1 
         ? fieldErrors[0].message
         : `Please fix the following issues: ${fieldErrors.map(e => e.message).join(', ')}`

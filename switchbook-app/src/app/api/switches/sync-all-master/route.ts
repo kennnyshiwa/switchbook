@@ -1,3 +1,4 @@
+import { copyMasterFields } from '@/lib/master-switch-modifications'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -41,47 +42,10 @@ export async function POST(req: NextRequest) {
 
       // Update the switch with master data
       const updateData: any = {
-        name: userSwitch.masterSwitch.name,
-        chineseName: userSwitch.masterSwitch.chineseName,
-        type: userSwitch.masterSwitch.type,
-        technology: userSwitch.masterSwitch.technology,
-        manufacturer: userSwitch.masterSwitch.manufacturer,
-        actuationForce: userSwitch.masterSwitch.actuationForce,
-        bottomOutForce: userSwitch.masterSwitch.bottomOutForce,
-        preTravel: userSwitch.masterSwitch.preTravel,
-        bottomOut: userSwitch.masterSwitch.bottomOut,
-        springWeight: userSwitch.masterSwitch.springWeight,
-        springLength: userSwitch.masterSwitch.springLength,
-        notes: userSwitch.masterSwitch.notes,
-        topHousing: userSwitch.masterSwitch.topHousing,
-        bottomHousing: userSwitch.masterSwitch.bottomHousing,
-        stem: userSwitch.masterSwitch.stem,
-        topHousingColor: userSwitch.masterSwitch.topHousingColor,
-        bottomHousingColor: userSwitch.masterSwitch.bottomHousingColor,
-        stemColor: userSwitch.masterSwitch.stemColor,
-        stemShape: userSwitch.masterSwitch.stemShape,
-        markings: userSwitch.masterSwitch.markings,
-        tactileForce: userSwitch.masterSwitch.tactileForce,
-        tactilePosition: userSwitch.masterSwitch.tactilePosition,
-        progressiveSpring: userSwitch.masterSwitch.progressiveSpring,
-        doubleStage: userSwitch.masterSwitch.doubleStage,
-        clickType: userSwitch.masterSwitch.clickType,
-        imageUrl: userSwitch.masterSwitch.imageUrl,
+        ...copyMasterFields(userSwitch.masterSwitch),
         masterSwitchVersion: userSwitch.masterSwitch.version,
         isModified: false,
-        modifiedFields: null
-      }
-
-      // Handle magnetic switch properties
-      if (userSwitch.masterSwitch.technology === 'MAGNETIC') {
-        updateData.magnetOrientation = userSwitch.masterSwitch.magnetOrientation
-        updateData.magnetPosition = userSwitch.masterSwitch.magnetPosition
-        updateData.magnetPolarity = userSwitch.masterSwitch.magnetPolarity
-        updateData.initialForce = userSwitch.masterSwitch.initialForce
-        updateData.initialMagneticFlux = userSwitch.masterSwitch.initialMagneticFlux
-        updateData.bottomOutMagneticFlux = userSwitch.masterSwitch.bottomOutMagneticFlux
-        updateData.pcbThickness = userSwitch.masterSwitch.pcbThickness
-        updateData.compatibility = userSwitch.masterSwitch.compatibility
+        modifiedFields: []
       }
 
       await prisma.switch.update({
@@ -104,7 +68,7 @@ export async function POST(req: NextRequest) {
             data: {
               switchId: userSwitch.id,
               url: userSwitch.masterSwitch.imageUrl,
-              type: 'LINKED',
+            type: 'LINKED',
               order: 0
             }
           })
@@ -126,9 +90,9 @@ export async function POST(req: NextRequest) {
 
       updates.push({
         id: userSwitch.id,
-        name: userSwitch.masterSwitch.name,
         previousVersion: userSwitch.masterSwitchVersion || 0,
-        newVersion: userSwitch.masterSwitch.version
+        name: userSwitch.masterSwitch.name,
+        newVersion: userSwitch.masterSwitch.version,
       })
 
       updatedCount++

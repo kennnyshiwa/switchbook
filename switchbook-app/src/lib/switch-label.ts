@@ -28,6 +28,7 @@ export type LabelTechnology =
 export type LabelClickType = 'CLICK_LEAF' | 'CLICK_BAR' | 'CLICK_JACKET'
 
 export interface LabelSwitchInput {
+  quantity?: number | null
   name: string
   type?: LabelSwitchType | null
   technology?: LabelTechnology | null
@@ -157,6 +158,7 @@ export function renderSwitchLabel(item: LabelSwitchInput): string {
   const springWeight = text(item.springWeight)
 
   const specs: [string, string | null][] = [
+    ['Quantity', item.quantity == null ? null : String(item.quantity)],
     ['Actuation', actuation],
     ['Bottom Out', measure(item.bottomOutForce, 'g')],
     ['Initial Force', measure(item.initialForce, 'g')],

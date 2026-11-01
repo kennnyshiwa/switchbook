@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     // Fetch all switches for the user
     const switches = await prisma.switch.findMany({
       where: { userId: session.user.id },
+      include: { images: { orderBy: { order: 'asc' } } },
       orderBy: [
         { manufacturer: 'asc' },
         { name: 'asc' }

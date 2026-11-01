@@ -3,6 +3,8 @@
 import { useState } from 'react'
 
 export type SortOption = 
+  | 'quantity-asc'
+  | 'quantity-desc'
   | 'recent' 
   | 'oldest' 
   | 'name-asc' 
@@ -273,6 +275,8 @@ export default function CollectionControls({
               <option value="manufacturer-asc">Manufacturer (A-Z)</option>
               <option value="manufacturer-desc">Manufacturer (Z-A)</option>
               <option value="type">Type</option>
+              <option value="quantity-asc">Quantity (Low to High; unknown last)</option>
+              <option value="quantity-desc">Quantity (High to Low; unknown last)</option>
               <option value="spring-asc">Spring Weight (Low to High)</option>
               <option value="spring-desc">Spring Weight (High to Low)</option>
             </select>

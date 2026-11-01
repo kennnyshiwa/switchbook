@@ -1,5 +1,7 @@
 'use client'
 
+import { requestCollectionQuantity } from '@/lib/collection-quantity'
+
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -139,10 +141,14 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
       return
     }
     
+    const quantity = requestCollectionQuantity(message => window.prompt(message), message => window.alert(message))
+    if (quantity === undefined) return
     setAdding(true)
     try {
       const response = await fetch(`/api/master-switches/${switchData.id}/add-to-collection`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
       })
 
       if (response.ok) {

@@ -222,41 +222,41 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             </p>
           )}
 
-          {(switchItem.initialForce || switchItem.actuationForce || switchItem.tactileForce || switchItem.bottomOutForce || switchItem.preTravel || switchItem.bottomOut || switchItem.springWeight || switchItem.springLength || switchItem.progressiveSpring || switchItem.doubleStage || switchItem.clickType) && (
+          {(switchItem.initialForce != null || switchItem.actuationForce != null || switchItem.tactileForce != null || switchItem.tactilePosition != null || switchItem.bottomOutForce != null || switchItem.preTravel != null || switchItem.bottomOut != null || switchItem.springWeight || switchItem.springLength || switchItem.progressiveSpring || switchItem.doubleStage || switchItem.clickType) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Specs</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                {switchItem.initialForce && (
+                {switchItem.initialForce != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Initial Force:</span> {switchItem.initialForce}g
                   </p>
                 )}
-                {switchItem.actuationForce && (
+                {switchItem.actuationForce != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Actuation:</span> {switchItem.actuationForce}g
                   </p>
                 )}
-                {switchItem.tactileForce && (
+                {switchItem.tactileForce != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Tactile Force:</span> {switchItem.tactileForce}g
                   </p>
                 )}
-                {switchItem.tactilePosition && (
+                {switchItem.tactilePosition != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Tactile Position:</span> {switchItem.tactilePosition}mm
                   </p>
                 )}
-                {switchItem.bottomOutForce && (
+                {switchItem.bottomOutForce != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Bottom Out:</span> {switchItem.bottomOutForce}g
                   </p>
                 )}
-                {switchItem.preTravel && (
+                {switchItem.preTravel != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Pre Travel:</span> {switchItem.preTravel}mm
                   </p>
                 )}
-                {switchItem.bottomOut && (
+                {switchItem.bottomOut != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Bottom Out/Total Travel:</span> {switchItem.bottomOut}mm
                   </p>
@@ -290,16 +290,16 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             </div>
           )}
 
-          {switchItem.technology === 'MAGNETIC' && (switchItem.initialMagneticFlux || switchItem.bottomOutMagneticFlux || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
+          {switchItem.technology === 'MAGNETIC' && (switchItem.initialMagneticFlux != null || switchItem.bottomOutMagneticFlux != null || switchItem.magnetOrientation || switchItem.magnetPosition || switchItem.pcbThickness || switchItem.magnetPolarity) && (
             <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Magnet Details</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                {switchItem.initialMagneticFlux && (
+                {switchItem.initialMagneticFlux != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Initial Flux:</span> {switchItem.initialMagneticFlux}Gs
                   </p>
                 )}
-                {switchItem.bottomOutMagneticFlux && (
+                {switchItem.bottomOutMagneticFlux != null && (
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Bottom Out Flux:</span> {switchItem.bottomOutMagneticFlux}Gs
                   </p>
@@ -420,7 +420,7 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             </div>
           )}
 
-          {switchItem.masterSwitchId && switchItem.personalNotes && (
+          {switchItem.personalNotes && (
             <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
               <p className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">Personal Notes</p>
               <p className="text-sm text-blue-700 dark:text-blue-300">{linkify(switchItem.personalNotes)}</p>

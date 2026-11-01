@@ -1,5 +1,7 @@
 'use client'
 
+import { summarizeQuantity } from '@/lib/collection-quantity'
+
 import { useState, useEffect } from 'react'
 import { Switch } from '@prisma/client'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
@@ -10,6 +12,7 @@ interface CollectionStatsProps {
 }
 
 export default function CollectionStats({ switches }: CollectionStatsProps) {
+  const inventory = summarizeQuantity(switches)
   const { theme } = useTheme()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showTypeNumbers, setShowTypeNumbers] = useState(false)
@@ -186,6 +189,7 @@ export default function CollectionStats({ switches }: CollectionStatsProps) {
         </button>
       </div>
       
+      <p className="text-sm text-gray-600 dark:text-gray-300">{switches.length} entries · {inventory.knownUnits.toLocaleString()} known units · {inventory.unknownEntries} entries with unknown quantity. Charts count entries.</p>
       {!isCollapsed && (
         <div className="grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 gap-6 transition-all duration-300">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">

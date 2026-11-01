@@ -1,8 +1,8 @@
+import { copyMasterFields } from '@/lib/master-switch-modifications'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { PERSONAL_NOTES_TOO_LONG_ERROR, SWITCH_PERSONAL_NOTES_MAX } from '@/lib/validation'
 
 const linkSchema = z.object({
   userSwitchId: z.string().min(1, 'User switch ID is required')
@@ -65,43 +65,14 @@ export async function POST(
       `${userSwitch.personalNotes ? userSwitch.personalNotes + '\n\n' : ''}Previous notes: ${userSwitch.notes}` : 
       userSwitch.personalNotes
 
-    // Never truncate: refuse the link (no write) rather than lose text, and
-    // keep the switch saveable under switchSchema's personal notes limit.
-    if (personalNotes && personalNotes.length > SWITCH_PERSONAL_NOTES_MAX) {
-      return NextResponse.json({ error: PERSONAL_NOTES_TOO_LONG_ERROR }, { status: 400 })
-    }
-
     // Update the user switch to link it to the master switch
     // This will override all details with master switch data
     const updatedSwitch = await prisma.switch.update({
       where: { id: userSwitchId },
       data: {
         masterSwitchId: masterSwitchId,
-        name: masterSwitch.name,
-        chineseName: masterSwitch.chineseName,
-        type: masterSwitch.type,
-        technology: masterSwitch.technology,
-        manufacturer: masterSwitch.manufacturer,
-        actuationForce: masterSwitch.actuationForce,
-        bottomOutForce: masterSwitch.bottomOutForce,
-        preTravel: masterSwitch.preTravel,
-        bottomOut: masterSwitch.bottomOut,
-        springWeight: masterSwitch.springWeight,
-        springLength: masterSwitch.springLength,
-        topHousing: masterSwitch.topHousing,
-        bottomHousing: masterSwitch.bottomHousing,
-        stem: masterSwitch.stem,
-        notes: masterSwitch.notes,
+        ...copyMasterFields(masterSwitch),
         personalNotes: personalNotes,
-        // Magnetic properties
-        magnetOrientation: masterSwitch.magnetOrientation,
-        magnetPosition: masterSwitch.magnetPosition,
-        magnetPolarity: masterSwitch.magnetPolarity,
-        initialForce: masterSwitch.initialForce,
-        initialMagneticFlux: masterSwitch.initialMagneticFlux,
-        bottomOutMagneticFlux: masterSwitch.bottomOutMagneticFlux,
-        pcbThickness: masterSwitch.pcbThickness,
-        compatibility: masterSwitch.compatibility,
         // Reset modified fields since we're syncing with master
         isModified: false,
         modifiedFields: [],

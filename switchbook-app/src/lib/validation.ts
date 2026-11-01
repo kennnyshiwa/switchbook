@@ -18,14 +18,10 @@ export const loginSchema = z.object({
 
 export const QUANTITY_MAX = 1_000_000
 
-// Length caps for a switch's notes. Personal notes get more room because
-// linking to a master merges the old notes into them ("Previous notes: ...").
-export const SWITCH_NOTES_MAX = 2000
-export const SWITCH_PERSONAL_NOTES_MAX = 5000
-
-export const PERSONAL_NOTES_TOO_LONG_ERROR =
-  `Personal notes would exceed ${SWITCH_PERSONAL_NOTES_MAX} characters after merging in this switch's notes. ` +
-  'Please shorten your notes or personal notes and try again.'
+// Collection text is PostgreSQL text, as are catalog/legacy values. Do not
+// impose shorter collection-only caps that make valid snapshots uneditable.
+const optionalText = z.string().nullable().transform(value => value ?? '').optional()
+const optionalMeasurement = z.number().finite().nullable().transform(value => value ?? NaN).optional().or(z.nan())
 
 /**
  * Parse a user-typed quantity. Blank clears it (null); whole numbers from 0 to
@@ -60,47 +56,47 @@ export const quantitySchema = z.preprocess(value => {
   .optional())
 
 export const switchSchema = z.object({
-  name: z.string().min(1, "Switch name is required").max(100),
-  chineseName: z.string().max(100).optional().or(z.literal("")),
-  type: z.enum(["LINEAR", "TACTILE", "CLICKY", "SILENT_LINEAR", "SILENT_TACTILE", "MOUSE"]).optional().or(z.literal("")),
-  technology: z.enum(["MECHANICAL", "OPTICAL", "MAGNETIC", "INDUCTIVE", "ELECTRO_CAPACITIVE"]).optional().or(z.literal("")),
-  magnetOrientation: z.string().max(200).optional().or(z.literal("")),
-  magnetPosition: z.string().max(200).optional().or(z.literal("")),
-  magnetPolarity: z.string().max(10).optional().or(z.literal("")),
-  initialForce: z.number().min(0).max(1000).optional().or(z.nan().transform(() => undefined)),
-  initialMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan().transform(() => undefined)),
-  bottomOutMagneticFlux: z.number().min(0).max(10000).optional().or(z.nan().transform(() => undefined)),
-  pcbThickness: z.string().max(10).optional().or(z.literal("")),
-  compatibility: z.string().max(200).optional().or(z.literal("")),
-  manufacturer: z.string().max(100).optional().or(z.literal("")),
-  springWeight: z.string().optional(),
-  springLength: z.string().optional(),
-  actuationForce: z.number().min(0).max(1000).optional().or(z.nan().transform(() => undefined)),
-  tactileForce: z.number().min(0).max(1000).optional().or(z.nan().transform(() => undefined)),
-  bottomOutForce: z.number().min(0).max(1000).optional().or(z.nan().transform(() => undefined)),
+  name: z.string().min(1, "Switch name is required"),
+  chineseName: optionalText,
+  type: z.enum(["LINEAR", "TACTILE", "CLICKY", "SILENT_LINEAR", "SILENT_TACTILE", "MOUSE"]).nullable().transform(value => value ?? "").optional().or(z.literal("")),
+  technology: z.enum(["MECHANICAL", "OPTICAL", "MAGNETIC", "INDUCTIVE", "ELECTRO_CAPACITIVE"]).nullable().transform(value => value ?? "").optional().or(z.literal("")),
+  magnetOrientation: optionalText,
+  magnetPosition: optionalText,
+  magnetPolarity: optionalText,
+  initialForce: optionalMeasurement,
+  initialMagneticFlux: optionalMeasurement,
+  bottomOutMagneticFlux: optionalMeasurement,
+  pcbThickness: optionalText,
+  compatibility: optionalText,
+  manufacturer: optionalText,
+  springWeight: optionalText,
+  springLength: optionalText,
+  actuationForce: optionalMeasurement,
+  tactileForce: optionalMeasurement,
+  bottomOutForce: optionalMeasurement,
   progressiveSpring: z.boolean().optional(),
   doubleStage: z.boolean().optional(),
-  preTravel: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
-  bottomOut: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
-  notes: z.string().max(SWITCH_NOTES_MAX).optional(),
-  personalNotes: z.string().max(SWITCH_PERSONAL_NOTES_MAX).optional(),
-  topHousing: z.string().max(100).optional().or(z.literal("")),
-  bottomHousing: z.string().max(100).optional().or(z.literal("")),
-  stem: z.string().max(100).optional().or(z.literal("")),
-  frankenTop: z.string().max(100).optional().or(z.literal("")),
-  frankenBottom: z.string().max(100).optional().or(z.literal("")),
-  frankenStem: z.string().max(100).optional().or(z.literal("")),
-  clickType: z.enum(["CLICK_LEAF", "CLICK_BAR", "CLICK_JACKET"]).optional().or(z.literal("")),
-  tactilePosition: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
-  dateObtained: z.string().optional().or(z.literal("")),
+  preTravel: optionalMeasurement,
+  bottomOut: optionalMeasurement,
+  notes: optionalText,
+  personalNotes: optionalText,
+  topHousing: optionalText,
+  bottomHousing: optionalText,
+  stem: optionalText,
+  frankenTop: optionalText,
+  frankenBottom: optionalText,
+  frankenStem: optionalText,
+  clickType: z.enum(["CLICK_LEAF", "CLICK_BAR", "CLICK_JACKET"]).nullable().transform(value => value ?? "").optional().or(z.literal("")),
+  tactilePosition: optionalMeasurement,
+  dateObtained: optionalText.refine(value => !value || !Number.isNaN(new Date(value).getTime()), "Invalid date"),
   // Absent means "leave unchanged" on update; creates get the column default [].
-  personalTags: z.array(z.string().max(50)).optional(),
+  personalTags: z.array(z.string()).optional(),
   quantity: quantitySchema,
-  topHousingColor: z.string().max(50).optional().or(z.literal("")),
-  bottomHousingColor: z.string().max(50).optional().or(z.literal("")),
-  stemColor: z.string().max(50).optional().or(z.literal("")),
-  stemShape: z.string().max(50).optional().or(z.literal("")),
-  markings: z.string().max(500).optional().or(z.literal("")),
+  topHousingColor: optionalText,
+  bottomHousingColor: optionalText,
+  stemColor: optionalText,
+  stemShape: optionalText,
+  markings: optionalText,
 })
 
 export const passwordResetRequestSchema = z.object({

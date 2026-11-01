@@ -1,5 +1,6 @@
 'use client'
 
+import { resolveImportIdentities } from '@/lib/switch-import-identity'
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Switch } from '@prisma/client'
 import Link from 'next/link'
@@ -32,8 +33,10 @@ type ImportStep = 'upload' | 'mapping' | 'preview' | 'importing' | 'complete'
 
 interface ParsedSwitchWithDuplicate extends ParsedSwitch {
   isDuplicate?: boolean
+  identityMessage?: string
   existingId?: string
   overwrite?: boolean
+  importAction?: 'create' | 'overwrite'
   manufacturerValid?: boolean
   manufacturerSuggestions?: string[]
   /** Per-field problems (e.g. an invalid Quantity) that block importing the row. */
@@ -129,18 +132,7 @@ const SwitchTableRow = memo(({
       setManufacturerSuggestions([])
     }
     
-    // Debounced update to parent
-    const existingTimeout = timeoutRefs.current.get('manufacturer')
-    if (existingTimeout) {
-      clearTimeout(existingTimeout)
-    }
-    
-    const timeoutId = setTimeout(() => {
-      onUpdate(index, 'manufacturer', value)
-      timeoutRefs.current.delete('manufacturer')
-    }, 300)
-    
-    timeoutRefs.current.set('manufacturer', timeoutId)
+    onUpdate(index, 'manufacturer', value)
   }, [index, onUpdate])
 
   // Handle suggestion selection
@@ -191,19 +183,7 @@ const SwitchTableRow = memo(({
   const handleChange = useCallback((field: keyof ParsedSwitchWithDuplicate, value: any) => {
     setLocalValues(prev => ({ ...prev, [field]: value }))
     
-    // Clear existing timeout for this field
-    const existingTimeout = timeoutRefs.current.get(field)
-    if (existingTimeout) {
-      clearTimeout(existingTimeout)
-    }
-    
-    // Set new timeout for debounced update
-    const timeoutId = setTimeout(() => {
-      onUpdate(index, field, value)
-      timeoutRefs.current.delete(field)
-    }, 300)
-    
-    timeoutRefs.current.set(field, timeoutId)
+    onUpdate(index, field, value)
     
     // If a Franken field is modified and has content, add a visual indicator
     if ((field === 'frankenTop' || field === 'frankenBottom' || field === 'frankenStem') && value && value.trim() !== '') {
@@ -247,18 +227,18 @@ const SwitchTableRow = memo(({
         )}
         {switchItem.isDuplicate ? (
           <div className="flex flex-col space-y-1">
-            <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
-              Duplicate
+            <span className="max-w-[240px] whitespace-normal text-xs font-medium text-yellow-600 dark:text-yellow-400">
+              {switchItem.identityMessage}
             </span>
             <label className="flex items-center text-xs">
               <input
                 type="checkbox"
-                checked={switchItem.overwrite}
+                checked={!!switchItem.overwrite}
                 onChange={() => onToggleOverwrite(index)}
                 className="mr-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-gray-600 dark:text-gray-400">
-                Overwrite
+                {switchItem.existingId ? 'Overwrite owned entry' : 'Create separate entry'}
               </span>
             </label>
           </div>
@@ -287,7 +267,7 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <select
           value={localValues.type || ''}
-          onChange={(e) => handleChange('type', e.target.value || undefined)}
+          onChange={(e) => handleChange('type', e.target.value)}
           className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         >
@@ -303,7 +283,7 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <select
           value={localValues.technology || ''}
-          onChange={(e) => handleChange('technology', e.target.value || undefined)}
+          onChange={(e) => handleChange('technology', e.target.value)}
           className="block w-full min-w-[180px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         >
@@ -318,7 +298,7 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <select
           value={localValues.magnetOrientation || ''}
-          onChange={(e) => handleChange('magnetOrientation', e.target.value || undefined)}
+          onChange={(e) => handleChange('magnetOrientation', e.target.value)}
           className="block w-full min-w-[140px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         >
@@ -330,7 +310,7 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <select
           value={localValues.magnetPosition || ''}
-          onChange={(e) => handleChange('magnetPosition', e.target.value || undefined)}
+          onChange={(e) => handleChange('magnetPosition', e.target.value)}
           className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         >
@@ -343,11 +323,9 @@ const SwitchTableRow = memo(({
         <input
           type="number"
           value={localValues.initialForce || ''}
-          onChange={(e) => handleChange('initialForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('initialForce', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          min="0"
-          max="1000"
-          step="0.01"
+          step="any"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
@@ -355,11 +333,9 @@ const SwitchTableRow = memo(({
         <input
           type="number"
           value={localValues.initialMagneticFlux || ''}
-          onChange={(e) => handleChange('initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('initialMagneticFlux', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          min="0"
-          max="10000"
-          step="0.01"
+          step="any"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
@@ -367,18 +343,16 @@ const SwitchTableRow = memo(({
         <input
           type="number"
           value={localValues.bottomOutMagneticFlux || ''}
-          onChange={(e) => handleChange('bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('bottomOutMagneticFlux', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
-          min="0"
-          max="10000"
-          step="0.01"
+          step="any"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <select
           value={localValues.pcbThickness || ''}
-          onChange={(e) => handleChange('pcbThickness', e.target.value || undefined)}
+          onChange={(e) => handleChange('pcbThickness', e.target.value)}
           className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         >
@@ -390,7 +364,7 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <select
           value={localValues.magnetPolarity || ''}
-          onChange={(e) => handleChange('magnetPolarity', e.target.value || undefined)}
+          onChange={(e) => handleChange('magnetPolarity', e.target.value)}
           className="block w-full min-w-[100px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
         >
@@ -483,46 +457,38 @@ const SwitchTableRow = memo(({
         <input
           type="number"
           value={localValues.actuationForce || ''}
-          onChange={(e) => handleChange('actuationForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('actuationForce', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-          min="0"
-          max="1000"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="number"
           value={localValues.tactileForce || ''}
-          onChange={(e) => handleChange('tactileForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('tactileForce', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-          min="0"
-          max="1000"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="number"
           value={localValues.tactilePosition || ''}
-          onChange={(e) => handleChange('tactilePosition', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('tactilePosition', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={(switchItem.isDuplicate && !switchItem.overwrite) || (localValues.type !== 'TACTILE' && localValues.type !== 'SILENT_TACTILE' && localValues.type !== 'CLICKY')}
           placeholder="0.3, 1.5"
-          step="0.1"
-          min="0"
-          max="10"
+          step="any"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="number"
           value={localValues.bottomOutForce || ''}
-          onChange={(e) => handleChange('bottomOutForce', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('bottomOutForce', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-          min="0"
-          max="1000"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
@@ -546,7 +512,7 @@ const SwitchTableRow = memo(({
       <td className="px-3 py-4 whitespace-nowrap">
         <select
           value={localValues.clickType || ''}
-          onChange={(e) => handleChange('clickType', e.target.value || undefined)}
+          onChange={(e) => handleChange('clickType', e.target.value)}
           className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite || localValues.type !== 'CLICKY'}
         >
@@ -560,24 +526,20 @@ const SwitchTableRow = memo(({
         <input
           type="number"
           value={localValues.preTravel || ''}
-          onChange={(e) => handleChange('preTravel', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('preTravel', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-          min="0"
-          max="10"
-          step="0.01"
+          step="any"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="number"
           value={localValues.bottomOut || ''}
-          onChange={(e) => handleChange('bottomOut', e.target.value ? parseFloat(e.target.value) : undefined)}
+          onChange={(e) => handleChange('bottomOut', e.target.value ? parseFloat(e.target.value) : NaN)}
           className="block w-full min-w-[80px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
           disabled={switchItem.isDuplicate && !switchItem.overwrite}
-          min="0"
-          max="10"
-          step="0.01"
+          step="any"
         />
       </td>
       <td className="px-3 py-4 whitespace-nowrap">
@@ -790,8 +752,9 @@ export default function BulkUploadPage() {
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({})
-  const [parsedSwitches, setParsedSwitches] = useState<ParsedSwitchWithDuplicate[]>([])
+  const [parsedRows, setParsedSwitches] = useState<ParsedSwitchWithDuplicate[]>([])
   const [existingSwitches, setExistingSwitches] = useState<Switch[]>([])
+  const parsedSwitches = resolveImportIdentities(parsedRows, existingSwitches)
   const [importProgress, setImportProgress] = useState(0)
   const [importResults, setImportResults] = useState<{ success: number; errors: string[]; skipped: number }>({ success: 0, errors: [], skipped: 0 })
   const [manufacturerValidationResults, setManufacturerValidationResults] = useState<Map<string, ManufacturerValidationResult>>(new Map())
@@ -897,7 +860,8 @@ export default function BulkUploadPage() {
     reader.onload = (e) => {
       const text = e.target?.result as string
       // RFC 4180 parse: quoted fields may contain commas, quotes and newlines.
-      const data = parseCsv(text)
+      let data: string[][]
+      try { data = parseCsv(text) } catch (error) { alert(error instanceof Error ? error.message : 'Invalid CSV'); return }
       
       if (data.length > 0) {
         setHeaders(data[0])
@@ -925,13 +889,14 @@ export default function BulkUploadPage() {
     const quantityColumn = Object.entries(columnMapping).find(([, field]) => field === 'quantity')?.[0]
     const parsed: ParsedSwitchWithDuplicate[] = csvData.map(row => {
       const { data, errors } = parseSwitchCsvRow(row, columnMapping)
-      const parsedRow = data as ParsedSwitchWithDuplicate
+      const parsedRow = { ...data, name: data.name ?? '' } as ParsedSwitchWithDuplicate
+      if (!parsedRow.name) errors.name = 'Switch name is required'
       if (Object.keys(errors).length > 0) {
         parsedRow.fieldErrors = errors
         if (errors.quantity && quantityColumn !== undefined) parsedRow.quantityInput = (row[Number(quantityColumn)] ?? '').trim()
       }
       return parsedRow
-    }).filter(sw => sw.name) // Only include switches with required fields (just name now)
+    }) // Keep invalid rows visible; never silently drop unnamed records.
     
     // Get all manufacturers for validation
     const manufacturers = parsed.map(sw => sw.manufacturer || '').filter(m => m)
@@ -940,9 +905,7 @@ export default function BulkUploadPage() {
     
     // Check for duplicates and add manufacturer validation
     const parsedWithDuplicateCheck = parsed.map(switchItem => {
-      const existingSwitch = existingSwitches.find(
-        existing => existing.name.toLowerCase() === switchItem.name.toLowerCase()
-      )
+
       
       // Add manufacturer validation results
       let manufacturerValid = true
@@ -951,19 +914,8 @@ export default function BulkUploadPage() {
       if (switchItem.manufacturer) {
         const validationResult = validationResults.get(switchItem.manufacturer)
         if (validationResult) {
-          manufacturerValid = validationResult.isValid
+          manufacturerValid = true
           manufacturerSuggestions = validationResult.suggestions || []
-        }
-      }
-      
-      if (existingSwitch) {
-        return {
-          ...switchItem,
-          isDuplicate: true,
-          existingId: existingSwitch.id,
-          overwrite: false, // Default to not overwriting
-          manufacturerValid,
-          manufacturerSuggestions
         }
       }
       
@@ -1011,35 +963,23 @@ export default function BulkUploadPage() {
       return
     }
 
-    // If manufacturer field is being updated, validate it
-    if (field === 'manufacturer' && typeof cleanedValue === 'string') {
-      const validationResults = await validateManufacturers([cleanedValue])
-      const validationResult = validationResults.get(cleanedValue)
-      
-      setParsedSwitches(prev => prev.map((sw, i) => {
-        if (i !== index) return sw
-        
-        return {
-          ...sw,
-          [field]: cleanedValue,
-          manufacturerValid: validationResult?.isValid ?? true,
-          manufacturerSuggestions: validationResult?.suggestions || []
-        }
-      }))
-    } else {
-      setParsedSwitches(prev => prev.map((sw, i) => {
-        if (i !== index) return sw
-        
-        return { ...sw, [field]: cleanedValue }
-      }))
-    }
+    setParsedSwitches(prev => prev.map((sw, i) => i !== index ? sw : {
+      ...sw, [field]: cleanedValue,
+      fieldErrors: Object.fromEntries(Object.entries(sw.fieldErrors ?? {}).filter(([key]) => key !== field)),
+      ...(['name', 'manufacturer', 'id'].includes(field) ? { overwrite: false, importAction: undefined } : {}),
+      ...(field === 'manufacturer' ? { manufacturerValid: true } : {})
+    }))
   }, [])
 
   const toggleOverwrite = useCallback((index: number) => {
-    setParsedSwitches(prev => prev.map((sw, i) => 
-      i === index ? { ...sw, overwrite: !sw.overwrite } : sw
-    ))
-  }, [])
+    setParsedSwitches(prev => {
+      const resolved = resolveImportIdentities(prev, existingSwitches)[index]
+      return prev.map((sw, i) => i !== index ? sw : {
+        ...sw, overwrite: !resolved.overwrite,
+        importAction: resolved.existingId ? 'overwrite' : 'create'
+      })
+    })
+  }, [existingSwitches])
 
   const removeParsedSwitch = useCallback((index: number) => {
     setParsedSwitches(prev => prev.filter((_, i) => i !== index))
@@ -1086,7 +1026,7 @@ export default function BulkUploadPage() {
         
         if (switchItem.isDuplicate && switchItem.overwrite && switchItem.existingId) {
           // Update existing switch
-          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, fieldErrors, quantityInput, ...switchData } = switchItem
+          const { isDuplicate, existingId, overwrite, importAction, identityMessage, manufacturerValid, manufacturerSuggestions, fieldErrors, quantityInput, ...switchData } = switchItem
           response = await fetch(`/api/switches/${switchItem.existingId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -1094,7 +1034,7 @@ export default function BulkUploadPage() {
           })
         } else {
           // Create new switch
-          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, fieldErrors, quantityInput, ...switchData } = switchItem
+          const { isDuplicate, existingId, overwrite, importAction, identityMessage, manufacturerValid, manufacturerSuggestions, fieldErrors, quantityInput, ...switchData } = switchItem
           response = await fetch('/api/switches', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1151,7 +1091,8 @@ export default function BulkUploadPage() {
             <p>Follow these steps to bulk import your switch collection:</p>
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li><strong>Prepare your CSV file</strong> with switch information</li>
-              <li><strong>Required field:</strong> Switch Name</li>
+              <li><strong>Required field:</strong> Switch Name. Only an owned Collection Switch ID enables overwrite; ambiguous names can be skipped or explicitly created as separate entries.</li>
+              <li>Omitted columns and short rows preserve fields. Explicit blank cells clear fields. Image References is a JSON gallery: [] clears it; omission preserves it. References require the media to remain available.</li>
               <li><strong>Optional fields:</strong> Type, Technology, Magnetic Pole Orientation, Magnet Position, Magnet Polarity, Initial Force, Initial Magnetic Flux, Bottom Out Magnetic Flux, PCB Thickness, Compatibility, Chinese Name, Manufacturer, Spring Weight, Spring Length, Progressive Spring, Double Stage, Forces (Actuation, Tactile, Bottom Out), Travel distances, Housing materials, Notes, etc.</li>
               <li><strong>Upload your CSV</strong> and verify the column mapping</li>
               <li><strong>Review and edit</strong> your switches before final import</li>

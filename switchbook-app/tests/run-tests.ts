@@ -23,3 +23,5 @@ import "./master-match-images.test";
 import "./master-submit-images.test";
 import "./switch-csv-roundtrip.test";
 import "./switch-quantity.test";
+
+import "./scope-rework.test";

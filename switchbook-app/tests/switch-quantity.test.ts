@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
-import { switchSchema, SWITCH_NOTES_MAX, SWITCH_PERSONAL_NOTES_MAX, parseQuantityInput } from '../src/lib/validation'
+import { switchSchema, parseQuantityInput } from '../src/lib/validation'
 import { transformSwitchData } from '../src/utils/dataTransform'
 import { serializeCanonicalSwitchShare } from '../src/lib/canonical-switch-share'
 import { applySwitchFilters, deriveSwitchFilterOptions } from '../src/lib/switch-filters'
@@ -57,7 +57,7 @@ const MASTER = {
 function database(overrides: Record<string, unknown> = {}) {
   const row: any = {
     id: 'sw-1', userId: 'owner-1', name: 'Mine', manufacturer: 'Acme', masterSwitchId: null, masterSwitchVersion: null,
-    notes: 'Old notes', personalNotes: 'Keep me', personalTags: ['keep'], quantity: 42, images: [], primaryImageId: null,
+    progressiveSpring: false, doubleStage: false, notes: 'Old notes', personalNotes: 'Keep me', personalTags: ['keep'], quantity: 42, images: [], primaryImageId: null,
     ...overrides,
   }
   const masterWrites: any[] = []
@@ -129,32 +129,19 @@ test('numeric fields keep 0 while blank/NaN/undefined become null', () => {
   assert.equal(blank.actuationForce, null)
   assert.equal(blank.preTravel, null)
   assert.equal(transformSwitchData({ name: 'x', bottomOut: NaN }).bottomOut, null)
-  assert.equal(transformSwitchData({ name: 'x' }).tactilePosition, null)
+  assert.equal(transformSwitchData({ name: 'x' }).tactilePosition, undefined)
 })
 
-test('notes allow 2000 characters and personal notes 5000', () => {
-  assert.equal(SWITCH_NOTES_MAX, 2000)
-  assert.equal(SWITCH_PERSONAL_NOTES_MAX, 5000)
-  for (const [key, max] of [['notes', SWITCH_NOTES_MAX], ['personalNotes', SWITCH_PERSONAL_NOTES_MAX]] as const) {
-    assert.equal(switchSchema.safeParse({ name: 'x', [key]: 'n'.repeat(max) }).success, true, key)
-    assert.equal(switchSchema.safeParse({ name: 'x', [key]: 'n'.repeat(max + 1) }).success, false, key)
-  }
-})
-
-test('update-notes rejects (without writing) merged personal notes over the cap instead of truncating', async () => {
+test('legacy notes are unrestricted text and update-notes preserves them verbatim', async () => {
+  const notes = ' \r\n🎹 '.repeat(6000)
+  const personalNotes = ' x '.repeat(6000)
+  assert.equal(switchSchema.safeParse({ name: 'x', notes, personalNotes }).success, true)
   const db = database()
   const route = await load(routes.updateNotes, db.prisma)
-  const params = { params: Promise.resolve({ id: 'sw-1' }) }
-  const tooLong = 'p'.repeat(SWITCH_PERSONAL_NOTES_MAX + 1)
-  let res = await route.PATCH(json('http://localhost/api/switches/sw-1/update-notes', 'PATCH', { notes: '', personalNotes: tooLong }), params)
-  assert.equal(res.status, 400)
-  assert.match((await res.json()).error, /shorten/)
-  assert.equal(db.switchWrites.length, 0)
-  assert.equal(db.row.personalNotes, 'Keep me')
-  const merged = 'p'.repeat(SWITCH_PERSONAL_NOTES_MAX)
-  res = await route.PATCH(json('http://localhost/api/switches/sw-1/update-notes', 'PATCH', { notes: '', personalNotes: merged }), params)
+  const res = await route.PATCH(json('http://localhost/api/switches/sw-1/update-notes', 'PATCH', { notes, personalNotes }), { params: Promise.resolve({ id: 'sw-1' }) })
   assert.equal(res.status, 200)
-  assert.equal(db.row.personalNotes, merged, 'stored in full, never truncated')
+  assert.equal(db.row.notes, notes)
+  assert.equal(db.row.personalNotes, personalNotes)
 })
 
 test('parseQuantityInput accepts whole numbers (incl. "1.0") and rejects the rest', () => {
@@ -204,10 +191,12 @@ test('master submission never copies quantity or personal fields into the master
   const res = await route.POST(json('http://localhost/api/master-switches/submit', 'POST', {
     name: 'Mine', manufacturer: 'Acme', submissionNotes: 'A unique switch from my collection',
     confirmNotDuplicate: true, sourceSwitchId: 'sw-1', imageUrl: null,
-    quantity: 42, personalNotes: 'Keep me', personalTags: ['keep'],
+    quantity: 42, personalNotes: 'Keep me', personalTags: ['keep'], tactilePosition: 0, frankenTop: 'Custom top',
   }))
   assert.equal(res.status, 200, JSON.stringify(await res.clone().json()))
   assert.ok(db.masterWrites.length > 0)
+  assert.equal(db.masterWrites[0].tactilePosition, 0)
+  assert.equal(db.masterWrites[0].frankenTop, 'Custom top')
   for (const write of db.masterWrites) {
     for (const key of ['quantity', 'personalNotes', 'personalTags']) {
       assert.equal(key in write, false, `MasterSwitch write has ${key}`)
@@ -236,15 +225,11 @@ test('linking, syncing and sync-all preserve quantity on the user switch', async
   assert.equal(fitDb.row.personalNotes, `${'p'.repeat(2500)}\n\nPrevious notes: ${'o'.repeat(2000)}`)
   assert.equal(switchSchema.safeParse({ name: 'x', personalNotes: fitDb.row.personalNotes }).success, true)
 
-  // ...and refused (no write, nothing truncated) when it would exceed the cap.
-  const longDb = database({ notes: 'o'.repeat(2000), personalNotes: 'p'.repeat(4000) })
+  // Legacy long notes merge losslessly and remain editable.
+  const longDb = database({ notes: 'o'.repeat(2001), personalNotes: 'p'.repeat(5001) })
   res = await (await load(routes.link, longDb.prisma)).POST(json('http://localhost/api/master-switches/m-1/link-existing', 'POST', { userSwitchId: 'sw-1' }), { params: Promise.resolve({ id: 'm-1' }) })
-  assert.equal(res.status, 400)
-  assert.match((await res.json()).error, /shorten/)
-  assert.equal(longDb.switchWrites.length, 0)
-  assert.equal(longDb.row.masterSwitchId, null)
-  assert.equal(longDb.row.personalNotes, 'p'.repeat(4000))
-  assert.equal(longDb.row.notes, 'o'.repeat(2000))
+  assert.equal(res.status, 200)
+  assert.equal(longDb.row.personalNotes, `${'p'.repeat(5001)}\n\nPrevious notes: ${'o'.repeat(2001)}`)
 
   const syncDb = database({ masterSwitchId: 'm-1', masterSwitchVersion: 1 })
   const sync = await load(routes.sync, syncDb.prisma)

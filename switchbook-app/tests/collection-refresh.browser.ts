@@ -142,13 +142,14 @@ test('collection changes appear without a reload and master adds invalidate cach
   let failAdd=false
   await page.route('**/api/**', async route => {
     const url=new URL(route.request().url())
+    if(url.pathname.endsWith('/add-to-collection')) assert.equal(route.request().postDataJSON().quantity,0)
     if(url.pathname.endsWith('/add-to-collection')) return route.fulfill({status:failAdd?500:200,json:failAdd?{error:'Test failure'}:{switchId:'new-1'}})
     if(url.pathname==='/api/master-switches') return route.fulfill({json:{switches:[master]}})
     if(url.pathname==='/api/master-switches/master-1') return route.fulfill({json:master})
     if(url.pathname==='/api/switches' && route.request().method()==='POST') return route.fulfill({json:{id:'bulk-1'}})
     return route.fulfill({json:[]})
   })
-  page.on('dialog',dialog=>dialog.dismiss())
+  page.on('dialog',dialog=>dialog.type()==='prompt'?dialog.accept('0'):dialog.dismiss())
   for(const mode of ['Browse','Detail']) {
     await page.evaluate(mode => { (window as any).refreshes=0; (window as any)['show'+mode]() },mode)
     if(mode==='Browse') await page.getByRole('button',{name:'Open Crystal Jade'}).click()

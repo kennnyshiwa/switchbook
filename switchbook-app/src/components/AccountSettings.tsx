@@ -378,7 +378,7 @@ export default function AccountSettings({ user }: AccountSettingsProps) {
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Data Export</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Export your entire switch collection as a CSV file. The exported file uses the same format as the bulk import feature, 
-          making it easy to backup your data or transfer it to another account.
+          including image references and metadata for import. Media must remain available at those URLs; this is not an offline media archive or whole-account backup.
         </p>
         <div className="flex items-center space-x-4">
           <button

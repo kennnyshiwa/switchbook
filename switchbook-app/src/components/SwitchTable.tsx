@@ -241,31 +241,31 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                   {switchItem.compatibility || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.initialForce ? `${switchItem.initialForce}g` : '-'}
+                  {switchItem.initialForce != null ? `${switchItem.initialForce}g` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.actuationForce ? `${switchItem.actuationForce}g` : '-'}
+                  {switchItem.actuationForce != null ? `${switchItem.actuationForce}g` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.tactileForce ? `${switchItem.tactileForce}g` : '-'}
+                  {switchItem.tactileForce != null ? `${switchItem.tactileForce}g` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.tactilePosition ? `${switchItem.tactilePosition}mm` : '-'}
+                  {switchItem.tactilePosition != null ? `${switchItem.tactilePosition}mm` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.bottomOutForce ? `${switchItem.bottomOutForce}g` : '-'}
+                  {switchItem.bottomOutForce != null ? `${switchItem.bottomOutForce}g` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.preTravel ? `${switchItem.preTravel}mm` : '-'}
+                  {switchItem.preTravel != null ? `${switchItem.preTravel}mm` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.bottomOut ? `${switchItem.bottomOut}mm` : '-'}
+                  {switchItem.bottomOut != null ? `${switchItem.bottomOut}mm` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.initialMagneticFlux ? `${switchItem.initialMagneticFlux}Gs` : '-'}
+                  {switchItem.initialMagneticFlux != null ? `${switchItem.initialMagneticFlux}Gs` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                  {switchItem.bottomOutMagneticFlux ? `${switchItem.bottomOutMagneticFlux}Gs` : '-'}
+                  {switchItem.bottomOutMagneticFlux != null ? `${switchItem.bottomOutMagneticFlux}Gs` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                   {switchItem.magnetOrientation || '-'}
@@ -352,13 +352,13 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                         <span className="text-gray-500 dark:text-gray-400">{linkify(switchItem.notes)}</span>
                       </div>
                     )}
-                    {switchItem.masterSwitchId && switchItem.personalNotes && (
+                    {switchItem.personalNotes && (
                       <div>
                         <span className="text-xs font-medium text-blue-700 dark:text-blue-300 block">Personal Notes:</span>
                         <span className="text-blue-600 dark:text-blue-400">{linkify(switchItem.personalNotes)}</span>
                       </div>
                     )}
-                    {!switchItem.notes && (!switchItem.masterSwitchId || !switchItem.personalNotes) && '-'}
+                    {!switchItem.notes && !switchItem.personalNotes && '-'}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">

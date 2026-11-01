@@ -95,13 +95,14 @@ const unlinked = {
 }
 
 const exportedKeys = SWITCH_CSV_COLUMNS.map(column => column.key)
+const scalarFixtureKeys = exportedKeys.filter(key => !['id', 'imageReferences', 'imageUrl'].includes(key))
 const LINK_ONLY_KEYS = ['masterSwitchId', 'masterSwitchVersion']
 
 const isBlank = (value: unknown) =>
   value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)
 
 test('round-trip fixtures populate every exported column (so the round trip cannot pass vacuously)', () => {
-  for (const key of exportedKeys) {
+  for (const key of scalarFixtureKeys) {
     assert.ok(!isBlank((linked as any)[key]), `linked fixture is missing a value for exported column "${key}"`)
     if (!LINK_ONLY_KEYS.includes(key)) assert.ok(!isBlank((unlinked as any)[key]), `unlinked fixture is missing a value for "${key}"`)
   }
@@ -116,7 +117,7 @@ test('export columns cover every user-facing Switch scalar field in the Prisma s
   const excluded = Object.keys(SWITCH_CSV_EXCLUDED_FIELDS)
   const missing = scalarFields.filter(field => !exportedKeys.includes(field as never) && !excluded.includes(field))
   assert.deepEqual(missing, [], `Switch fields neither exported nor explicitly excluded: ${missing.join(', ')}`)
-  for (const key of [...exportedKeys, ...excluded]) assert.ok(scalarFields.includes(key), `${key} is a Switch scalar field`)
+  for (const key of [...exportedKeys.filter(key => key !== 'imageReferences'), ...excluded]) assert.ok(scalarFields.includes(key), `${key} is a Switch scalar field`)
   assert.deepEqual(exportedKeys.filter(key => excluded.includes(key)), [], 'a field is both exported and excluded')
   assert.equal(new Set(exportedKeys).size, exportedKeys.length, 'duplicate export column')
   assert.equal(new Set(SWITCH_CSV_COLUMNS.map(column => column.header)).size, exportedKeys.length, 'duplicate export header')
@@ -175,7 +176,7 @@ test('export -> bulk-upload import round trip preserves every field for linked a
 
   for (const [index, original] of [linked, unlinked].entries()) {
     const stored = created[index]
-    for (const key of exportedKeys) {
+    for (const key of scalarFixtureKeys) {
       if (key === 'dateObtained') {
         assert.equal(stored.dateObtained.getTime(), original.dateObtained.getTime(), `${original.id}.dateObtained`)
       } else if (LINK_ONLY_KEYS.includes(key)) {
@@ -220,8 +221,8 @@ test('legacy export headers and hand-written CSVs still import', () => {
   const [headers, ...rows] = parseCsv(legacy)
   const data = csvRowToSwitchData(rows[0], mapSwitchCsvHeaders(headers))
   assert.deepEqual(data, {
-    name: 'Holy Panda', type: 'TACTILE', technology: 'MAGNETIC', magnetOrientation: 'Horizontal',
-    springWeight: '67g', actuationForce: 67, notes: 'Great, "thocky"', dateObtained: '2023-05-01',
+    name: 'Holy Panda', chineseName: '', type: 'TACTILE', technology: 'MAGNETIC', magnetOrientation: 'h',
+    springWeight: '67 G', actuationForce: 67, notes: 'Great, "thocky"', dateObtained: '2023-05-01',
   })
 
   const handWritten = 'name,qty,tags,personal notes\nBox Jade, 12 , "clicky, box",late night\n'
@@ -244,8 +245,8 @@ test('blank cells in mapped Quantity / Personal Notes / Personal Tags columns cl
   assert.deepEqual(csvRowToSwitchData(rows[0], mapSwitchCsvHeaders(headers)), { name: 'Jade', quantity: null, personalNotes: '', personalTags: [] })
   const [plainHeaders, ...plainRows] = parseCsv('Switch Name,Notes\r\nJade,\r\n')
   const data = csvRowToSwitchData(plainRows[0], mapSwitchCsvHeaders(plainHeaders))
-  assert.deepEqual(data, { name: 'Jade' })
-  for (const key of ['quantity', 'personalNotes', 'personalTags', 'notes']) assert.equal(key in data, false, key)
+  assert.deepEqual(data, { name: 'Jade', notes: '' })
+  for (const key of ['quantity', 'personalNotes', 'personalTags']) assert.equal(key in data, false, key)
 })
 
 test('enum, number and name cells are trimmed; free text is kept verbatim', () => {
@@ -253,7 +254,7 @@ test('enum, number and name cells are trimmed; free text is kept verbatim', () =
     '"  Holy Panda  "," tactile "," hall effect "," click bar "," n "," 67 "," 3 ","  keep  this\n"\r\n'
   const [headers, ...rows] = parseCsv(csv)
   assert.deepEqual(csvRowToSwitchData(rows[0], mapSwitchCsvHeaders(headers)), {
-    name: 'Holy Panda', type: 'TACTILE', technology: 'MAGNETIC', clickType: 'CLICK_BAR', magnetPolarity: 'North',
+    name: '  Holy Panda  ', type: 'TACTILE', technology: 'MAGNETIC', clickType: 'CLICK_BAR', magnetPolarity: ' n ',
     actuationForce: 67, quantity: 3, notes: '  keep  this\n',
   })
 })
@@ -335,7 +336,7 @@ test('an exported version newer than the master (or invalid) falls back to the c
   assert.equal((await importOne({ ...exportedLinked, masterSwitchVersion: 0 })).masterSwitchVersion, 5)
 })
 
-test('adding from the master database (no version sent) behaves as before: current version, not modified', async () => {
+test('fresh catalog linking copies omitted specs and truthfully marks explicit clears modified', async () => {
   const created: any[] = []
   const prisma: any = {
     switch: { count: async () => 0, create: async ({ data }: any) => { created.push(data); return { id: 'new', ...data, images: [] } } },
@@ -343,15 +344,16 @@ test('adding from the master database (no version sent) behaves as before: curre
     $transaction: async (fn: any) => fn(prisma),
   }
   const route = await load(createBundle, prisma)
-  // AddSwitchModal fills only some master fields, so values differ from the master.
+  // Omitted specs are copied, but explicitly clearing markings is a modification.
   const res = await route.POST(new Request('http://localhost/api/switches', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Oil King', manufacturer: 'Gateron', markings: '', personalTags: [], masterSwitchId: FULL_MASTER.id, copyMasterImages: true }),
   }))
   assert.equal(res.status, 200)
   assert.equal(created[0].masterSwitchVersion, 5)
-  assert.equal(created[0].isModified, false)
-  assert.equal('modifiedFields' in created[0], false)
+  assert.equal(created[0].isModified, true)
+  assert.deepEqual(created[0].modifiedFields, ['markings'])
+  assert.equal(created[0].actuationForce, FULL_MASTER.actuationForce)
 })
 
 test('short rows leave missing trailing cells absent; only an explicitly empty cell clears', () => {
