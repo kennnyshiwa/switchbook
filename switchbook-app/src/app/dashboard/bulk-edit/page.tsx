@@ -7,6 +7,7 @@ import { validateManufacturers, ManufacturerValidationResult } from '@/utils/man
 import TagsInputWithAutocomplete from '@/components/TagsInputWithAutocomplete'
 import { getMaterials } from '@/utils/materials'
 import { getStemShapes } from '@/utils/stemShapes'
+import { parseQuantityInput } from '@/lib/validation'
 import {
   useReactTable,
   getCoreRowModel,
@@ -56,6 +57,7 @@ interface EditableSwitchData {
   frankenStem?: string
   dateObtained?: string
   personalTags?: string[]
+  quantity?: number
   manufacturerValid?: boolean
   manufacturerSuggestions?: string[]
 }
@@ -101,7 +103,8 @@ const EditableCell = memo(({
   submittedManufacturers,
   isCheckbox = false,
   isInvalid = false,
-  options = []
+  options = [],
+  integer = false
 }: {
   value: any
   field: keyof EditableSwitchData
@@ -118,8 +121,12 @@ const EditableCell = memo(({
   isCheckbox?: boolean
   isInvalid?: boolean
   options?: { value: string; label: string }[]
+  integer?: boolean
 }) => {
   const [localValue, setLocalValue] = useState(value)
+  // Integer cells (quantity): text that isn't a whole number >= 0 is flagged
+  // and never sent, so one bad cell can't fail the whole bulk save.
+  const [integerInvalid, setIntegerInvalid] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<{ id: string; name: string }[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -221,15 +228,39 @@ const EditableCell = memo(({
       ) : (
         <input
           type={type}
-          value={localValue || ''}
-          onChange={(e) => handleChange(type === 'number' ? parseFloat(e.target.value) || '' : e.target.value)}
+          value={localValue ?? ''}
+          onChange={(e) => {
+            if (type !== 'number') return handleChange(e.target.value)
+            if (integer) {
+              const parsed = parseQuantityInput(e.target.value)
+              if (!parsed.ok) {
+                setLocalValue(e.target.value)
+                setIntegerInvalid(true)
+                return
+              }
+              setIntegerInvalid(false)
+              return handleChange(parsed.value ?? '')
+            }
+            // Keep 0; blank or unparsable input clears the cell.
+            const parsed = parseFloat(e.target.value)
+            handleChange(Number.isNaN(parsed) ? '' : parsed)
+          }}
+          onBlur={integer ? () => {
+            // Drop invalid text and show the last valid value again.
+            if (integerInvalid) {
+              setLocalValue(value)
+              setIntegerInvalid(false)
+            }
+          } : undefined}
+          aria-invalid={integer ? integerInvalid : undefined}
+          title={integerInvalid ? 'Enter a whole number of 0 or more' : undefined}
           onKeyDown={field === 'manufacturer' ? handleKeyDown : undefined}
           placeholder={placeholder}
           min={min}
           max={max}
           step={step}
           className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 ${
-            isInvalid 
+            isInvalid || integerInvalid
               ? 'border-red-500 bg-red-50 dark:bg-red-900/20 focus:ring-red-500' 
               : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-blue-500'
           } text-gray-900 dark:text-gray-100`}
@@ -491,23 +522,23 @@ export default function BulkEditPage() {
           magnetOrientation: sw.magnetOrientation || undefined,
           magnetPosition: sw.magnetPosition || undefined,
           magnetPolarity: sw.magnetPolarity || undefined,
-          initialForce: sw.initialForce || undefined,
-          initialMagneticFlux: sw.initialMagneticFlux || undefined,
-          bottomOutMagneticFlux: sw.bottomOutMagneticFlux || undefined,
+          initialForce: sw.initialForce ?? undefined,
+          initialMagneticFlux: sw.initialMagneticFlux ?? undefined,
+          bottomOutMagneticFlux: sw.bottomOutMagneticFlux ?? undefined,
           pcbThickness: sw.pcbThickness || undefined,
           compatibility: sw.compatibility || undefined,
           manufacturer: sw.manufacturer || undefined,
           springWeight: sw.springWeight || undefined,
           springLength: sw.springLength || undefined,
-          actuationForce: sw.actuationForce || undefined,
-          tactileForce: sw.tactileForce || undefined,
-          tactilePosition: sw.tactilePosition || undefined,
-          bottomOutForce: sw.bottomOutForce || undefined,
+          actuationForce: sw.actuationForce ?? undefined,
+          tactileForce: sw.tactileForce ?? undefined,
+          tactilePosition: sw.tactilePosition ?? undefined,
+          bottomOutForce: sw.bottomOutForce ?? undefined,
           progressiveSpring: sw.progressiveSpring || undefined,
           doubleStage: sw.doubleStage || undefined,
           clickType: sw.clickType || undefined,
-          preTravel: sw.preTravel || undefined,
-          bottomOut: sw.bottomOut || undefined,
+          preTravel: sw.preTravel ?? undefined,
+          bottomOut: sw.bottomOut ?? undefined,
           notes: sw.notes || undefined,
           topHousing: sw.topHousing || undefined,
           bottomHousing: sw.bottomHousing || undefined,
@@ -522,6 +553,7 @@ export default function BulkEditPage() {
           frankenStem: sw.frankenStem || undefined,
           dateObtained: sw.dateObtained ? new Date(sw.dateObtained).toISOString().split('T')[0] : undefined,
           personalTags: sw.personalTags || undefined,
+          quantity: sw.quantity ?? undefined,
         }))
         setSwitches(editableData)
         // Store original data without validation fields
@@ -569,6 +601,7 @@ export default function BulkEditPage() {
           'compatibility',
           'notes',
           'dateObtained',
+          'quantity',
           'magnetOrientation',
           'magnetPosition',
           'magnetPolarity',
@@ -702,12 +735,15 @@ export default function BulkEditPage() {
         progressiveSpring = false,
         doubleStage = false,
         personalTags = [],
+        quantity,
         ...rest 
       }) => ({
         ...rest,
         progressiveSpring,
         doubleStage,
         personalTags,
+        // Send null (not an omitted key) so clearing the cell clears it.
+        quantity: quantity ?? null,
         dateObtained: dateObtained || ''
       }))
       
@@ -1245,6 +1281,24 @@ export default function BulkEditPage() {
             switchId={row.original.id}
             onUpdate={updateSwitch}
             type="date"
+          />
+        ),
+      },
+      {
+        id: 'quantity',
+        accessorKey: 'quantity',
+        header: 'Quantity',
+        size: 90,
+        cell: ({ row }) => (
+          <EditableCell
+            value={row.original.quantity}
+            field="quantity"
+            switchId={row.original.id}
+            onUpdate={updateSwitch}
+            type="number"
+            min={0}
+            step={1}
+            integer
           />
         ),
       },

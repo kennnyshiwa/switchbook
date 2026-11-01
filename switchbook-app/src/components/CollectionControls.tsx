@@ -45,6 +45,8 @@ export interface FilterOptions {
   initialForces: number[]
   initialMagneticFluxes: number[]
   bottomOutMagneticFluxes: number[]
+  /** Distinct quantities in the user's collection; empty hides the filter. */
+  quantities: number[]
   progressiveSprings: boolean[]
   doubleStages: boolean[]
 }
@@ -87,6 +89,8 @@ export interface ActiveFilters {
   initialMagneticFluxMax?: number
   bottomOutMagneticFluxMin?: number
   bottomOutMagneticFluxMax?: number
+  quantityMin?: number
+  quantityMax?: number
   hasForceCurves?: boolean
   hasSwitchScores?: boolean
   frankenStatus?: 'franken' | 'non-franken' | 'all'
@@ -153,7 +157,11 @@ export default function CollectionControls({
     onFiltersChange(emptyFilters)
   }
 
-  const activeFilterCount = Object.values(activeFilters).filter(Boolean).length
+  // Count 0 (e.g. "quantity max 0") and false (boolean filters) as active;
+  // only unset/empty values (and franken "all") are inactive.
+  const activeFilterCount = Object.entries(activeFilters).filter(([key, value]) =>
+    value !== undefined && value !== null && value !== '' && !(key === 'frankenStatus' && value === 'all')
+  ).length
 
   const handleNumericRangeChange = (field: string, type: 'min' | 'max', value: string) => {
     const numValue = value === '' ? undefined : parseFloat(value)
@@ -814,6 +822,34 @@ export default function CollectionControls({
                 />
               </div>
             </div>
+
+            {filterOptions.quantities.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Quantity
+                </label>
+                <div className="flex gap-1">
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="Min"
+                    value={activeFilters.quantityMin ?? ''}
+                    onChange={(e) => handleNumericRangeChange('quantity', 'min', e.target.value)}
+                    className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                  />
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="Max"
+                    value={activeFilters.quantityMax ?? ''}
+                    onChange={(e) => handleNumericRangeChange('quantity', 'max', e.target.value)}
+                    className="block w-full pl-3 pr-2 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

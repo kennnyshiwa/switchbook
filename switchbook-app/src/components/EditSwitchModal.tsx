@@ -65,19 +65,19 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       magnetOrientation: switchItem.magnetOrientation || '',
       magnetPosition: switchItem.magnetPosition || '',
       magnetPolarity: switchItem.magnetPolarity || '',
-      initialForce: switchItem.initialForce || undefined,
-      initialMagneticFlux: switchItem.initialMagneticFlux || undefined,
-      bottomOutMagneticFlux: switchItem.bottomOutMagneticFlux || undefined,
+      initialForce: switchItem.initialForce ?? undefined,
+      initialMagneticFlux: switchItem.initialMagneticFlux ?? undefined,
+      bottomOutMagneticFlux: switchItem.bottomOutMagneticFlux ?? undefined,
       pcbThickness: switchItem.pcbThickness || '',
       compatibility: switchItem.compatibility || '',
       manufacturer: switchItem.manufacturer || '',
-      actuationForce: switchItem.actuationForce || undefined,
-      tactileForce: switchItem.tactileForce || undefined,
-      bottomOutForce: switchItem.bottomOutForce || undefined,
+      actuationForce: switchItem.actuationForce ?? undefined,
+      tactileForce: switchItem.tactileForce ?? undefined,
+      bottomOutForce: switchItem.bottomOutForce ?? undefined,
       progressiveSpring: switchItem.progressiveSpring || false,
       doubleStage: switchItem.doubleStage || false,
-      preTravel: switchItem.preTravel || undefined,
-      bottomOut: switchItem.bottomOut || undefined,
+      preTravel: switchItem.preTravel ?? undefined,
+      bottomOut: switchItem.bottomOut ?? undefined,
       springWeight: switchItem.springWeight || '',
       springLength: switchItem.springLength || '',
       notes: switchItem.notes || '',
@@ -89,9 +89,10 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       frankenBottom: switchItem.frankenBottom || '',
       frankenStem: switchItem.frankenStem || '',
       clickType: switchItem.clickType || undefined,
-      tactilePosition: switchItem.tactilePosition || undefined,
+      tactilePosition: switchItem.tactilePosition ?? undefined,
       dateObtained: switchItem.dateObtained ? new Date(switchItem.dateObtained).toISOString().split('T')[0] : '',
       personalTags: switchItem.personalTags || [],
+      quantity: switchItem.quantity ?? undefined,
       topHousingColor: switchItem.topHousingColor || '',
       bottomHousingColor: switchItem.bottomHousingColor || '',
       stemColor: switchItem.stemColor || '',
@@ -153,24 +154,24 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
       setValue('magnetOrientation', syncedSwitch.magnetOrientation || '')
       setValue('magnetPosition', syncedSwitch.magnetPosition || '')
       setValue('magnetPolarity', syncedSwitch.magnetPolarity || '')
-      setValue('initialForce', syncedSwitch.initialForce || undefined)
-      setValue('initialMagneticFlux', syncedSwitch.initialMagneticFlux || undefined)
-      setValue('bottomOutMagneticFlux', syncedSwitch.bottomOutMagneticFlux || undefined)
+      setValue('initialForce', syncedSwitch.initialForce ?? undefined)
+      setValue('initialMagneticFlux', syncedSwitch.initialMagneticFlux ?? undefined)
+      setValue('bottomOutMagneticFlux', syncedSwitch.bottomOutMagneticFlux ?? undefined)
       setValue('pcbThickness', syncedSwitch.pcbThickness || '')
       setValue('compatibility', syncedSwitch.compatibility || '')
       setValue('manufacturer', syncedSwitch.manufacturer || '')
-      setValue('actuationForce', syncedSwitch.actuationForce || undefined)
-      setValue('tactileForce', syncedSwitch.tactileForce || undefined)
-      setValue('tactilePosition', syncedSwitch.tactilePosition || undefined)
-      setValue('bottomOutForce', syncedSwitch.bottomOutForce || undefined)
+      setValue('actuationForce', syncedSwitch.actuationForce ?? undefined)
+      setValue('tactileForce', syncedSwitch.tactileForce ?? undefined)
+      setValue('tactilePosition', syncedSwitch.tactilePosition ?? undefined)
+      setValue('bottomOutForce', syncedSwitch.bottomOutForce ?? undefined)
       setValue('progressiveSpring', syncedSwitch.progressiveSpring || false)
       setValue('doubleStage', syncedSwitch.doubleStage || false)
-      setValue('preTravel', syncedSwitch.preTravel || undefined)
-      setValue('bottomOut', syncedSwitch.bottomOut || undefined)
+      setValue('preTravel', syncedSwitch.preTravel ?? undefined)
+      setValue('bottomOut', syncedSwitch.bottomOut ?? undefined)
       setValue('springWeight', syncedSwitch.springWeight || '')
       setValue('springLength', syncedSwitch.springLength || '')
       setValue('notes', syncedSwitch.notes || '')
-      // Keep personalNotes and personalTags unchanged - they're user-specific
+      // Keep personalNotes, personalTags and quantity unchanged - they're user-specific
       setValue('topHousing', syncedSwitch.topHousing || '')
       setValue('bottomHousing', syncedSwitch.bottomHousing || '')
       setValue('stem', syncedSwitch.stem || '')
@@ -263,9 +264,9 @@ export default function EditSwitchModal({ switch: switchItem, onClose, onSwitchU
         })
         
         if (!moveNotesResponse.ok) {
-          const errorText = await moveNotesResponse.text()
-          // Failed to preserve personal notes
-          throw new Error('Failed to preserve personal notes')
+          // e.g. the merged personal notes would be too long; show why.
+          const errorBody = await moveNotesResponse.json().catch(() => null)
+          throw new Error(errorBody?.error || 'Failed to preserve personal notes')
         }
         
         // Update the form to reflect this change

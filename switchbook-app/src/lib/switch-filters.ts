@@ -7,7 +7,7 @@ export type FilterableSwitch = Partial<Record<
   | 'magnetPolarity' | 'pcbThickness' | 'compatibility', string | null
 >> & Partial<Record<
   | 'actuationForce' | 'tactileForce' | 'bottomOutForce' | 'preTravel' | 'bottomOut'
-  | 'initialForce' | 'initialMagneticFlux' | 'bottomOutMagneticFlux', number | null
+  | 'initialForce' | 'initialMagneticFlux' | 'bottomOutMagneticFlux' | 'quantity', number | null
 >> & {
   progressiveSpring?: boolean | null
   doubleStage?: boolean | null
@@ -27,6 +27,7 @@ const numericFields = {
   actuationForce: 'actuationForces', tactileForce: 'tactileForces', bottomOutForce: 'bottomOutForces',
   preTravel: 'preTravels', bottomOut: 'bottomOuts', initialForce: 'initialForces',
   initialMagneticFlux: 'initialMagneticFluxes', bottomOutMagneticFlux: 'bottomOutMagneticFluxes',
+  quantity: 'quantities',
 } as const
 
 export const normalizeFilterValue = (value: unknown): string =>

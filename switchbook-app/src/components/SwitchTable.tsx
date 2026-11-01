@@ -203,6 +203,9 @@ function SwitchTable({ switches, onDelete, onEdit, showForceCurves, forceCurveCa
                       )}
                     </div>
                   )}
+                  {switchItem.quantity !== null && switchItem.quantity !== undefined && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400" data-testid="switch-quantity">Qty: {switchItem.quantity}</div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {switchItem.type ? (

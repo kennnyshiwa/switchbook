@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { switchSchema } from "@/lib/validation"
+import { switchSchema, SWITCH_NOTES_MAX, SWITCH_PERSONAL_NOTES_MAX } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
+import { computeMasterModifiedFields, MASTER_TRACKED_SELECT } from "@/lib/master-switch-modifications"
 import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
 import { withSmartRateLimit } from "@/lib/with-rate-limit"
 
@@ -63,7 +64,8 @@ async function createSwitchHandler(request: NextRequest) {
           status: true,
           version: true,
           imageUrl: true,
-          images: { orderBy: { order: 'asc' } }
+          images: { orderBy: { order: 'asc' } },
+          ...MASTER_TRACKED_SELECT
         }
       })
 
@@ -73,6 +75,21 @@ async function createSwitchHandler(request: NextRequest) {
           { status: 400 }
         )
       }
+
+      // Re-linking an exported switch (CSV import) carries the master version
+      // it was last synced to. Keep it when it is a plausible earlier version so
+      // "updates available" still works, and record which fields the user had
+      // customised. Ordinary adds from the master database (AddSwitchModal)
+      // don't send a version: they link at the current version, unmodified,
+      // exactly as before (that form doesn't copy every master field, so
+      // diffing it would wrongly flag fresh adds as modified).
+      const requestedVersion = body.masterSwitchVersion
+      const isRelink = requestedVersion !== undefined && requestedVersion !== null && requestedVersion !== ''
+      const parsedVersion = Number(requestedVersion)
+      const masterSwitchVersion = isRelink && Number.isInteger(parsedVersion) && parsedVersion >= 1 && parsedVersion <= masterSwitch.version
+        ? parsedVersion
+        : masterSwitch.version
+      const modifiedFields = isRelink ? computeMasterModifiedFields(transformedData, masterSwitch) : []
 
       // Copy image records, not their master IDs or ownership. Keep the same
       // gallery-first / legacy URL fallback as the dedicated collection route.
@@ -99,8 +116,9 @@ async function createSwitchHandler(request: NextRequest) {
             ...transformedData,
             userId,
             masterSwitchId,
-            masterSwitchVersion: masterSwitch.version,
-            isModified: false,
+            masterSwitchVersion,
+            isModified: modifiedFields.length > 0,
+            ...(isRelink ? { modifiedFields } : {}),
             images: { create: images }
           },
           include: { images: { orderBy: { order: 'asc' } } }
@@ -147,10 +165,10 @@ async function createSwitchHandler(request: NextRequest) {
             message = 'Manufacturer field cannot exceed 100 characters'
             break
           case 'notes':
-            message = 'Notes cannot exceed 500 characters'
+            message = `Notes cannot exceed ${SWITCH_NOTES_MAX} characters`
             break
           case 'personalNotes':
-            message = 'Personal notes cannot exceed 500 characters'
+            message = `Personal notes cannot exceed ${SWITCH_PERSONAL_NOTES_MAX} characters`
             break
           case 'markings':
             message = 'Markings cannot exceed 500 characters'

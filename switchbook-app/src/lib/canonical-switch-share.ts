@@ -113,6 +113,7 @@ export function serializeCanonicalSwitchShare(sourceKind: ShareSourceKind, recor
     ? [
         ['dateObtained', 'Date Obtained', record.dateObtained ? new Date(String(record.dateObtained)).toLocaleDateString('en-US', { timeZone: 'UTC' }) : null],
         ['personalTags', 'Personal Tags', Array.isArray(record.personalTags) && record.personalTags.length ? record.personalTags.join(', ') : null],
+        ['quantity', 'Quantity', typeof record.quantity === 'number' && Number.isFinite(record.quantity) ? String(record.quantity) : null],
         ['isModified', 'Modified', Object.prototype.hasOwnProperty.call(record, 'isModified') && typeof record.isModified === 'boolean' ? display(record.isModified) : null],
       ].filter((entry): entry is [string, string, string] => Boolean(entry[2])).map(([key, label, value]) => ({ key, label, value }))
     : []

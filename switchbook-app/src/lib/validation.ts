@@ -16,6 +16,49 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 })
 
+export const QUANTITY_MAX = 1_000_000
+
+// Length caps for a switch's notes. Personal notes get more room because
+// linking to a master merges the old notes into them ("Previous notes: ...").
+export const SWITCH_NOTES_MAX = 2000
+export const SWITCH_PERSONAL_NOTES_MAX = 5000
+
+export const PERSONAL_NOTES_TOO_LONG_ERROR =
+  `Personal notes would exceed ${SWITCH_PERSONAL_NOTES_MAX} characters after merging in this switch's notes. ` +
+  'Please shorten your notes or personal notes and try again.'
+
+/**
+ * Parse a user-typed quantity. Blank clears it (null); whole numbers from 0 to
+ * QUANTITY_MAX are accepted, including forms like "1.0"; anything else
+ * (negative, fractional, "1,000", text) is rejected.
+ */
+export function parseQuantityInput(raw: string): { ok: true; value: number | null } | { ok: false } {
+  const trimmed = raw.trim()
+  if (trimmed === '') return { ok: true, value: null }
+  if (!/^\+?\d+(\.0+)?$/.test(trimmed)) return { ok: false }
+  const value = Number(trimmed)
+  return value <= QUANTITY_MAX ? { ok: true, value } : { ok: false }
+}
+
+// How many of this switch the user owns. Optional and nullable: blank form
+// input (NaN from valueAsNumber, or an empty string) clears it to null, and a
+// numeric string from CSV/JSON clients is accepted as a number.
+export const quantitySchema = z.preprocess(value => {
+  if (value === null || value === undefined) return value
+  if (typeof value === 'number') return Number.isNaN(value) ? null : value
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed === '') return null
+    return /^[+-]?\d+(\.\d+)?$/.test(trimmed) ? Number(trimmed) : value
+  }
+  return value
+}, z.number({ invalid_type_error: 'Quantity must be a whole number' })
+  .int('Quantity must be a whole number')
+  .min(0, 'Quantity cannot be negative')
+  .max(QUANTITY_MAX, 'Quantity is too large')
+  .nullable()
+  .optional())
+
 export const switchSchema = z.object({
   name: z.string().min(1, "Switch name is required").max(100),
   chineseName: z.string().max(100).optional().or(z.literal("")),
@@ -39,8 +82,8 @@ export const switchSchema = z.object({
   doubleStage: z.boolean().optional(),
   preTravel: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   bottomOut: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
-  notes: z.string().max(500).optional(),
-  personalNotes: z.string().max(500).optional(),
+  notes: z.string().max(SWITCH_NOTES_MAX).optional(),
+  personalNotes: z.string().max(SWITCH_PERSONAL_NOTES_MAX).optional(),
   topHousing: z.string().max(100).optional().or(z.literal("")),
   bottomHousing: z.string().max(100).optional().or(z.literal("")),
   stem: z.string().max(100).optional().or(z.literal("")),
@@ -50,7 +93,9 @@ export const switchSchema = z.object({
   clickType: z.enum(["CLICK_LEAF", "CLICK_BAR", "CLICK_JACKET"]).optional().or(z.literal("")),
   tactilePosition: z.number().min(0).max(10).optional().or(z.nan().transform(() => undefined)),
   dateObtained: z.string().optional().or(z.literal("")),
-  personalTags: z.array(z.string().max(50)).optional().default([]),
+  // Absent means "leave unchanged" on update; creates get the column default [].
+  personalTags: z.array(z.string().max(50)).optional(),
+  quantity: quantitySchema,
   topHousingColor: z.string().max(50).optional().or(z.literal("")),
   bottomHousingColor: z.string().max(50).optional().or(z.literal("")),
   stemColor: z.string().max(50).optional().or(z.literal("")),

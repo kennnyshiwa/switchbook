@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { PERSONAL_NOTES_TOO_LONG_ERROR, SWITCH_NOTES_MAX, SWITCH_PERSONAL_NOTES_MAX } from '@/lib/validation'
 
+// Same limits as switchSchema so the switch stays editable afterwards.
+// EditSwitchModal merges notes into personal notes here before linking; an
+// over-long merge is rejected (no write) instead of being truncated.
 const updateNotesSchema = z.object({
-  notes: z.string(),
-  personalNotes: z.string()
+  notes: z.string().max(SWITCH_NOTES_MAX, `Notes cannot exceed ${SWITCH_NOTES_MAX} characters`),
+  personalNotes: z.string().max(SWITCH_PERSONAL_NOTES_MAX, PERSONAL_NOTES_TOO_LONG_ERROR)
 })
 
 export async function PATCH(
@@ -52,7 +56,7 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
+        { error: error.errors[0]?.message || 'Invalid request data', details: error.errors },
         { status: 400 }
       )
     }

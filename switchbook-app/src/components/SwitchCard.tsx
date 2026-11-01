@@ -209,6 +209,12 @@ function SwitchCard({ switch: switchItem, onDelete, onEdit, showForceCurves, for
             <span className="font-medium">Manufacturer:</span> {switchItem.manufacturer || 'Unknown'}
           </p>
 
+          {switchItem.quantity !== null && switchItem.quantity !== undefined && (
+            <p className="text-sm text-gray-600 dark:text-gray-300" data-testid="switch-quantity">
+              <span className="font-medium">Quantity:</span> {switchItem.quantity}
+            </p>
+          )}
+
 
           {switchItem.compatibility && (
             <p className="text-sm text-gray-600 dark:text-gray-300">

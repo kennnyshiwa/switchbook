@@ -7,49 +7,25 @@ import { useRouter } from 'next/navigation'
 import { validateManufacturers, ManufacturerValidationResult } from '@/utils/manufacturerValidation'
 import { getMaterials } from '@/utils/materials'
 import { getStemShapes } from '@/utils/stemShapes'
+import {
+  SWITCH_CSV_COLUMNS,
+  SwitchCsvData,
+  SwitchCsvField,
+  QUANTITY_ERROR,
+  cleanSpringValue,
+  mapSwitchCsvHeaders,
+  parseSwitchCsvRow,
+  parseCsv,
+  switchesToCsv,
+} from '@/lib/switchCsv'
+import { parseQuantityInput } from '@/lib/validation'
 
-interface ParsedSwitch {
-  name: string
-  chineseName?: string
-  type?: string
-  technology?: string
-  magnetOrientation?: string
-  magnetPosition?: string
-  magnetPolarity?: string
-  initialForce?: number
-  initialMagneticFlux?: number
-  bottomOutMagneticFlux?: number
-  pcbThickness?: string
-  compatibility?: string
-  manufacturer?: string
-  springWeight?: string
-  springLength?: string
-  actuationForce?: number
-  tactileForce?: number
-  tactilePosition?: number
-  bottomOutForce?: number
-  progressiveSpring?: boolean
-  doubleStage?: boolean
-  clickType?: string
-  preTravel?: number
-  bottomOut?: number
-  notes?: string
-  topHousing?: string
-  bottomHousing?: string
-  stem?: string
-  topHousingColor?: string
-  bottomHousingColor?: string
-  stemColor?: string
-  stemShape?: string
-  markings?: string
-  frankenTop?: string
-  frankenBottom?: string
-  frankenStem?: string
-  dateObtained?: string
-}
+// Field set and value encoding are shared with the CSV export
+// (src/lib/switchCsv.ts) so exported collections re-import losslessly.
+type ParsedSwitch = SwitchCsvData & { name: string }
 
 interface ColumnMapping {
-  [key: string]: keyof ParsedSwitch | null
+  [key: string]: SwitchCsvField | null
 }
 
 type ImportStep = 'upload' | 'mapping' | 'preview' | 'importing' | 'complete'
@@ -60,7 +36,13 @@ interface ParsedSwitchWithDuplicate extends ParsedSwitch {
   overwrite?: boolean
   manufacturerValid?: boolean
   manufacturerSuggestions?: string[]
+  /** Per-field problems (e.g. an invalid Quantity) that block importing the row. */
+  fieldErrors?: Partial<Record<SwitchCsvField, string>>
+  /** Raw Quantity text while it is invalid, so the user can see and fix it. */
+  quantityInput?: string
 }
+
+const hasFieldErrors = (sw: ParsedSwitchWithDuplicate) => Object.keys(sw.fieldErrors ?? {}).length > 0
 
 // Shared manufacturer cache
 let manufacturerCache: { id: string; name: string }[] = []
@@ -255,9 +237,14 @@ const SwitchTableRow = memo(({
   return (
     <tr 
       ref={invalidRowRef}
-      className={`${switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''} ${switchItem.manufacturer && !switchItem.manufacturerValid && !isManufacturerSubmitted ? 'bg-red-50 dark:bg-red-900/20' : ''}`}
+      className={`${switchItem.isDuplicate ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''} ${(switchItem.manufacturer && !switchItem.manufacturerValid && !isManufacturerSubmitted) || hasFieldErrors(switchItem) ? 'bg-red-50 dark:bg-red-900/20' : ''}`}
     >
       <td className="px-3 py-4 whitespace-nowrap">
+        {hasFieldErrors(switchItem) && (
+          <div className="mb-1 max-w-[220px] whitespace-normal text-xs text-red-600 dark:text-red-400" role="alert">
+            {Object.values(switchItem.fieldErrors ?? {}).map(message => <div key={message}>{message}</div>)}
+          </div>
+        )}
         {switchItem.isDuplicate ? (
           <div className="flex flex-col space-y-1">
             <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
@@ -729,6 +716,51 @@ const SwitchTableRow = memo(({
           rows={2}
         />
       </td>
+      <td className="px-3 py-4">
+        <textarea
+          value={localValues.personalNotes || ''}
+          onChange={(e) => handleChange('personalNotes', e.target.value)}
+          className="block w-full min-w-[120px] text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white px-3 py-2"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+          rows={2}
+        />
+      </td>
+      <td className="px-3 py-4">
+        <div className="flex flex-wrap gap-1 min-w-[120px]">
+          {(localValues.personalTags || []).map((tag, tagIndex) => (
+            <span
+              key={tagIndex}
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-3 py-4 whitespace-nowrap">
+        <input
+          type="number"
+          value={localValues.quantityInput ?? localValues.quantity ?? ''}
+          onChange={(e) => {
+            // Validated (whole number >= 0) by the parent; invalid text is kept
+            // visible and flagged instead of being rounded or dropped.
+            const raw = e.target.value
+            setLocalValues(prev => ({ ...prev, quantityInput: raw }))
+            const existingTimeout = timeoutRefs.current.get('quantity')
+            if (existingTimeout) clearTimeout(existingTimeout)
+            timeoutRefs.current.set('quantity', setTimeout(() => {
+              onUpdate(index, 'quantity', raw)
+              timeoutRefs.current.delete('quantity')
+            }, 300))
+          }}
+          aria-invalid={Boolean(switchItem.fieldErrors?.quantity)}
+          title={switchItem.fieldErrors?.quantity}
+          className={`block w-full min-w-[80px] text-sm rounded-md dark:bg-gray-700 dark:text-white px-3 py-2 ${switchItem.fieldErrors?.quantity ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
+          min="0"
+          step="1"
+          disabled={switchItem.isDuplicate && !switchItem.overwrite}
+        />
+      </td>
       <td className="px-3 py-4 whitespace-nowrap">
         <input
           type="date"
@@ -796,45 +828,11 @@ export default function BulkUploadPage() {
     }
   }, [currentStep])
 
-  const switchFields = [
-    { key: 'name', label: 'Switch Name', required: true },
-    { key: 'chineseName', label: 'Chinese Name', required: false },
-    { key: 'type', label: 'Type', required: false },
-    { key: 'technology', label: 'Technology', required: false },
-    { key: 'magnetOrientation', label: 'Magnetic Pole Orientation', required: false },
-    { key: 'magnetPosition', label: 'Magnet Position', required: false },
-    { key: 'magnetPolarity', label: 'Magnet Polarity', required: false },
-    { key: 'initialForce', label: 'Initial Force (g)', required: false },
-    { key: 'initialMagneticFlux', label: 'Initial Magnetic Flux (Gs)', required: false },
-    { key: 'bottomOutMagneticFlux', label: 'Bottom Out Magnetic Flux (Gs)', required: false },
-    { key: 'pcbThickness', label: 'PCB Thickness', required: false },
-    { key: 'compatibility', label: 'Compatibility', required: false },
-    { key: 'manufacturer', label: 'Manufacturer', required: false },
-    { key: 'springWeight', label: 'Spring Weight', required: false },
-    { key: 'springLength', label: 'Spring Length', required: false },
-    { key: 'actuationForce', label: 'Actuation Force (g)', required: false },
-    { key: 'tactileForce', label: 'Tactile Force (g)', required: false },
-    { key: 'tactilePosition', label: 'Tactile Position (mm)', required: false },
-    { key: 'bottomOutForce', label: 'Bottom Out Force (g)', required: false },
-    { key: 'progressiveSpring', label: 'Progressive Spring', required: false },
-    { key: 'doubleStage', label: 'Double Stage', required: false },
-    { key: 'clickType', label: 'Click Type', required: false },
-    { key: 'preTravel', label: 'Pre-travel (mm)', required: false },
-    { key: 'bottomOut', label: 'Bottom Out (mm)', required: false },
-    { key: 'topHousing', label: 'Top Housing', required: false },
-    { key: 'bottomHousing', label: 'Bottom Housing', required: false },
-    { key: 'stem', label: 'Stem', required: false },
-    { key: 'topHousingColor', label: 'Top Housing Color', required: false },
-    { key: 'bottomHousingColor', label: 'Bottom Housing Color', required: false },
-    { key: 'stemColor', label: 'Stem Color', required: false },
-    { key: 'stemShape', label: 'Stem Shape', required: false },
-    { key: 'markings', label: 'Markings', required: false },
-    { key: 'frankenTop', label: 'Franken Top', required: false },
-    { key: 'frankenBottom', label: 'Franken Bottom', required: false },
-    { key: 'frankenStem', label: 'Franken Stem', required: false },
-    { key: 'notes', label: 'Notes', required: false },
-    { key: 'dateObtained', label: 'Date Obtained', required: false },
-  ]
+  const switchFields = SWITCH_CSV_COLUMNS.map(column => ({
+    key: column.key,
+    label: column.header,
+    required: Boolean(column.required),
+  }))
 
   // Fetch existing switches on component mount
   useEffect(() => {
@@ -853,49 +851,34 @@ export default function BulkUploadPage() {
   }, [])
 
   const downloadTemplate = () => {
-    const templateHeaders = switchFields.map(field => field.label)
-    const sampleData = [
-      'Cherry MX Red', // Switch Name
-      '樱桃红轴', // Chinese Name
-      'LINEAR', // Type
-      'MECHANICAL', // Technology
-      '', // Magnetic Pole Orientation
-      '', // Magnet Position
-      '', // Magnet Polarity
-      '', // Initial Force (g)
-      '', // Initial Magnetic Flux (Gs)
-      '', // Bottom Out Magnetic Flux (Gs)
-      '', // PCB Thickness
-      'MX-style', // Compatibility
-      'Cherry', // Manufacturer
-      '45g', // Spring Weight
-      '11.5mm', // Spring Length
-      '45', // Actuation Force (g)
-      '', // Tactile Force (g)
-      '60', // Bottom Out Force (g)
-      'false', // Progressive Spring
-      'false', // Double Stage
-      '', // Click Type
-      '2.0', // Pre-travel (mm)
-      '4.0', // Bottom Out (mm)
-      'Nylon', // Top Housing
-      'Nylon', // Bottom Housing
-      'POM', // Stem
-      'Black', // Top Housing Color
-      'Black', // Bottom Housing Color
-      'Red', // Stem Color
-      'MX', // Stem Shape
-      '', // Markings
-      '', // Franken Top
-      '', // Franken Bottom
-      '', // Franken Stem
-      'Great for gaming', // Notes
-      '2024-01-15' // Date Obtained
-    ]
-    
-    const csvContent = [templateHeaders, sampleData].map(row => 
-      row.map(cell => `"${cell}"`).join(',')
-    ).join('\n')
+    const csvContent = switchesToCsv([{
+      name: 'Cherry MX Red',
+      chineseName: '樱桃红轴',
+      type: 'LINEAR',
+      technology: 'MECHANICAL',
+      compatibility: 'MX-style',
+      manufacturer: 'Cherry',
+      springWeight: '45g',
+      springLength: '11.5mm',
+      actuationForce: 45,
+      bottomOutForce: 60,
+      progressiveSpring: false,
+      doubleStage: false,
+      preTravel: 2.0,
+      bottomOut: 4.0,
+      topHousing: 'Nylon',
+      bottomHousing: 'Nylon',
+      stem: 'POM',
+      topHousingColor: 'Black',
+      bottomHousingColor: 'Black',
+      stemColor: 'Red',
+      stemShape: 'MX',
+      notes: 'Great for gaming',
+      personalNotes: 'Lubed with 205g0',
+      personalTags: ['gaming', 'linear'],
+      quantity: 90,
+      dateObtained: '2024-01-15',
+    }])
     
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -913,59 +896,15 @@ export default function BulkUploadPage() {
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
-      const lines = text.split('\n').filter(line => line.trim())
-      const data = lines.map(line => {
-        const cells = []
-        let current = ''
-        let inQuotes = false
-        
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i]
-          if (char === '"') {
-            inQuotes = !inQuotes
-          } else if (char === ',' && !inQuotes) {
-            cells.push(current.trim())
-            current = ''
-          } else {
-            current += char
-          }
-        }
-        cells.push(current.trim())
-        return cells
-      })
+      // RFC 4180 parse: quoted fields may contain commas, quotes and newlines.
+      const data = parseCsv(text)
       
       if (data.length > 0) {
         setHeaders(data[0])
         setCsvData(data.slice(1))
         
         // Auto-map columns based on header names
-        const autoMapping: ColumnMapping = {}
-        data[0].forEach((header, index) => {
-          const normalizedHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '')
-          
-          // Try exact matches first
-          let matchedField = switchFields.find(field => {
-            const normalizedLabel = field.label.toLowerCase().replace(/[^a-z0-9]/g, '')
-            const normalizedKey = field.key.toLowerCase()
-            return normalizedLabel === normalizedHeader || normalizedKey === normalizedHeader
-          })
-          
-          // If no exact match, try partial matches but be more specific
-          if (!matchedField) {
-            matchedField = switchFields.find(field => {
-              const normalizedLabel = field.label.toLowerCase().replace(/[^a-z0-9]/g, '')
-              const normalizedKey = field.key.toLowerCase()
-              
-              // Check if the header contains the full field key or label
-              return (normalizedHeader.includes(normalizedKey) && normalizedKey.length > 3) ||
-                     (normalizedLabel.includes(normalizedHeader) && normalizedHeader.length > 3)
-            })
-          }
-          
-          if (matchedField) {
-            autoMapping[index.toString()] = matchedField.key as keyof ParsedSwitch
-          }
-        })
+        const autoMapping: ColumnMapping = mapSwitchCsvHeaders(data[0])
         setColumnMapping(autoMapping)
         setCurrentStep('mapping')
       }
@@ -980,128 +919,18 @@ export default function BulkUploadPage() {
     }))
   }
 
-  // Helper function to clean up values with duplicate units
-  const cleanUnitValue = (value: string): string => {
-    // Remove quotes first
-    const cleanValue = value.replace(/^"|"$/g, '').trim()
-    
-    // Extract numeric part and unit
-    const match = cleanValue.match(/^(\d+\.?\d*)\s*([a-zA-Z]+)?/)
-    if (!match) return cleanValue
-    
-    const [, number, unit] = match
-    if (!unit) return cleanValue
-    
-    // Return number with single unit
-    return `${number}${unit.toLowerCase()}`
-  }
-
   const parseAndPreview = async () => {
     setIsValidating(true)
     
+    const quantityColumn = Object.entries(columnMapping).find(([, field]) => field === 'quantity')?.[0]
     const parsed: ParsedSwitchWithDuplicate[] = csvData.map(row => {
-      const switchData: Partial<ParsedSwitchWithDuplicate> = {}
-      
-      Object.entries(columnMapping).forEach(([columnIndex, field]) => {
-        if (field && row[parseInt(columnIndex)]) {
-          const value = row[parseInt(columnIndex)].replace(/^"|"$/g, '') // Remove quotes
-          
-          if (['actuationForce', 'tactileForce', 'tactilePosition', 'bottomOutForce', 'preTravel', 'bottomOut', 'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux'].includes(field)) {
-            const numValue = parseFloat(value)
-            if (!isNaN(numValue)) {
-              (switchData as any)[field] = numValue
-            }
-          } else if (['progressiveSpring', 'doubleStage'].includes(field)) {
-            // Handle boolean fields
-            const lowerValue = value.toLowerCase().trim()
-            ;(switchData as any)[field] = lowerValue === 'true' || lowerValue === 'yes' || lowerValue === '1' || lowerValue === 'y'
-          } else if (field === 'type') {
-            // Normalize switch type to uppercase and handle variations
-            const normalizedType = value.toUpperCase().replace(/[\s_-]/g, '_')
-            // Map common variations to valid enum values
-            const typeMapping = {
-              'LINEAR': 'LINEAR',
-              'TACTILE': 'TACTILE',
-              'CLICKY': 'CLICKY',
-              'SILENT_LINEAR': 'SILENT_LINEAR',
-              'SILENT_TACTILE': 'SILENT_TACTILE',
-              'MOUSE': 'MOUSE',
-              'SILENTLINEAR': 'SILENT_LINEAR',
-              'SILENTTACTILE': 'SILENT_TACTILE',
-            } as const
-            (switchData as any)[field] = typeMapping[normalizedType as keyof typeof typeMapping] || normalizedType
-          } else if (field === 'technology') {
-            // Normalize technology to uppercase and handle variations
-            const normalizedTech = value.toUpperCase().replace(/[\s_-]/g, '_')
-            const techMapping = {
-              'MECHANICAL': 'MECHANICAL',
-              'OPTICAL': 'OPTICAL',
-              'MAGNETIC': 'MAGNETIC',
-              'INDUCTIVE': 'INDUCTIVE',
-              'ELECTRO_CAPACITIVE': 'ELECTRO_CAPACITIVE',
-              'ELECTROCAPACITIVE': 'ELECTRO_CAPACITIVE',
-              'HALL_EFFECT': 'MAGNETIC', // Common alternative name
-              'HALLEFFECT': 'MAGNETIC',
-            } as const
-            (switchData as any)[field] = techMapping[normalizedTech as keyof typeof techMapping] || normalizedTech
-          } else if (field === 'magnetOrientation') {
-            // Normalize magnetic orientation to proper case
-            const normalizedOrientation = value.trim().toLowerCase()
-            if (normalizedOrientation === 'horizontal' || normalizedOrientation === 'h') {
-              (switchData as any)[field] = 'Horizontal'
-            } else if (normalizedOrientation === 'vertical' || normalizedOrientation === 'v') {
-              (switchData as any)[field] = 'Vertical'
-            } else if (value.trim()) {
-              // If not empty but not recognized, keep original value
-              (switchData as any)[field] = value
-            }
-          } else if (field === 'magnetPosition') {
-            // Normalize magnet position to proper case
-            const normalizedPosition = value.trim().toLowerCase()
-            if (normalizedPosition === 'center' || normalizedPosition === 'c') {
-              (switchData as any)[field] = 'Center'
-            } else if (normalizedPosition === 'off-center' || normalizedPosition === 'offcenter' || normalizedPosition === 'off center' || normalizedPosition === 'oc') {
-              (switchData as any)[field] = 'Off-Center'
-            } else if (value.trim()) {
-              // If not empty but not recognized, keep original value
-              (switchData as any)[field] = value
-            }
-          } else if (field === 'magnetPolarity') {
-            // Normalize magnet polarity to proper case
-            const normalizedPolarity = value.trim().toLowerCase()
-            if (normalizedPolarity === 'north' || normalizedPolarity === 'n') {
-              (switchData as any)[field] = 'North'
-            } else if (normalizedPolarity === 'south' || normalizedPolarity === 's') {
-              (switchData as any)[field] = 'South'
-            } else if (value.trim()) {
-              // If not empty but not recognized, keep original value
-              (switchData as any)[field] = value
-            }
-          } else if (field === 'clickType') {
-            // Normalize click type to uppercase
-            const normalizedClickType = value.toUpperCase().replace(/[\s-]/g, '_')
-            const clickTypeMapping = {
-              'CLICK_LEAF': 'CLICK_LEAF',
-              'CLICKLEAF': 'CLICK_LEAF',
-              'LEAF': 'CLICK_LEAF',
-              'CLICK_BAR': 'CLICK_BAR',
-              'CLICKBAR': 'CLICK_BAR',
-              'BAR': 'CLICK_BAR',
-              'CLICK_JACKET': 'CLICK_JACKET',
-              'CLICKJACKET': 'CLICK_JACKET',
-              'JACKET': 'CLICK_JACKET',
-            } as const
-            (switchData as any)[field] = clickTypeMapping[normalizedClickType as keyof typeof clickTypeMapping] || normalizedClickType
-          } else if (field === 'springWeight' || field === 'springLength') {
-            // Clean up spring weight and length values to avoid duplicate units
-            (switchData as any)[field] = cleanUnitValue(value)
-          } else {
-            (switchData as any)[field] = value
-          }
-        }
-      })
-      
-      return switchData as ParsedSwitchWithDuplicate
+      const { data, errors } = parseSwitchCsvRow(row, columnMapping)
+      const parsedRow = data as ParsedSwitchWithDuplicate
+      if (Object.keys(errors).length > 0) {
+        parsedRow.fieldErrors = errors
+        if (errors.quantity && quantityColumn !== undefined) parsedRow.quantityInput = (row[Number(quantityColumn)] ?? '').trim()
+      }
+      return parsedRow
     }).filter(sw => sw.name) // Only include switches with required fields (just name now)
     
     // Get all manufacturers for validation
@@ -1161,13 +990,27 @@ export default function BulkUploadPage() {
     }, 100)
   }
 
-  const updateParsedSwitch = useCallback(async (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | undefined) => {
+  const updateParsedSwitch = useCallback(async (index: number, field: keyof ParsedSwitchWithDuplicate, value: string | number | boolean | string[] | undefined) => {
     // Clean up spring weight and length values when editing
     let cleanedValue = value
     if ((field === 'springWeight' || field === 'springLength') && typeof value === 'string') {
-      cleanedValue = cleanUnitValue(value)
+      cleanedValue = cleanSpringValue(value)
     }
     
+    // Quantity arrives as the raw input text: accept whole numbers >= 0 (blank
+    // clears to null) and flag anything else on the row instead of guessing.
+    if (field === 'quantity' && typeof value === 'string') {
+      const quantity = parseQuantityInput(value)
+      setParsedSwitches(prev => prev.map((sw, i) => {
+        if (i !== index) return sw
+        const { quantity: _previousError, ...otherErrors } = sw.fieldErrors ?? {}
+        return quantity.ok
+          ? { ...sw, quantity: quantity.value, quantityInput: undefined, fieldErrors: otherErrors }
+          : { ...sw, quantity: undefined, quantityInput: value, fieldErrors: { ...otherErrors, quantity: `${QUANTITY_ERROR} (got "${value.trim()}")` } }
+      }))
+      return
+    }
+
     // If manufacturer field is being updated, validate it
     if (field === 'manufacturer' && typeof cleanedValue === 'string') {
       const validationResults = await validateManufacturers([cleanedValue])
@@ -1217,6 +1060,12 @@ export default function BulkUploadPage() {
       return
     }
     
+    const rowsWithErrors = parsedSwitches.filter(sw => hasFieldErrors(sw) && !(sw.isDuplicate && !sw.overwrite))
+    if (rowsWithErrors.length > 0) {
+      alert(`Cannot import: ${rowsWithErrors.length} switches have invalid values (highlighted in red). Please fix or remove them.`)
+      return
+    }
+    
     setCurrentStep('importing')
     setImportProgress(0)
     
@@ -1237,7 +1086,7 @@ export default function BulkUploadPage() {
         
         if (switchItem.isDuplicate && switchItem.overwrite && switchItem.existingId) {
           // Update existing switch
-          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, ...switchData } = switchItem
+          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, fieldErrors, quantityInput, ...switchData } = switchItem
           response = await fetch(`/api/switches/${switchItem.existingId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -1245,13 +1094,25 @@ export default function BulkUploadPage() {
           })
         } else {
           // Create new switch
-          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, ...switchData } = switchItem
-          console.log('Creating switch with data:', switchData)
+          const { isDuplicate, existingId, overwrite, manufacturerValid, manufacturerSuggestions, fieldErrors, quantityInput, ...switchData } = switchItem
           response = await fetch('/api/switches', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(switchData)
           })
+          // An exported Master Switch ID may no longer be valid (removed or
+          // unapproved master). Keep the row's data rather than failing it.
+          if (!response.ok && response.status === 400 && switchData.masterSwitchId) {
+            const errorBody = await response.clone().json().catch(() => null)
+            if (errorBody?.error === 'Invalid master switch') {
+              const { masterSwitchId, masterSwitchVersion, ...unlinkedData } = switchData
+              response = await fetch('/api/switches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(unlinkedData)
+              })
+            }
+          }
         }
         
         if (response.ok) {
@@ -1319,6 +1180,10 @@ export default function BulkUploadPage() {
                 <li>• Click Type is only applicable for CLICKY switches and must be: CLICK_LEAF, CLICK_BAR, or CLICK_JACKET (case-insensitive)</li>
                 <li>• Progressive Spring and Double Stage should be &quot;true&quot;/&quot;false&quot;, &quot;yes&quot;/&quot;no&quot;, or &quot;1&quot;/&quot;0&quot;</li>
                 <li>• Travel distances should be numeric values in millimeters</li>
+                <li>• Quantity (if provided) must be a whole number of 0 or more</li>
+                <li>• Personal Tags can be a JSON list (e.g., [&quot;gaming&quot;,&quot;lubed&quot;]) or comma-separated (e.g., gaming, lubed)</li>
+                <li>• Values containing commas, quotes or line breaks must be wrapped in double quotes, with inner quotes doubled</li>
+                <li>• A file exported from Account Settings can be re-imported as-is</li>
               </ul>
             </div>
           </div>
@@ -1598,6 +1463,15 @@ export default function BulkUploadPage() {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Notes
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Personal Notes
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Personal Tags
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Quantity
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date Obtained

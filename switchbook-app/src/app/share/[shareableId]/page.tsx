@@ -90,6 +90,7 @@ export default function SharePage() {
       initialForces: [],
       initialMagneticFluxes: [],
       bottomOutMagneticFluxes: [],
+      quantities: [],
       progressiveSprings: [],
       doubleStages: []
     }
@@ -128,6 +129,7 @@ export default function SharePage() {
     const initialForces = [...new Set(switches.map(s => s.initialForce).filter(Boolean) as number[])].sort((a, b) => a - b)
     const initialMagneticFluxes = [...new Set(switches.map(s => s.initialMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
     const bottomOutMagneticFluxes = [...new Set(switches.map(s => s.bottomOutMagneticFlux).filter(Boolean) as number[])].sort((a, b) => a - b)
+    const quantities = [...new Set(switches.map(s => s.quantity).filter((q): q is number => typeof q === 'number'))].sort((a, b) => a - b)
     
     // Get unique boolean values
     const progressiveSprings = [...new Set(switches.map(s => s.progressiveSpring).filter(b => b !== null && b !== undefined) as boolean[])]
@@ -161,6 +163,7 @@ export default function SharePage() {
       initialForces,
       initialMagneticFluxes,
       bottomOutMagneticFluxes,
+      quantities,
       progressiveSprings,
       doubleStages
     }
@@ -301,6 +304,12 @@ export default function SharePage() {
     }
     if (activeFilters.bottomOutMagneticFluxMax !== undefined) {
       filtered = filtered.filter(s => s.bottomOutMagneticFlux !== null && s.bottomOutMagneticFlux <= activeFilters.bottomOutMagneticFluxMax!)
+    }
+    if (activeFilters.quantityMin !== undefined) {
+      filtered = filtered.filter(s => s.quantity !== null && s.quantity >= activeFilters.quantityMin!)
+    }
+    if (activeFilters.quantityMax !== undefined) {
+      filtered = filtered.filter(s => s.quantity !== null && s.quantity <= activeFilters.quantityMax!)
     }
 
     // Apply sorting

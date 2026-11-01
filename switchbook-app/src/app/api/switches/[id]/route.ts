@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { switchSchema } from "@/lib/validation"
+import { switchSchema, SWITCH_NOTES_MAX, SWITCH_PERSONAL_NOTES_MAX } from "@/lib/validation"
 import { z } from "zod"
 import { transformSwitchData } from "@/utils/dataTransform"
+import { computeMasterModifiedFields } from "@/lib/master-switch-modifications"
 import { normalizeManufacturerName } from "@/utils/manufacturerNormalization"
 import { withSmartRateLimit } from "@/lib/with-rate-limit"
 
@@ -101,37 +102,9 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
       where: { id: switchItem.masterSwitchId }
     }) : null;
     
-    let isModified = false;
-    let modifiedFields: string[] = [];
-    
-    if (masterSwitch) {
-      // Track which fields are modified from the master switch
-      const fieldsToCheck = [
-        'name', 'chineseName', 'type', 'technology', 'manufacturer',
-        'actuationForce', 'bottomOutForce', 'preTravel', 'bottomOut',
-        'springWeight', 'springLength', 'notes',
-        'topHousing', 'bottomHousing', 'stem',
-        'topHousingColor', 'bottomHousingColor', 'stemColor', 'stemShape', 'markings',
-        'magnetOrientation', 'magnetPosition', 'magnetPolarity',
-        'initialForce', 'initialMagneticFlux', 'bottomOutMagneticFlux',
-        'pcbThickness', 'compatibility', 'tactileForce',
-        'progressiveSpring', 'doubleStage', 'clickType'
-      ];
-      
-      for (const field of fieldsToCheck) {
-        const newValue = (transformedData as any)[field];
-        const masterValue = (masterSwitch as any)[field];
-        
-        // Compare values, treating null/undefined/empty string as equivalent
-        const normalize = (val: any) => val === null || val === undefined || val === '' ? null : val;
-        
-        if (normalize(newValue) !== normalize(masterValue)) {
-          modifiedFields.push(field);
-        }
-      }
-      
-      isModified = modifiedFields.length > 0;
-    }
+    // Track which fields are modified from the master switch
+    const modifiedFields: string[] = masterSwitch ? computeMasterModifiedFields(transformedData, masterSwitch) : []
+    const isModified = modifiedFields.length > 0
 
     // Update the switch
     const updatedSwitch = await prisma.switch.update({
@@ -166,10 +139,10 @@ async function updateSwitchHandler(request: NextRequest, { params }: RouteParams
             message = 'Manufacturer field cannot exceed 100 characters'
             break
           case 'notes':
-            message = 'Notes cannot exceed 500 characters'
+            message = `Notes cannot exceed ${SWITCH_NOTES_MAX} characters`
             break
           case 'personalNotes':
-            message = 'Personal notes cannot exceed 500 characters'
+            message = `Personal notes cannot exceed ${SWITCH_PERSONAL_NOTES_MAX} characters`
             break
           case 'markings':
             message = 'Markings cannot exceed 500 characters'

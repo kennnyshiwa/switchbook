@@ -40,6 +40,12 @@ interface SwitchData {
   clickType?: ClickType | null | '';
   dateObtained?: string | null;
   personalTags?: string[];
+  quantity?: number | null;
+}
+
+// Keep 0 (a real measurement); blank/NaN/undefined from forms become null.
+function numberOrNull(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 export function transformSwitchData(data: SwitchData) {
@@ -51,24 +57,28 @@ export function transformSwitchData(data: SwitchData) {
     magnetOrientation: data.magnetOrientation || null,
     magnetPosition: data.magnetPosition || null,
     magnetPolarity: data.magnetPolarity || null,
-    initialForce: data.initialForce || null,
-    initialMagneticFlux: data.initialMagneticFlux || null,
-    bottomOutMagneticFlux: data.bottomOutMagneticFlux || null,
+    initialForce: numberOrNull(data.initialForce),
+    initialMagneticFlux: numberOrNull(data.initialMagneticFlux),
+    bottomOutMagneticFlux: numberOrNull(data.bottomOutMagneticFlux),
     pcbThickness: data.pcbThickness || null,
     compatibility: data.compatibility || null,
     manufacturer: data.manufacturer || null,
     springWeight: data.springWeight || null,
     springLength: data.springLength || null,
-    actuationForce: data.actuationForce || null,
-    tactileForce: data.tactileForce || null,
-    tactilePosition: data.tactilePosition || null,
-    bottomOutForce: data.bottomOutForce || null,
+    actuationForce: numberOrNull(data.actuationForce),
+    tactileForce: numberOrNull(data.tactileForce),
+    tactilePosition: numberOrNull(data.tactilePosition),
+    bottomOutForce: numberOrNull(data.bottomOutForce),
     progressiveSpring: data.progressiveSpring || false,
     doubleStage: data.doubleStage || false,
-    preTravel: data.preTravel || null,
-    bottomOut: data.bottomOut || null,
+    preTravel: numberOrNull(data.preTravel),
+    bottomOut: numberOrNull(data.bottomOut),
     notes: data.notes || null,
-    personalNotes: data.personalNotes || null,
+    // personalNotes, personalTags and quantity are user-only fields that some clients (e.g.
+    // the bulk-edit grid) do not carry. When the key is absent, return
+    // undefined so Prisma updates leave the stored value untouched; creates
+    // fall back to the column default (null).
+    personalNotes: data.personalNotes === undefined ? undefined : (data.personalNotes || null),
     topHousing: data.topHousing || null,
     bottomHousing: data.bottomHousing || null,
     stem: data.stem || null,
@@ -82,6 +92,7 @@ export function transformSwitchData(data: SwitchData) {
     frankenStem: data.frankenStem || null,
     clickType: data.clickType === '' ? null : (data.clickType || null),
     dateObtained: data.dateObtained ? new Date(data.dateObtained) : null,
-    personalTags: data.personalTags || [],
+    personalTags: data.personalTags === undefined ? undefined : data.personalTags,
+    quantity: data.quantity === undefined ? undefined : (data.quantity ?? null),
   };
 }
