@@ -1,6 +1,5 @@
 'use client'
 
-import { requestCollectionQuantity } from '@/lib/collection-quantity'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
@@ -409,13 +408,12 @@ export default function BrowseMasterSwitchesPage() {
 
   
 
-  const addToCollection = async (switchId: string) => {
+  /** Returns an error message to show inline next to the button, or null on success. */
+  const addToCollection = async (switchId: string, quantity: number | null): Promise<string | null> => {
     if (!session) {
       router.push('/auth/register')
-      return
+      return null
     }
-    const quantity = requestCollectionQuantity(message => window.prompt(message), message => window.alert(message))
-    if (quantity === undefined) return
     setAddingSwitch(switchId)
     try {
       const response = await fetch(`/api/master-switches/${switchId}/add-to-collection`, {
@@ -439,13 +437,13 @@ export default function BrowseMasterSwitchesPage() {
         }
         // Discard the cached dashboard so returning to it includes this add.
         router.refresh()
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to add switch to collection')
+        return null
       }
+      const error = await response.json().catch(() => ({}))
+      return error.error || 'Failed to add switch to collection'
     } catch (error) {
       console.error('Failed to add switch:', error)
-      alert('Failed to add switch to collection')
+      return 'Failed to add switch to collection'
     } finally {
       setAddingSwitch(null)
     }
@@ -1248,6 +1246,7 @@ export default function BrowseMasterSwitchesPage() {
           switchItem={selectedSwitch}
           onClose={() => setSelectedSwitch(null)}
           onAddToCollection={addToCollection}
+          showQuantityInput={!!session}
           onAddToWishlist={addToWishlist}
           onDeleteSwitch={session?.user?.role === 'ADMIN' ? deleteSwitch : undefined}
           onOpenLinkDialog={setLinkDialogSwitch}

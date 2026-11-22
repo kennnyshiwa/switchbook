@@ -1,7 +1,5 @@
 'use client'
 
-import { requestCollectionQuantity } from '@/lib/collection-quantity'
-
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -12,6 +10,7 @@ import LinkToCollectionDialog from '@/components/LinkToCollectionDialog'
 import ForceCurvesButton from '@/components/ForceCurvesButton'
 import SwitchScoresButton from '@/components/SwitchScoresButton'
 import ImageCarousel from '@/components/ImageCarousel'
+import AddToCollectionControl from '@/components/AddToCollectionControl'
 
 interface SwitchImage {
   id: string
@@ -134,15 +133,14 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
     }
   }, [])
 
-  const addToCollection = async () => {
-    if (!switchData) return
+  /** Returns an error message to show inline next to the button, or null on success. */
+  const addToCollection = async (quantity: number | null): Promise<string | null> => {
+    if (!switchData) return null
     if (!session) {
       router.push('/auth/register')
-      return
+      return null
     }
-    
-    const quantity = requestCollectionQuantity(message => window.prompt(message), message => window.alert(message))
-    if (quantity === undefined) return
+
     setAdding(true)
     try {
       const response = await fetch(`/api/master-switches/${switchData.id}/add-to-collection`, {
@@ -156,13 +154,13 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
         setSwitchData(prev => prev ? { ...prev, inCollection: true, userSwitchId: data.switchId } : null)
         // Discard the cached dashboard so returning to it includes this add.
         router.refresh()
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Failed to add switch to collection')
+        return null
       }
+      const error = await response.json().catch(() => ({}))
+      return error.error || 'Failed to add switch to collection'
     } catch (error) {
       console.error('Failed to add switch:', error)
-      alert('Failed to add switch to collection')
+      return 'Failed to add switch to collection'
     } finally {
       setAdding(false)
     }
@@ -289,7 +287,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
             ← Back to Browse
           </Link>
           
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -313,9 +311,9 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
               )}
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-start gap-3 sm:gap-4">
               {switchData.inCollection && (
-                <span className="text-green-600 dark:text-green-400 flex items-center">
+                <span className="text-green-600 dark:text-green-400 flex items-center py-2">
                   <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
@@ -324,7 +322,7 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
               )}
               
               {switchData.inWishlist && !switchData.inCollection && (
-                <span className="text-purple-600 dark:text-purple-400 flex items-center">
+                <span className="text-purple-600 dark:text-purple-400 flex items-center py-2">
                   <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                   </svg>
@@ -343,13 +341,13 @@ export default function MasterSwitchDetailPage({ params, searchParams }: { param
               )}
               
               {!switchData.inCollection && (
-                <button
-                  onClick={addToCollection}
-                  disabled={adding}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {session ? (adding ? 'Adding...' : 'Add to Collection') : 'Sign Up to Collect'}
-                </button>
+                <AddToCollectionControl
+                  onAdd={addToCollection}
+                  isAdding={adding}
+                  showQuantity={!!session}
+                  label={session ? 'Add to Collection' : 'Sign Up to Collect'}
+                  size="md"
+                />
               )}
               
               <div className="relative" ref={dropdownRef}>

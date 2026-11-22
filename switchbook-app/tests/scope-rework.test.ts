@@ -7,7 +7,7 @@ import { switchSchema } from '../src/lib/validation'
 import { transformSwitchData } from '../src/utils/dataTransform'
 import { csvRowToSwitchData, mapSwitchCsvHeaders, parseCsv, parseSwitchCsvRow, switchesToCsv } from '../src/lib/switchCsv'
 import { resolveImportIdentities } from '../src/lib/switch-import-identity'
-import { compareQuantity, summarizeQuantity, requestCollectionQuantity } from '../src/lib/collection-quantity'
+import { compareQuantity, summarizeQuantity, validateCollectionQuantity, COLLECTION_QUANTITY_ERROR } from '../src/lib/collection-quantity'
 import { MASTER_TRACKED_FIELDS, computeMasterModifiedFields, copyMasterFields } from '../src/lib/master-switch-modifications'
 import { imageReferenceSchema, exportImageReferences } from '../src/lib/switch-image-references'
 import { masterFieldsToForm } from '../src/lib/master-switch-form'
@@ -223,13 +223,14 @@ test('quantity sort is numeric with unknown last both ways; totals distinguish z
   assert.deepEqual(summarizeQuantity([]), { knownUnits: 0, unknownEntries: 0 })
 })
 
-test('catalog quantity confirmation treats blank as unknown, cancel as no add, rejects invalid input', () => {
-  const errors: string[] = []
-  assert.equal(requestCollectionQuantity(() => '0', message => errors.push(message)), 0)
-  assert.equal(requestCollectionQuantity(() => '', message => errors.push(message)), null)
-  assert.equal(requestCollectionQuantity(() => null, message => errors.push(message)), undefined)
-  for (const bad of ['-1','1.5','1000001','bad']) assert.equal(requestCollectionQuantity(() => bad, message => errors.push(message)), undefined)
-  assert.equal(errors.length, 4)
+test('inline catalog quantity field treats blank as unknown and rejects invalid input with an inline error', () => {
+  assert.deepEqual(validateCollectionQuantity(''), { ok: true, value: null })
+  assert.deepEqual(validateCollectionQuantity('   '), { ok: true, value: null })
+  assert.deepEqual(validateCollectionQuantity('0'), { ok: true, value: 0 })
+  assert.deepEqual(validateCollectionQuantity(' 12 '), { ok: true, value: 12 })
+  assert.deepEqual(validateCollectionQuantity('1000000'), { ok: true, value: 1000000 })
+  for (const bad of ['-1', '1.5', '1000001', 'bad', '1,000', '1e3']) assert.deepEqual(validateCollectionQuantity(bad), { ok: false, error: COLLECTION_QUANTITY_ERROR }, bad)
+  assert.match(COLLECTION_QUANTITY_ERROR, /whole number from 0 to 1,000,000/)
 })
 
 for (const quantity of [undefined, null, 0, 12, -1, 1.5, 1000001]) test(`catalog real add validates quantity ${quantity}, never writes it to master`, async () => {

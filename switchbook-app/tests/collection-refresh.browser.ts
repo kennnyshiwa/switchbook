@@ -25,7 +25,7 @@ const stubs: Record<string, string> = {
   'SwitchesDBComparison': `export default ()=>null;`,
   'LinkToCollectionDialog': `export default ()=>null;`,
   'VirtualSwitchList': `import React from 'react'; export default function List({switches,onSwitchClick}) {return <div>{switches.map(s=><button key={s.id} onClick={()=>onSwitchClick(s)}>Open {s.name}</button>)}</div>}`, 
-  'MasterSwitchDetailsPopup': `import React from 'react'; export default function Popup({switchItem,onAddToCollection}) { return <button onClick={()=>onAddToCollection(switchItem.id)}>{switchItem.inCollection?'In Collection':'Add to Collection'}</button> }`,
+  'MasterSwitchDetailsPopup': `import React from 'react'; export default function Popup({switchItem,onAddToCollection}) { const [error,setError]=React.useState(null); return <div><button onClick={async()=>setError(await onAddToCollection(switchItem.id,0))}>{switchItem.inCollection?'In Collection':'Add to Collection'}</button>{error&&<p role="alert">{error}</p>}</div> }`,
 }
 
 const fixtureSource = `
@@ -149,18 +149,21 @@ test('collection changes appear without a reload and master adds invalidate cach
     if(url.pathname==='/api/switches' && route.request().method()==='POST') return route.fulfill({json:{id:'bulk-1'}})
     return route.fulfill({json:[]})
   })
-  page.on('dialog',dialog=>dialog.type()==='prompt'?dialog.accept('0'):dialog.dismiss())
+  const dialogs:string[]=[]
+  page.on('dialog',dialog=>{ dialogs.push(dialog.type()); void dialog.dismiss() })
   for(const mode of ['Browse','Detail']) {
     await page.evaluate(mode => { (window as any).refreshes=0; (window as any)['show'+mode]() },mode)
     if(mode==='Browse') await page.getByRole('button',{name:'Open Crystal Jade'}).click()
+    if(mode==='Detail') await page.getByRole('textbox',{name:'Quantity to add (optional)'}).fill('0')
     failAdd=true
     await page.getByRole('button',{name:'Add to Collection',exact:true}).click()
-    await page.waitForTimeout(100)
+    await page.getByRole('alert').filter({hasText:'Test failure'}).waitFor()
     assert.equal(await page.evaluate(()=>(window as any).refreshes),0, 'failed adds must not invalidate or claim success')
     failAdd=false
     await page.getByRole('button',{name:'Add to Collection',exact:true}).click()
     await page.waitForFunction(()=>(window as any).refreshes===1)
   }
+  assert.deepEqual(dialogs,[], 'catalog adds must never open native prompt/alert dialogs')
   await page.evaluate(() => { (window as any).refreshes=0; (window as any).showBulk() })
   await page.locator('input[type="file"]').setInputFiles({name:'switches.csv',mimeType:'text/csv',buffer:Buffer.from('name\nBulk Test\n')})
   await page.getByRole('button',{name:'Continue to Preview'}).click()

@@ -9,12 +9,9 @@ export function compareQuantity(a: QuantityRow, b: QuantityRow, direction: 'asc'
 export function summarizeQuantity(rows: readonly QuantityRow[]) {
   return { knownUnits: rows.reduce((sum, row) => sum + (row.quantity ?? 0), 0), unknownEntries: rows.filter(row => row.quantity == null).length }
 }
-/** Native confirmation matches catalog's existing alert flows; cancel does not add. */
-export function requestCollectionQuantity(promptValue: (message: string) => string | null, showError: (message: string) => void): number | null | undefined {
-  const value = promptValue('Quantity to add (optional). Leave blank if unknown; Cancel to stop.')
-  if (value === null) return undefined
-  const parsed = parseQuantityInput(value)
-  if (parsed.ok) return parsed.value
-  showError(`Quantity must be a whole number from 0 to ${QUANTITY_MAX.toLocaleString('en-US')}. Nothing was added.`)
-  return undefined
+export const COLLECTION_QUANTITY_ERROR = `Enter a whole number from 0 to ${QUANTITY_MAX.toLocaleString('en-US')}, or leave blank.`
+/** Validates the inline "Qty" field next to Add to Collection. Blank = unknown (null). */
+export function validateCollectionQuantity(raw: string): { ok: true; value: number | null } | { ok: false; error: string } {
+  const parsed = parseQuantityInput(raw)
+  return parsed.ok ? parsed : { ok: false, error: COLLECTION_QUANTITY_ERROR }
 }

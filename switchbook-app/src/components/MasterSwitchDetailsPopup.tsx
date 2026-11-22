@@ -8,6 +8,7 @@ import { getImageUrl } from '@/utils/imageHelpers'
 import ImageCarousel from './ImageCarousel'
 import MasterSwitchShareButton from './MasterSwitchShareButton'
 import ForceCurvesButton from './ForceCurvesButton'
+import AddToCollectionControl, { type AddToCollectionResult } from './AddToCollectionControl'
 
 interface SwitchImage {
   id: string
@@ -68,7 +69,9 @@ interface MasterSwitch {
 interface MasterSwitchDetailsPopupProps {
   switchItem: MasterSwitch
   onClose: () => void
-  onAddToCollection: (switchId: string) => void
+  onAddToCollection: (switchId: string, quantity: number | null) => AddToCollectionResult | Promise<AddToCollectionResult>
+  /** Show the inline optional quantity field next to Add to Collection (signed-in users). */
+  showQuantityInput?: boolean
   onAddToWishlist: (switchId: string) => void
   onDeleteSwitch?: (switchId: string) => void
   onOpenLinkDialog: (switchItem: { id: string; name: string }) => void
@@ -82,6 +85,7 @@ export default function MasterSwitchDetailsPopup({
   switchItem,
   onClose,
   onAddToCollection,
+  showQuantityInput = true,
   onAddToWishlist,
   onDeleteSwitch,
   onOpenLinkDialog,
@@ -420,9 +424,9 @@ export default function MasterSwitchDetailsPopup({
 
         {/* Actions */}
         <div data-testid="master-switch-popup-footer" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 border-t border-gray-200 dark:border-gray-700">
-          <div className={`flex flex-wrap items-center gap-3 ${switchItem.inWishlist && !switchItem.inCollection ? 'min-w-[200px] justify-center' : ''}`}>
+          <div className={`flex flex-wrap items-start gap-3 ${switchItem.inWishlist && !switchItem.inCollection ? 'min-w-[200px] justify-center' : ''}`}>
             {switchItem.inCollection && (
-              <span className="text-green-600 dark:text-green-400 text-sm flex items-center">
+              <span className="text-green-600 dark:text-green-400 text-sm flex items-center py-2">
                 <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
@@ -431,7 +435,7 @@ export default function MasterSwitchDetailsPopup({
             )}
             
             {switchItem.inWishlist && !switchItem.inCollection && (
-              <span className="text-purple-600 dark:text-purple-400 text-sm flex items-center">
+              <span className="text-purple-600 dark:text-purple-400 text-sm flex items-center py-2">
                 <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
                 </svg>
@@ -450,13 +454,11 @@ export default function MasterSwitchDetailsPopup({
             )}
             
             {!switchItem.inCollection && (
-              <button
-                onClick={() => onAddToCollection(switchItem.id)}
-                disabled={isAddingSwitch}
-                className="px-4 py-2 bg-blue-600 text-white text-center rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              >
-                {isAddingSwitch ? 'Adding...' : 'Add to Collection'}
-              </button>
+              <AddToCollectionControl
+                onAdd={quantity => onAddToCollection(switchItem.id, quantity)}
+                isAdding={isAddingSwitch}
+                showQuantity={showQuantityInput}
+              />
             )}
           </div>
 
